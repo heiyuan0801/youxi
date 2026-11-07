@@ -23,7 +23,7 @@ import {upgradeSoilBatch} from './FarmSoil';
 import {itemName, localizeOrder, t, LOCALES, LOCALE_LABEL, type Locale} from './FarmI18n';
 import {momentText} from './FarmShare';
 export type Panel='warehouse'|'orders'|'shop'|'tasks'|'workshop'|'fishing'|'world'|'levels'|'animals'|'travel'|'home'|'seasons'|'genetics'|'explore'|'automation'|'offline'|'ponds'|'growth'|'events'|'settings'|'privacy'|'confirm-reset'|'breakfast'|'story'|'honors'|'carpenter'|'festival-games'|'ice-fishing'|'patrol'|'restore-save'|'agenda'|null;
-export interface UICallbacks {act:(f:()=>Result)=>void;pick:(id:CropId)=>void;place:(id:DecoId)=>void;zoom:(factor:number)=>void;focus:(id:RegionId|'home')=>void;travel:(id:MapId)=>void;settings:(key:'sound'|'music'|'haptics')=>void;setVolume:(kind:'bgm'|'sfx',value:number)=>void;toggleMute:()=>void;setLocale:(locale:Locale)=>void;share:(which:'invite'|'pending'|'latest')=>void;askRedeem:()=>void;exportSave:()=>void;chooseSave:()=>void;restoreBackup:()=>void;confirmSave:()=>void;reset:()=>void;start:()=>void;}
+export interface UICallbacks {act:(f:()=>Result)=>void;pick:(id:CropId)=>void;place:(id:DecoId)=>void;zoom:(factor:number)=>void;focus:(id:RegionId|'home')=>void;travel:(id:MapId)=>void;settings:(key:'sound'|'music'|'haptics')=>void;setVolume:(kind:'bgm'|'sfx',value:number)=>void;toggleMute:()=>void;setLocale:(locale:Locale)=>void;toggleHud:(side:'left'|'right')=>void;share:(which:'invite'|'pending'|'latest')=>void;askRedeem:()=>void;exportSave:()=>void;chooseSave:()=>void;restoreBackup:()=>void;confirmSave:()=>void;reset:()=>void;start:()=>void;}
 const PALE='#fffcf4',LINE='#f2d8ac',INK='#5a3e2b',SOFT='#997455';
 export class FarmUI {
   panel:Panel=null;shopTab='土地';seedOpen=false;selected:CropId|null=null;started=true;
@@ -44,6 +44,7 @@ export class FarmUI {
   }
   get diagnostics(){return this.buttons.filter(b=>b.n.activeInHierarchy).map(b=>{const a=b.n.worldPosition;return{label:b.label,x:a.x,y:900-a.y,w:b.n.getComponent(UITransform)!.width*this.root.scale.x,h:b.n.getComponent(UITransform)!.height*this.root.scale.y};});}
   private button(p:Painter,parent:Node,label:string,x:number,y:number,w:number,h:number,run:()=>void,color='#67ca70',dark='#3fa94d',font=16){const n=p.button(parent,label,x,y,w,h,run,color,dark,font);this.buttons.push({label,n});return n;}
+  private chromeToggle(p:Painter,name:string,glyph:string,x:number,y:number,run:()=>void){const n=this.button(p,this.root,glyph,x,y,44,44,run,'#fff6e4','#e4d0aa',22);this.buttons[this.buttons.length-1].label=name;n.name='Button-'+name;return n;}
   private closeButton(p:Painter,parent:Node,x:number,y:number,run:()=>void){this.button(p,parent,'×',x,y,44,44,run,'#ff7aa2','#d64d7d',26);}
   private iconButton(p:Painter,parent:Node,label:string,key:string,x:number,y:number,w:number,h:number,run:()=>void,fill=PALE){const n=p.rect(parent,x,y,w,h,fill,h/2,'#ffffff',2);p.contain(n,key,p.w/2,p.h/2,w*.67,h*.67);n.name='Button-'+label;p.hit(n,run);this.buttons.push({label,n});return n;}
   private money(p:Painter,parent:Node,value:number|string,x:number,y:number,size=17,key='coin',w=90){p.contain(parent,key,x-w/2+size*.6,y,size*1.25);p.label(parent,String(value),x+size*.4,y,size,key==='coin'?'#a87505':'#d38300',w-size*1.3,size*1.5,true);}
@@ -52,13 +53,16 @@ export class FarmUI {
     const id=[this.panel,this.panel==='tasks'?this.diaryTab:this.panel==='shop'?this.shopTab:this.panel==='workshop'?this.factory:''].join(':'),previous=this.modalRoot?.isValid?this.modalRoot.getComponentInChildren(ScrollView):null,offset=id===this.scrollId?previous?.getScrollOffset():null;this.scrollId=id;
     empty(this.root);this.buttons=[];this.liveUpdates=[];const frame=view.getFrameSize(),layout=hudLayout(frame.width,frame.height,sys.isNative,nativeInsets());this.root.setScale(layout.scale,layout.scale,1);this.root.setPosition(layout.x,layout.y,0);this.p=new Painter(layout.width,layout.height,this.art);const p=this.p,w=p.w,h=p.h,state=this.state(),lv=levelFor(state.xp),left=state.xp-levelFloor(lv),next=levelCeil(lv)-levelFloor(lv);
     // The reference HUD has no large title/task boxes and no full-width bottom toolbar.
+    const locale=state.retention?.locale,hud=state.retention?.hud||{left:true,right:true},leftOpen=hud.left!==false,rightOpen=hud.right!==false;
     const ratio=lv>=100?1:Math.min(1,left/next);p.pill(this.root,165,43,200,40);p.label(this.root,`${lv}级`,149,33,11,SOFT,120,18,true,'left');p.rect(this.root,153,51,130,11,'#f1e2c8',5);if(ratio>0)p.rect(this.root,88+130*ratio/2,51,Math.max(4,130*ratio),11,'#69c957',5);p.label(this.root,lv>=100?'满级':`${left}/${next}`,235,43,12,SOFT,52,24);
     const levelStar=p.contain(this.root,'star',51,43,62);p.label(this.root,String(lv),51,45,22,INK,45,45,true,'center','#ffffff');p.hit(levelStar,()=>this.open('levels'));this.buttons.push({label:'等级奖励',n:levelStar});
-    const ready=state.features.jobs.filter(j=>j.readyAt<=Date.now()).length;
+    if(leftOpen){const ready=state.features.jobs.filter(j=>j.readyAt<=Date.now()).length;
     for(const [x,label,key,panel]of [[80,ready?`工坊 · ${ready}`:'工坊','windmill','workshop'],[209,fishingPhase(state)==='bite'?'咬钩啦！':'钓鱼','fish','fishing']] as const){const n=p.pill(this.root,x,108,118,40);p.contain(n,key,p.w/2-36,p.h/2,33,36);p.label(n,label,p.w/2+16,p.h/2,14,INK,76,32);p.hit(n,()=>this.open(panel));this.buttons.push({label:panel==='workshop'?'工坊':'钓鱼',n});}
     for(const [x,label,key,panel]of [[80,'开拓地图','tree_round','world'],[209,unclaimedLevels(state).length?`奖励 · ${unclaimedLevels(state).length}`:'等级册','star','levels']] as const){const n=p.pill(this.root,x,158,118,40);p.contain(n,key,p.w/2-37,p.h/2,32,34);p.label(n,label,p.w/2+15,p.h/2,13,INK,79,32);p.hit(n,()=>this.open(panel));this.buttons.push({label:panel==='world'?'开拓地图':'等级册',n});}
-    for(const [x,label,key,panel]of [[80,'动物伙伴','duck','animals'],[209,'旅行手册','forestCamp','travel']] as const){const n=p.pill(this.root,x,208,118,40);p.contain(n,key,p.w/2-37,p.h/2,32,34);p.label(n,label,p.w/2+15,p.h/2,13,INK,79,32);p.hit(n,()=>this.open(panel));this.buttons.push({label,n});}
-    const dayLabel=SEASONS[seasonIndex(state)%4]+' · '+WEATHER_NAMES[weatherAt(state)];const season=p.pill(this.root,w-115,sys.isNative?136:124,178,35);p.label(season,dayLabel+' · 节庆',p.w/2,p.h/2,13,SOFT,168,31);p.hit(season,()=>this.open('seasons'));this.buttons.push({label:'季节与自动化',n:season});const home=p.pill(this.root,w-115,sys.isNative?180:168,178,35);p.label(home,'我的小屋 · 装修',p.w/2,p.h/2,13,SOFT,168,31);p.hit(home,()=>this.open('home'));this.buttons.push({label:'我的小屋',n:home});
+    for(const [x,label,key,panel]of [[80,'动物伙伴','duck','animals'],[209,'旅行手册','forestCamp','travel']] as const){const n=p.pill(this.root,x,208,118,40);p.contain(n,key,p.w/2-37,p.h/2,32,34);p.label(n,label,p.w/2+15,p.h/2,13,INK,79,32);p.hit(n,()=>this.open(panel));this.buttons.push({label,n});}}
+    this.chromeToggle(p,t(leftOpen?'hud.leftHide':'hud.leftShow',{},locale),leftOpen?'⌃':'⌄',296,43,()=>this.cb.toggleHud('left'));
+    const dayLabel=SEASONS[seasonIndex(state)%4]+' · '+WEATHER_NAMES[weatherAt(state)];
+    if(rightOpen){const season=p.pill(this.root,w-115,sys.isNative?136:124,178,35);p.label(season,dayLabel+' · 节庆',p.w/2,p.h/2,13,SOFT,168,31);p.hit(season,()=>this.open('seasons'));this.buttons.push({label:'季节与自动化',n:season});const home=p.pill(this.root,w-115,sys.isNative?180:168,178,35);p.label(home,'我的小屋 · 装修',p.w/2,p.h/2,13,SOFT,168,31);p.hit(home,()=>this.open('home'));this.buttons.push({label:'我的小屋',n:home});}
     if(state.life.activeMap!=='home'){
       const name=TRAVEL_MAPS.find(m=>m.id===state.life.activeMap)!.name,y=w<1000?h-137:38;
       p.pill(this.root,w/2,y,310,48);p.label(this.root,'当前位置 · '+name,w/2-66,y,12,INK,160,35);
@@ -70,9 +74,10 @@ export class FarmUI {
       if(state.animals.some(a=>a.type==='cat'||a.type==='dog'))this.button(p,this.root,state.activities.patrol?'巡院线索':'宠物巡院',80,256,118,35,()=>this.open('patrol'),'#ab89d3','#8360ac',13);
       if(state.activities.stormPlot!==null)this.button(p,this.root,'疏通积水',209,256,118,35,()=>this.cb.act(()=>repairStormPlot(state)),'#58bde4','#3295bd',13);
     }
-    this.button(p,this.root,'自动农场',w-115,sys.isNative?224:212,178,35,()=>this.open('automation'),'#ab89d3','#8360ac',13);
-    this.button(p,this.root,t('hud.agenda',{},state.retention?.locale),w-115,sys.isNative?310:298,178,35,()=>this.open('agenda'),'#67ca70','#3fa84d',13);
-    if(state.advanced.auto.report)this.button(p,this.root,state.advanced.auto.report.unread?'离线收获 · 查看':'离线报告',w-115,sys.isNative?266:254,178,33,()=>this.open('offline'),'#ffb150','#dc8a29',13);
+    if(rightOpen){this.button(p,this.root,'自动农场',w-115,sys.isNative?224:212,178,35,()=>this.open('automation'),'#ab89d3','#8360ac',13);
+    this.button(p,this.root,t('hud.agenda',{},locale),w-115,sys.isNative?310:298,178,35,()=>this.open('agenda'),'#67ca70','#3fa84d',13);
+    if(state.advanced.auto.report)this.button(p,this.root,state.advanced.auto.report.unread?'离线收获 · 查看':'离线报告',w-115,sys.isNative?266:254,178,33,()=>this.open('offline'),'#ffb150','#dc8a29',13);}
+    this.chromeToggle(p,t(rightOpen?'hud.rightHide':'hud.rightShow',{},locale),rightOpen?'⌃':'⌄',w-115,rightOpen?(sys.isNative?360:348):(sys.isNative?136:124),()=>this.cb.toggleHud('right'));
     const right=w-20,topY=sys.isNative?44:32,secondY=sys.isNative?90:78;p.pill(this.root,right-186,topY,114,40);p.contain(this.root,'coin',right-217,topY,44);p.label(this.root,String(state.coins),right-174,topY,20,INK,65,35);
     this.iconButton(p,this.root,'放大','ui_plus',right-104,topY,32,topY,()=>this.cb.zoom(1.2));
     this.iconButton(p,this.root,'缩小','ui_minus',right-64,topY,32,topY,()=>this.cb.zoom(1/1.2));

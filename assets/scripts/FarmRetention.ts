@@ -51,6 +51,7 @@ export interface Retention {
   decorBest: number;
   decorShared: number;
   festivalBest: {pumpkin: number; flower: number};
+  hud: {left: boolean; right: boolean};
   share: {pending: ShareMoment | null; latest: ShareMoment | null; seen: string[]; shared: string[]; code: string; redeemed: boolean};
 }
 
@@ -129,6 +130,7 @@ export function newRetention(now = Date.now()): Retention {
     tomorrow: {order: null},
     decorBest: 0, decorShared: 0,
     festivalBest: {pumpkin: 0, flower: 0},
+    hud: {left: true, right: true},
     share: {pending: null, latest: null, seen: [], shared: [], code: makeInviteCode(now || 1), redeemed: false},
   };
 }
@@ -179,7 +181,15 @@ export function validRetention(r: Retention): boolean {
   if (!intOk(r.decorBest, 100000) || !intOk(r.decorShared, 100000) || !r.festivalBest || !intOk(r.festivalBest.pumpkin, 100000) || !intOk(r.festivalBest.flower, 100000)) return false;
   const share = r.share;
   if (!share || !validInviteCode(share.code) || typeof share.redeemed !== 'boolean' || !unique(share.seen, 80) || !unique(share.shared, 80) || share.shared.some(id => !share.seen.includes(id)) || !momentOk(share.pending, share.seen) || !momentOk(share.latest, share.seen)) return false;
+  if (!r.hud || typeof r.hud.left !== 'boolean' || typeof r.hud.right !== 'boolean') return false;
   return true;
+}
+
+export function toggleHud(s: FarmState, side: 'left' | 'right'): Result {
+  if (!s.retention?.hud || (side !== 'left' && side !== 'right')) return fail(t('hud.leftShow'));
+  s.retention.hud[side] = !s.retention.hud[side];
+  const open = s.retention.hud[side];
+  return ok(t(side === 'left' ? (open ? 'hud.leftShow' : 'hud.leftHide') : (open ? 'hud.rightShow' : 'hud.rightHide'), {}, loc(s)));
 }
 
 function ensureToday(s: FarmState, now: number) {

@@ -5,12 +5,29 @@ import {upgradeSoil, upgradeSoilBatch, soilTier, cropGrowSeconds} from '../asset
 import {t, itemName, localizeOrder, storyCopy, localDate, shiftLocal, atLocalNoon, weekKey} from '../assets/scripts/FarmI18n';
 import {submitFlowers} from '../assets/scripts/FarmActivities';
 import {
-  acceptTomorrow, advanceTutorial, claimAchievement, claimChecklist, claimLogin, claimNeighbor,
+  acceptTomorrow, advanceTutorial, claimAchievement, claimChecklist, claimLogin, claimNeighbor, toggleHud,
   decorScore, deliverTomorrow, enterContest, markFestival, noteDecor, noteFestivalScore, noteRecipe,
   pickBlessing, redeemInvite, setVolume, skipTutorial, toggleMute, tutorialDone, revealRecipe,
 } from '../assets/scripts/FarmRetention';
 
 const NOW = atLocalNoon(localDate(1_800_000_000_000));
+
+test('hud menus collapse independently and the choice survives a reload', () => {
+  const s = newFarm(NOW);
+  assert.deepEqual(s.retention.hud, {left: true, right: true});
+  assert.equal(toggleHud(s, 'left').ok, true);
+  assert.equal(s.retention.hud.left, false);
+  assert.equal(s.retention.hud.right, true);
+  const loaded = parseSave(serialize(s, NOW), NOW)!;
+  assert.equal(loaded.retention.hud.left, false);
+  assert.equal(toggleHud(loaded, 'right').ok, true);
+  assert.deepEqual(loaded.retention.hud, {left: false, right: false});
+  const raw = JSON.parse(serialize(newFarm(NOW), NOW));
+  delete raw.retention.hud;
+  assert.deepEqual(parseSave(JSON.stringify(raw), NOW)?.retention.hud, {left: true, right: true});
+  raw.retention.hud = {left: 1, right: true};
+  assert.equal(parseSave(JSON.stringify(raw), NOW), null);
+});
 
 test('tutorial can be skipped or walked, and names the next day', () => {
   const skipped = newFarm(NOW);

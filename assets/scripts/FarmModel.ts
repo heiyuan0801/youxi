@@ -227,6 +227,7 @@ export function parseSave(raw:string|null,now=Date.now(),refresh=true):FarmState
     if(s.plots.some(p=>p.composted!==undefined&&(p.composted!==true||p.crop!=='pumpkin'&&p.crop!=='goldenPumpkin')))return null;
     if(!validateLife(s.life,s.animals,PRODUCTS))return null;
     if(s.retention===undefined)s.retention=legacyRetention(now);
+    if(s.retention.hud===undefined)s.retention.hud={left:true,right:true};
     if(!validRetention(s.retention))return null;
     if(refresh){refreshFeatures(s,now);refreshLife(s,now);touchRetention(s,now);}
     return s;

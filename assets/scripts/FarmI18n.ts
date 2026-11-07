@@ -11,6 +11,10 @@ type Row = [string, string, string, string, string, string];
 const rows: Row[] = [
   ['probe.only', '仅简体', '', '', '', ''],
   ['hud.agenda', '日程', '日程', 'Today', '日程', '오늘'],
+  ['hud.leftHide', '收起左侧菜单', '收起左側選單', 'Hide left menu', '左のメニューをしまう', '왼쪽 메뉴 접기'],
+  ['hud.leftShow', '展开左侧菜单', '展開左側選單', 'Show left menu', '左のメニューを開く', '왼쪽 메뉴 펼치기'],
+  ['hud.rightHide', '收起右侧菜单', '收起右側選單', 'Hide right menu', '右のメニューをしまう', '오른쪽 메뉴 접기'],
+  ['hud.rightShow', '展开右侧菜单', '展開右側選單', 'Show right menu', '右のメニューを開く', '오른쪽 메뉴 펼치기'],
   ['hud.share', '分享给朋友', '分享給朋友', 'Share with friends', '友だちへ送る', '친구에게 공유'],
   ['hud.later', '稍后', '稍後', 'Later', 'あとで', '나중에'],
   ['settings.audio', '声音与触感', '聲音與觸感', 'Sound and haptics', '音と振動', '소리와 진동'],
