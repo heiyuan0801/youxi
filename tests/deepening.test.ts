@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { levelFloor, newFarm, parseSave, serialize } from '../assets/scripts/FarmModel';
 import { collectCraft, enqueueCraft } from '../assets/scripts/FarmFeatures';
 import { startFurniture } from '../assets/scripts/FarmRoom';
@@ -234,4 +235,8 @@ test('art hooks name every drop-in file and do not collide', () => {
   assert.ok(ART_HOOKS.includes('machineHarvester'));
   assert.ok(ART_HOOKS.includes('forest-layer-01'));
   assert.ok(ART_HOOKS.includes('coffeeBrew'));
+  for (const id of ['coffeeBrew', 'floralTea', 'sunTea', 'berryTea', 'fox', 'machineHarvester', 'machineFeeder', 'forest-layer-01', 'forest-layer-03', 'mine-layer-01', 'mine-layer-03', 'beach-layer-01', 'beach-layer-03', 'snow-layer-01', 'snow-layer-03']) {
+    assert.ok(existsSync(`assets/resources/hooks/${id}.png`), id);
+    assert.ok(existsSync(`assets/resources/hooks/${id}.png.meta`), id);
+  }
 });

@@ -29,7 +29,7 @@ async function sound(key,duration){
 await page.addInitScript(()=>{const raw=sessionStorage.getItem('__qingye_test_fixture');if(raw){localStorage.setItem('sunny-meadow-farm-v1',raw);sessionStorage.removeItem('__qingye_test_fixture');}});
 try{
  await page.goto('http://localhost:7526/?v=0.7.2',{waitUntil:'networkidle'});await ready();await wait(2300);await button('开始游戏');await wait(200);
- assert.equal((await page.evaluate(()=>window.__SUNNY_FARM__.art())).length,209);assert.equal((await page.evaluate(()=>window.__SUNNY_FARM__.audio())).loaded.length,37);pass('209 images and 37 actual WAV clips load in the Cocos build');
+ assert.equal((await page.evaluate(()=>window.__SUNNY_FARM__.art())).length,220);assert.equal((await page.evaluate(()=>window.__SUNNY_FARM__.audio())).loaded.length,37);pass('220 images and 37 actual WAV clips load in the Cocos build');
  let legacy=await state();delete legacy.progression;for(const id of ['apple','honey','orchardBasket'])delete legacy.inventory[id];legacy.coins=781;legacy.features.daily.claimed=['harvest'];await seed(legacy);let s=await state();assert.equal(s.coins,781);assert.deepEqual(s.plots,legacy.plots);assert.deepEqual(s.features,legacy.features);assert.ok(await page.evaluate(()=>localStorage.getItem('sunny-meadow-farm-v1-before-v04')));pass('v0.3 progress migrates with a raw backup and no changes to existing production');
  await animal(3);await sound('chicken',1.2);await animal(4);await sound('cow',2.25);pass('real chicken and cow clicks produce running, non-silent decoded audio');
  await plot(0);await sound('harvest',.32);pass('harvesting a mature crop produces the dedicated harvest sound');
