@@ -17,7 +17,14 @@ export const ART_HOOKS: readonly ArtHook[] = [
   {id: 'hook-bait-worm', file: 'hooks/bait-worm.png', fallback: 'bait'},
   {id: 'hook-bait-dough', file: 'hooks/bait-dough.png', fallback: 'bread'},
   {id: 'hook-bait-lure', file: 'hooks/bait-lure.png', fallback: 'gem'},
+  {id: 'hook-pond-empty', file: 'hooks/pond-empty.png', fallback: 'fish'},
+  {id: 'hook-fish-koi', file: 'hooks/fish-koi.png', fallback: 'goldenFish'},
+  {id: 'hook-fish-bucket', file: 'hooks/fish-bucket.png', fallback: 'barn'},
 ];
+
+export function hookStem(file: string): string {
+  return file.replace(/^hooks\//, '').replace(/\.png$/, '');
+}
 
 export function artHook(id: string, has: (key: string) => boolean): string {
   const hook = ART_HOOKS.find(entry => entry.id === id);
@@ -25,6 +32,7 @@ export function artHook(id: string, has: (key: string) => boolean): string {
   return has(hook.id) ? hook.id : hook.fallback;
 }
 
-export function fishArtHook(species: string): string {
+export function fishArtHook(species: string, raised = false): string {
+  if (raised && species === 'goldenFish') return 'hook-fish-koi';
   return `hook-fish-${species}`;
 }

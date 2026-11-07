@@ -18,6 +18,7 @@ import {worldWidth,hasRegion,collectOrchard} from './FarmProgression';
 import {REGIONS,RegionId} from './WorldData';
 import {refreshFeatures,fishingPhase,rollDaily} from './FarmFeatures';
 import {anglingPhase} from './FarmAngling';
+import {ART_HOOKS, hookStem} from './ArtHooks';
 import {PLOTS,unproject,freeGrass,project,BASE_Z,WIDTH,HEIGHT} from './SceneLayout';
 import {FarmState,Result,CropId,DecoId,SAVE_KEY,newFarm,parseSave,serialize,plant,harvest,water,readyPlot,secondsLeft,cropById,collectAnimal,buyDecoration,tendFlower,levelFor} from './FarmModel';
 import {audioMix,markShared,redeemInvite,setFarmLocale,setVolume,sharePayloadFor,toggleHud,toggleMute,touchRetention} from './FarmRetention';
@@ -41,13 +42,15 @@ export class FarmApp extends Component {
     const loaded=parseSave(raw,Date.now(),false);this.state=loaded||newFarm();settleAutomation(this.state);refreshFeatures(this.state);refreshLife(this.state);
     if(raw){try{const old=JSON.parse(raw);if(!loaded)sys.localStorage.setItem(SAVE_KEY+'-unreadable-backup',raw);else{if(!old.features)sys.localStorage.setItem(SAVE_KEY+'-before-v03',raw);if(!old.progression)sys.localStorage.setItem(SAVE_KEY+'-before-v04',raw);if(!old.life)sys.localStorage.setItem(SAVE_KEY+'-before-v05',raw);if(!old.ecology)sys.localStorage.setItem(SAVE_KEY+'-before-v06',raw);if(!old.advanced)sys.localStorage.setItem(SAVE_KEY+'-before-v07',raw);if(!old.journey)sys.localStorage.setItem(SAVE_KEY+'-before-v08',raw);}if(old.layoutVersion!==2)sys.localStorage.setItem(SAVE_KEY+'-before-v02',raw);}catch{try{sys.localStorage.setItem(SAVE_KEY+'-unreadable-backup',raw);}catch{}}}
     const p=new Painter(WIDTH,HEIGHT,this.art),loading=p.label(this.node,'晴野物语 · 正在准备农场…',800,450,24,'#5a3e2b',600,80);
+    const adopt=(key:string,texture:Texture2D)=>{texture.setFilters(Texture2D.Filter.LINEAR,Texture2D.Filter.LINEAR);const frame=new SpriteFrame();frame.texture=texture;this.art.set(key,frame);};
     const images=[{key:'cover',path:'branding/'},...Object.keys(REF_ART).map(key=>({key,path:'refart/'})),...EXPANSION_ART.map(key=>({key,path:'expansion/'})),...WORLD_ART.map(key=>({key,path:'worldart/'})),...Object.keys(NEXT_ART).map(key=>({key,path:'nextart/'})),...Object.keys(LIFE_ART).map(key=>({key,path:'lifeart/'}))].map(({key,path})=>new Promise<void>((resolve,reject)=>resources.load(path+key+'/texture',Texture2D,(err,texture)=>{
-      if(err){reject(err);return;}texture.setFilters(Texture2D.Filter.LINEAR,Texture2D.Filter.LINEAR);const frame=new SpriteFrame();frame.texture=texture;this.art.set(key,frame);resolve();
+      if(err){reject(err);return;}adopt(key,texture);resolve();
     })));
+    const hooks=ART_HOOKS.map(hook=>new Promise<void>(resolve=>resources.load('hooks/'+hookStem(hook.file)+'/texture',Texture2D,(err,texture)=>{if(!err&&texture)adopt(hook.id,texture);resolve();})));
     const fonts=(sys.isNative?['QingyeSC']:['Baloo2','Nunito']).map((name,i)=>new Promise<void>((resolve,reject)=>resources.load('fonts/'+name,Font,(err,font)=>{if(err){reject(err);return;}if(sys.isNative){Painter.displayFont=font;Painter.bodyFont=font;}else if(i===0)Painter.displayFont=font;else Painter.bodyFont=font;resolve();})));
     const sounds=SOUND_KEYS.map(key=>new Promise<void>((resolve,reject)=>resources.load('audio/'+key,AudioClip,(err,clip)=>{if(err){reject(err);return;}this.soundClips.set(key,clip);resolve();})));
     const nativeSounds=sys.isNative?['theme','ui'].map(key=>new Promise<void>((resolve,reject)=>resources.load('audio/'+key,AudioClip,(err,clip)=>{if(err){reject(err);return;}this.nativeClips.set(key,clip);resolve();}))):[];
-    Promise.all([...images,...fonts,...sounds,...nativeSounds]).then(()=>{loading.node.destroy();this.initialize(p);}).catch(err=>{loading.string='农场资源没有加载完整，请刷新重试';console.error(err);});
+    Promise.all([...images,...hooks,...fonts,...sounds,...nativeSounds]).then(()=>{loading.node.destroy();this.initialize(p);}).catch(err=>{loading.string='农场资源没有加载完整，请刷新重试';console.error(err);});
   }
   private initialize(p:Painter){
     this.world=p.node(this.node,'FarmWorld',800,450,9000,7000);const hud=p.node(this.node,'ReferenceUI');this.scene=new FarmScene(this.world,this.art,()=>this.state);    touchRetention(this.state);if(!this.state.retention.localeSet){this.state.retention.locale=detectLocale(typeof navigator!=='undefined'?navigator.language:'');this.state.retention.localeSet=true;}

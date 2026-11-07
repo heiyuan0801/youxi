@@ -46,4 +46,4 @@ iPhone 走系统分享面板，带文字和一张 SVG 卡片。网页优先用 W
 
 6 级、220 金币可以开挖鱼塘。买鱼苗放进去，投喂后等到点再捞起入库，也可以直接卖掉。起步 2 个位置，最多扩到 8 个。旧的分种养殖池还在动物面板里。
 
-鱼竿、鱼塘、鱼和鱼饵的图留给 `ArtHooks.ts` 里的 `hook-rod`、`hook-pond`、`hook-fish-*`、`hook-bait-*`。对应 PNG 还没放进资源，界面先用现成图标。以后把图载入同名 id 就会换上。
+鱼竿、鱼塘、鱼和鱼饵的图在 `assets/resources/hooks/`，由 `ArtHooks.ts` 载入到 `hook-rod`、`hook-pond`、`hook-fish-*`、`hook-bait-*`。空塘用 `pond-empty`，塘里的锦鲤用 `fish-koi`，钓获清单旁用 `fish-bucket`。缺图时仍退回原来的图标，加载失败不会挡住进游戏。

@@ -54,13 +54,14 @@ export function anglingPanel(c: FeaturePanelContext, tab: FishTab, setTab: (tab:
   }
   const action = phase === 'reel' ? () => reelCheck(s) : phase === 'bite' ? () => hookBite(s) : () => castRod(s, spot, bait);
   button(phase === 'reel' ? t('fish.reelBtn', {}, locale) : phase === 'bite' ? t('fish.lift', {}, locale) : phase === 'waiting' ? t('fish.wait', {}, locale) : t('fish.tabCast', {}, locale), w / 2, 320, Math.min(280, w - 24), 48, () => act(action), phase === 'bite' || phase === 'reel' ? '#ff7aa2' : '#57bddd', '#3493b1', 18);
-  p.label(root, s.fishery.codex.length ? s.fishery.codex.map(id => itemName(id, id, locale)).join('、') : '·', w / 2, 378, 13, SOFT, w - 16, 40);
+  p.contain(root, artHook('hook-fish-bucket', has), 36, 378, 36, 36);
+  p.label(root, s.fishery.codex.length ? s.fishery.codex.map(id => itemName(id, id, locale)).join('、') : '·', w / 2 + 16, 378, 13, SOFT, w - 70, 40);
 }
 
 function pondTab(c: FeaturePanelContext, locale: string | undefined, has: (key: string) => boolean) {
   const {p, root, w, state: s, button, slot, act} = c;
   const pond = s.fishery.pond;
-  p.contain(root, artHook('hook-pond', has), 40, 86, 56, 48);
+  p.contain(root, artHook(!pond.unlocked || !pond.stock.length ? 'hook-pond-empty' : 'hook-pond', has), 40, 86, 56, 48);
   if (!pond.unlocked) {
     p.label(root, t('pond.locked', {}, locale), w / 2, 150, 16, INK, w - 20, 32);
     button(`${t('pond.dig', {}, locale)} · ${POND_UNLOCK_COST}`, w / 2, 210, w - 40, 46, () => act(() => unlockPond(s)));
@@ -79,7 +80,8 @@ function pondTab(c: FeaturePanelContext, locale: string | undefined, has: (key: 
   pond.stock.forEach((fish, index) => {
     const y = 470 + index * 64;
     slot(w / 2, y, w, 56);
-    p.label(root, itemName(fish.species, fish.species, locale), 70, y, 14, INK, 120, 28, true, 'left');
+    p.contain(root, artHook(fishArtHook(fish.species, true), has), 28, y, 32, 28);
+    p.label(root, itemName(fish.species, fish.species, locale), 78, y, 14, INK, 110, 28, true, 'left');
     button(t('pond.feedBtn', {}, locale), w * .48, y, 70, 32, () => act(() => feedPondFish(s, fish.id)), '#ffb150', '#dc8a29', 12);
     button(t('pond.haul', {}, locale), w * .68, y, 70, 32, () => act(() => harvestPondFish(s, fish.id)));
     button(t('pond.sellBtn', {}, locale), w * .88, y, 70, 32, () => act(() => sellPondFish(s, fish.id)), '#c9bca5', '#ad9b7e', 12);

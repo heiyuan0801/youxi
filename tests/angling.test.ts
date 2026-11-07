@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {existsSync} from 'node:fs';
 import {newFarm, parseSave, serialize} from '../assets/scripts/FarmModel';
 import {ART_HOOKS, artHook} from '../assets/scripts/ArtHooks';
 import {
@@ -115,9 +116,16 @@ test('ponds unlock on a level gate, then stock, feed, harvest or sell inside cap
   assert.equal(parseSave(JSON.stringify(migrated), NOW), null);
 });
 
-test('art hooks name the rod, pond, fish and bait without requiring files yet', () => {
+test('art hooks name the rod, pond, fish and bait and the PNGs sit beside their metas', () => {
   assert.ok(ART_HOOKS.some(hook => hook.id === 'hook-rod' && hook.file === 'hooks/rod.png'));
-  assert.ok(ART_HOOKS.some(hook => hook.id === 'hook-pond'));
+  assert.ok(ART_HOOKS.some(hook => hook.id === 'hook-pond-empty'));
+  assert.ok(ART_HOOKS.some(hook => hook.id === 'hook-fish-koi'));
+  assert.ok(ART_HOOKS.some(hook => hook.id === 'hook-fish-bucket'));
+  for (const hook of ART_HOOKS) {
+    assert.equal(existsSync('assets/resources/' + hook.file), true, hook.file);
+    assert.equal(existsSync('assets/resources/' + hook.file + '.meta'), true, hook.file);
+  }
   assert.equal(artHook('hook-rod', () => false), 'fish');
-  assert.equal(artHook('hook-fish-carp', () => true), 'hook-fish-carp');
+  assert.equal(artHook('hook-fish-carp', id => id === 'hook-fish-carp'), 'hook-fish-carp');
+  assert.equal(artHook('hook-fish-koi', () => false), 'goldenFish');
 });
