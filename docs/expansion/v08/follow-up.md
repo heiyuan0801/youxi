@@ -10,11 +10,11 @@
 
 | id | 现在看到的 | 用途 |
 | --- | --- | --- |
-| `coffeeBrew` `floralTea` `sunTea` `berryTea` `estateBox` | 已放入 `hooks/` 的 AI 占位图标，可再打磨 | 酿造饮品和庄园礼盒 |
-| `cabinet` `teaTable` | 已放入 `hooks/` 的 AI 占位 | 宝石陈列柜、花茶几 |
-| `fox` | 已放入 `hooks/fox.png` 的 AI 占位 | 森林第3层林狐 |
-| `machineHarvester` `machineFeeder` | 已放入 `hooks/` 的 AI 占位，仍跟着 `machinePose` 摇 | 收菜器、喂养器 |
-| `forest-layer-01` … `12`，矿山、海滩、雪原同样 | 已放入 `hooks/`。每个地区目前只有一张地标图，12 层先共用，换独有层图时覆盖同名 png | 分层地标 |
+| `coffeeBrew` `floralTea` `sunTea` `berryTea` `estateBox` | 512×512，本地生成 | 酿造饮品和庄园礼盒 |
+| `cabinet` `teaTable` | 512×512，本地生成 | 宝石陈列柜、花茶几 |
+| `fox` | 512×512，本地生成 | 森林第3层林狐 |
+| `machineHarvester` `machineFeeder` | 512×512，本地生成，仍跟着 `machinePose` 摇 | 收菜器、喂养器 |
+| `forest-layer-01` … `12`，矿山、海滩、雪原同样 | 已换成 512×512 的分层图。每区第 1 层和第 3 层仍是同一张，其余层各不相同 | 分层地标 |
 
 ## 这一轮玩法
 
@@ -45,4 +45,4 @@
 
 ## 设备动画
 
-`machineHarvester`、`machineFeeder`、庄园礼盒、宝石柜和花茶几都已放进 `hooks/`，仍是 AI 占位。四个地区的 12 层都有图，目前每区共用一张地标。采集图标跟该地实际掉落走：矿山是铜矿、煤炭或宝石，不再一律显示木头。
+`hooks/` 里的图已换成本地生成的 512×512 版本，包括饮品、庄园礼盒、宝石柜、花茶几、林狐、两台机器，以及四个地区各 12 层。仓库里不放 1254 原图。每区第 1 层和第 3 层仍是同一张，其余层各不相同。采集图标跟该地实际掉落走：矿山是铜矿、煤炭或宝石，不再一律显示木头。
