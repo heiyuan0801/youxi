@@ -3,7 +3,7 @@ import { FURNITURE, TRAVEL_MAPS, animalSpec, furnitureGems, furnitureLevel } fro
 import { NAMES, ProductId } from './FarmModel';
 import { seasonIndex } from './FarmLife';
 import { AREA_STORIES, BREAKFAST_STEPS, COMMISSIONS, HONORS, TOWN_CHAPTERS, advanceBreakfast, advanceTown, breakfastReady, claimHonor, commissionLap, currentCommission, finishExploreQuest, finishStory, honorReady, nextExploreQuest, turnInCommission } from './FarmJourney';
-import { FLOWER_PALETTE, FlowerChoice, ICE_ROUND_MS, RACE_MS, SUMMER_LIMIT_MS, calendarEvent, claimCalendar, flowerScore, iceWindow, judgePumpkin, jumpRace, playFestivalRite, pullIceLine, pullPumpkinWeigh, pullSummerLine, raceWindow, startFestivalRite, startIceFishing, startPatrol, startPumpkinWeigh, startRace, startSummerContest, submitFlowers, summerWindow } from './FarmActivities';
+import { FLOWER_PALETTE, FlowerChoice, ICE_CONTROL_MS, ICE_ROUND_MS, RACE_MS, SUMMER_LIMIT_MS, calendarEvent, claimCalendar, claimCalendarPlay, claimDailyFestival, claimWeeklyFestival, flowerScore, iceControlWindow, iceWindow, judgePumpkin, jumpRace, playFestivalRite, practiceFlowers, pullIceLine, pullPumpkinWeigh, pullSummerLine, raceWindow, scoreDecor, startDailyWeigh, startFestivalRite, startIceControl, startIceFishing, startPatrol, startPumpkinWeigh, startRace, startSummerContest, submitDecor, submitFlowers, summerWindow } from './FarmActivities';
 import { collectFurniture, startFurniture } from './FarmRoom';
 import { buyBait } from './FarmFeatures';
 
@@ -149,7 +149,7 @@ export function carpenterPanel(c: FeaturePanelContext, lumber: () => void) {
   });
 }
 
-export function festivalGamesPanel(c: FeaturePanelContext, flowers: FlowerChoice[], choose: (i: number) => void) {
+export function festivalGamesPanel(c: FeaturePanelContext, flowers: FlowerChoice[], choose: (i: number) => void, decor: () => void) {
   const { p, root, w, state: s, button, slot, act } = c;
   const a = s.activities, season = seasonIndex(s), event = calendarEvent();
   slot(w / 2, 105, w, 191);
@@ -177,7 +177,17 @@ export function festivalGamesPanel(c: FeaturePanelContext, flowers: FlowerChoice
   if (event) {
     button(a.festivalRite ? '敲下鼓点' : '节日节奏', w * .27, 679, w * .44, 36, () => act(() => a.festivalRite ? playFestivalRite(s) : startFestivalRite(s)), '#58bde4', '#3295bd', 13);
     button(a.calendar.includes(event.key) ? '本月已完成' : '交付物资', w * .73, 679, w * .44, 36, () => act(() => claimCalendar(s)));
+    button('节日小游戏奖', w / 2, 724, w - 20, 34, () => act(() => claimCalendarPlay(s)), '#ab89d3', '#8360ac', 13);
   }
+  slot(w / 2, 900, w, 250);
+  p.label(root, '今日 · 本周 · 个人最好', w / 2, 800, 18, INK, w, 32);
+  p.label(root, `南瓜 ${a.dayScore.pumpkin}/${a.weekScore.pumpkin}/${a.lifeScore.pumpkin}  花艺 ${a.dayScore.flower}/${a.weekScore.flower}/${a.lifeScore.flower}  冰钓 ${a.dayScore.ice}/${a.weekScore.ice}/${a.lifeScore.ice}`, w / 2, 836, 12, INK, w - 16, 36);
+  p.label(root, '今日练习不消耗南瓜和花材。分数只保留更高的一次，存在本地存档。', w / 2, 868, 12, SOFT, w - 16, 32);
+  button(a.pumpkinWeigh?.daily ? '落今日的秤' : '今日称重', w * .27, 912, w * .44, 34, () => act(() => a.pumpkinWeigh?.daily ? pullPumpkinWeigh(s) : startDailyWeigh(s)), '#ab89d3', '#8360ac', 13);
+  button('今日插花', w * .73, 912, w * .44, 34, () => act(() => practiceFlowers(s, flowers)));
+  button(a.dayClaim === a.festivalDay && a.festivalDay ? '今日已领' : '领取今日', w * .27, 960, w * .44, 34, () => act(() => claimDailyFestival(s)), '#67ca70', '#3fa84d', 13);
+  button(a.weekClaim === a.festivalWeek && a.festivalWeek ? '本周已领' : '领取本周', w * .73, 960, w * .44, 34, () => act(() => claimWeeklyFestival(s)), '#ffb150', '#dc8a29', 13);
+  button('本地装饰赛', w / 2, 1004, w - 20, 36, decor, '#58bde4', '#3295bd', 14);
 }
 
 export function iceFishingPanel(c: FeaturePanelContext) {
@@ -196,15 +206,17 @@ export function iceFishingPanel(c: FeaturePanelContext) {
       status.string = `鱼饵 ${s.features.fishing.bait}份 · 可以抛竿`;
       return;
     }
-    const time = iceWindow(round, now), at = (ms: number) => left + width * Math.max(0, Math.min(1, ms / ICE_ROUND_MS));
+    const control = round.mode === 'control', time = control ? iceControlWindow(round, now) : iceWindow(round, now), at = (ms: number) => left + width * Math.max(0, Math.min(1, ms / (control ? ICE_CONTROL_MS : ICE_ROUND_MS)));
     p.path(meter, [[at(time.begin), y - 7], [at(time.end), y - 7], [at(time.end), y + 7], [at(time.begin), y + 7]], '#77c984');
     p.ellipse(meter, at(time.elapsed), y, 5, 13, '#574977');
-    status.string = time.expired ? '鱼线松了，重新抛竿吧' : `第${round.attempt + 1}/3次拉线 · 已命中${round.hits}次`;
+    status.string = time.expired ? '鱼线松了，重新抛竿吧' : `第${round.attempt + 1}/${control ? 4 : 3}次 · 已稳住${round.hits}次`;
   };
   draw();
   live(draw);
-  button('抛竿 · 1鱼饵', w / 4, 222, w / 2 - 12, 45, () => act(() => startIceFishing(s)), '#58bde4', '#3295bd', 15);
-  button('拉线', w * .75, 222, w / 2 - 12, 45, () => act(() => pullIceLine(s)), '#67ca70', '#3fa94d', 16);
+  button('抛竿 · 1鱼饵', w / 4, 222, w / 2 - 12, 42, () => act(() => startIceFishing(s)), '#58bde4', '#3295bd', 14);
+  button('拉线', w * .75, 222, w / 2 - 12, 42, () => act(() => pullIceLine(s)), '#67ca70', '#3fa94d', 16);
+  button('控线 · 1鱼饵', w / 2, 270, w - 22, 36, () => act(() => startIceControl(s)), '#ab89d3', '#8360ac', 13);
+  p.label(root, `控线要稳住4次，窗口会变窄。个人最好 ${s.activities.lifeScore.ice || '—'}分`, w / 2, 308, 12, SOFT, w - 12, 28);
   button('补充鱼饵 · 30金币', w / 2, 282, w - 22, 36, () => act(() => buyBait(s)), '#ffb150', '#dc8a29', 13);
 }
 
@@ -279,4 +291,22 @@ export function summerFishingPanel(c: FeaturePanelContext) {
   button('开始 · 1鱼饵', w / 4, 258, w / 2 - 12, 44, () => act(() => startSummerContest(s)), '#58bde4', '#3295bd', 14);
   button('收竿', w * .75, 258, w / 2 - 12, 44, () => act(() => pullSummerLine(s)), '#67ca70', '#3fa84d', 16);
   p.label(root, `赛时 ${SUMMER_LIMIT_MS / 1000} 秒 · 鱼会进入仓库，并计入夏日渔赛`, w / 2, 312, 12, SOFT, w - 12, 32);
+}
+
+export function decorPanel(c: FeaturePanelContext) {
+  const { p, root, w, state: s, button, slot, act } = c;
+  const card = scoreDecor(s), best = s.activities.decorLog.reduce((max, entry) => Math.max(max, entry.score), 0);
+  p.label(root, '本地装饰赛', w / 2, 22, 22, INK, w, 36);
+  p.label(root, '按当前小屋布局打分：摆放数量、稀有家具、左右前后的疏密、墙地是否成套。没有服务器，榜只留在这台设备上。', w / 2, 68, 13, SOFT, w - 16, 52);
+  slot(w / 2, 168, w, 110);
+  p.label(root, `${card.score}分 · ${card.theme} · 已摆${card.placed}件 · 稀有${card.rare}`, w / 2, 150, 16, INK, w - 16, 32);
+  p.label(root, `疏密 ${card.balance} · 个人最高 ${best || '—'} · 好友票 ${card.votes}（以后再接入）`, w / 2, 184, 13, SOFT, w - 16, 30);
+  button('提交当前布局', w / 2, 250, w - 20, 42, () => act(() => submitDecor(s)), '#67ca70', '#3fa84d', 15);
+  p.label(root, '最近记录', w / 2, 300, 16, INK, w, 30);
+  s.activities.decorLog.forEach((entry, i) => {
+    const y = 340 + i * 48;
+    slot(w / 2, y, w, 42);
+    p.label(root, `${entry.score}分 · ${entry.theme} · 摆${entry.placed} · 票${entry.votes}`, w / 2, y, 13, INK, w - 16, 28);
+  });
+  if (!s.activities.decorLog.length) p.label(root, '还没有提交。先在小屋摆好至少3件家具。', w / 2, 348, 13, SOFT, w - 16, 36);
 }

@@ -102,6 +102,14 @@ export class FarmScene {
       this.groundEllipse(g,b.x+.5,b.y+.5,.43,.39,'#71bdde');
       this.marker(b.x+.5,b.y+.5,'积水 · 疏通','plot',i);
     }
+    if(state.activities.stormCrop!==null){
+      const i=state.activities.stormCrop,b=PLOTS[i];
+      if(b)this.marker(b.x+.5,b.y+.2,'暴雨压倒 · 扶起','plot',i);
+    }
+    if(state.activities.scene){
+      const scene=state.activities.scene,b=scene.plot>=0?PLOTS[scene.plot]:null;
+      this.marker(b?b.x+.5:11,b?b.y-.3:8,scene.kind==='mouse'?'田鼠 · 让猫来':'货袋 · 让狗看',scene.kind==='mouse'?'scene-mouse':'scene-theft',scene.plot);
+    }
     const patrol=state.activities.patrol;
     if(patrol)PATROL_SPOTS.forEach((spot,i)=>{
       if(patrol.tried.includes(i))return;

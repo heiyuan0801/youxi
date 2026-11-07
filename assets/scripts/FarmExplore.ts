@@ -3,6 +3,7 @@ import {TRAVEL_MAPS,TravelId} from './FarmCatalog';
 import {ExploreEvent,ExploreRun} from './FarmAdvanced';
 import {farmLevel,discover} from './FarmFeatures';
 import {isAdult,refreshLife} from './FarmLife';
+import {grantPuzzleRelic} from './FarmActivities';
 export const DEPTH_LIMIT=12;
 type FieldMap=Exclude<TravelId,'village'>;
 const CLASSIC:{name:string;kind:'treasure'|'bridge'|'nest'|'spring';icon:string}[]=[
@@ -55,6 +56,20 @@ export function levelTheme(map:TravelId,depth=1):LevelTheme{
  const index=Math.min(DEPTH_LIMIT,Math.max(1,depth))-1,band=BANDS[map][Math.floor(index/4)],shift=(index%4)*7;
  return {id:`${map}-layer-${String(index+1).padStart(2,'0')}`,art:`${map}-layer-${String(index+1).padStart(2,'0')}`,ground:shade(band.ground,shift),tiles:shade(band.tiles,shift),title:LAYER_TITLES[map][index],icon:band.icon};
 }
+const LAYER_STORY:Record<FieldMap,string[]>={
+ forest:['护林人请你看看倒了的路牌。','萤火只照向其中一条岔路。','古树下有人留了干粮。','苔桥要靠谜题才能过去。','松果坡能听见啄木鸟。','雾里的木屋门是虚掩的。','溪水把上一层的脚印冲淡了。','鸟巢层的幼鸟还记得饲料。','藤蔓廊分成左右两股。','静湖对岸就是祭坛的灯光。','祭坛要一份真心，不是更多木头。','林心终于把路牌上的名字补全。'],
+ mine:['浅层还听得见地面的风。','支架上刻着上一队人的记号。','铜铃声提醒矿车还在前方。','蓝晶洞室的谜题决定能不能带走宝石。','矿车坡比看起来更陡。','落石厅要绕开，不要硬挖。','煤层的灯只能亮一小会儿。','地下水反射着洞顶的矿脉。','幽光矿脉只给帮过忙的人让路。','晶簇房很安静，适合数一数背包。','深井的风是往上走的。','矿心把第一块铜矿还给你看。'],
+ beach:['浅湾的贝壳还带着潮水。','潮线每天只停一次。','漂流木可以做标记，不要全带走。','潮汐滩涂的谜题藏在贝壳颜色里。','礁石缝里有昨夜的鱼。','贝壳湾的人在等你归还海贝。','暖滩适合歇一下再往深处走。','落日把礁岸照成一条线。','灯塔影下能看见下一层的潮。','夜潮会改写你刚才的选择。','珊瑚阶很滑，一次只走一步。','海平线那头没有新的地图，只有你已经做的选择。'],
+ snow:['薄雪盖不住冰湖的裂纹。','脚印坡说明有人刚走过。','冰桥要听声音，不要看厚度。','晶霜坡道的谜题在冰棱上。','雾凇林里极光会忽然亮一下。','暖棚是这一路唯一不用赶的地方。','风口会把没系好的背包吹开。','极光山谷比第3层的裂隙更安静。','冰窟里适合练习控线，而不是多挖。','星雪台能看见来时的脚印。','寂静岭不再出新的岔路。','极光之心记住你解开的每一道谜。'],
+};
+const DEEP_NOTE:Record<FieldMap,string>={
+ forest:' 再往深处，林狐会把你带回没走过的一侧。',
+ mine:' 再往深处，晶脉只肯把宝石让给撑住过裂缝的人。',
+ beach:' 再往深处，海贝会按你留下的鱼决定下一潮。',
+ snow:' 再往深处，极光会把控线的手感留给冰窟。',
+};
+export function layerStory(map:TravelId,depth=1){if(map==='village')return '工匠小镇今天没有野外故事。';const lines=LAYER_STORY[map as FieldMap];return lines[Math.min(lines.length,Math.max(1,depth))-1];}
+export function eventCopy(event:Exclude<ExploreEvent,'puzzle'>,map:TravelId,depth:number){const base=EVENT_TEXT[event];const extra=depth>=6&&map!=='village'?DEEP_NOTE[map as FieldMap]:'';return {...base,detail:base.detail+extra};}
 export function puzzleFor(run:ExploreRun){const bank=PUZZLES[run.map as FieldMap];const answer=(Math.imul(run.seed+run.depth*17,1664525)>>>0)%bank.choices.length;return {title:bank.title,hint:bank.hint(answer),choices:bank.choices,answer,icon:bank.icon};}
 function eventRoute(r:ExploreRun){
  if(r.depth%4===0){const puzzle=PUZZLES[r.map as FieldMap];return {name:puzzle.title,kind:'puzzle' as const,icon:puzzle.icon,cost:1};}
@@ -84,7 +99,7 @@ export function takeRoute(s:FarmState,index:number):Result{
 }
 export function resolveExploreEvent(s:FarmState,choice:number):Result{
  const r=s.advanced.explore.run;if(!r?.event)return fail('没有待处理事件');
- if(r.event==='puzzle'){const puzzle=puzzleFor(r);if(choice===puzzle.choices.length){if(r.stamina<1)return fail('绕开谜题需要1探索体力，也可以直接返程');r.stamina--;r.bag.wood=(r.bag.wood||0)+1;markSeen(s);r.event=null;r.step++;return {ok:true,message:'绕开谜题 · 收集1木材'};}if(!puzzle.choices[choice])return fail('没有这个选项');if(choice!==puzzle.answer){if(r.stamina<1)return fail('答错了，再试需要1探索体力');r.stamina--;return {ok:true,message:'不是这一处，再看看提示'};}r.bag.gem=(r.bag.gem||0)+1;r.stamina=Math.min(12,r.stamina+2);markSeen(s);r.event=null;r.step++;return {ok:true,message:'谜题解开 · 获得宝石与2探索体力'};}
+ if(r.event==='puzzle'){const puzzle=puzzleFor(r);if(choice===puzzle.choices.length){if(r.stamina<1)return fail('绕开谜题需要1探索体力，也可以直接返程');r.stamina--;r.bag.wood=(r.bag.wood||0)+1;markSeen(s);r.event=null;r.step++;return {ok:true,message:'绕开谜题 · 收集1木材'};}if(!puzzle.choices[choice])return fail('没有这个选项');if(choice!==puzzle.answer){if(r.stamina<1)return fail('答错了，再试需要1探索体力');r.stamina--;return {ok:true,message:'不是这一处，再看看提示'};}r.bag.gem=(r.bag.gem||0)+1;r.stamina=Math.min(12,r.stamina+2);markSeen(s);const relic=grantPuzzleRelic(s,r.map,r.depth);r.event=null;r.step++;return {ok:true,message:relic?`谜题解开 · 获得宝石与2探索体力 · ${relic}`:'谜题解开 · 获得宝石与2探索体力'};}
  if(![0,1].includes(choice))return fail('没有待处理事件');const help=HELP[r.event];if(choice===0){if(s.inventory[help.item]<1)return fail(`需要1份${help.name}`);s.inventory[help.item]--;r.bag.gem=(r.bag.gem||0)+1;r.stamina=Math.min(12,r.stamina+2);}else{if(r.stamina<1)return fail('绕行需要1探索体力，也可以直接返程');r.stamina--;r.bag.wood=(r.bag.wood||0)+1;}markSeen(s);r.event=null;r.step++;return {ok:true,message:choice===0?'帮助成功 · 获得宝石与2探索体力':'沿安全小径绕行 · 收集1木材'};
 }
 export function descendExplore(s:FarmState):Result{

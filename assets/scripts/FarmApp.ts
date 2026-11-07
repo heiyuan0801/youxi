@@ -1,5 +1,5 @@
 import {nativeHaptic,exportNativeSave,beginNativeSaveImport,takeNativeSaveImport} from './NativePlatform';
-import {compostPumpkin,recordStorm,repairStormPlot,searchPatrol,PATROL_SPOTS} from './FarmActivities';
+import {compostPumpkin,damageStorm,recordStorm,repairStormPlot,resolveScene,rollScene,searchPatrol,PATROL_SPOTS} from './FarmActivities';
 import {settleAutomation} from './FarmAutomation';
 import {takeRoute} from './FarmExplore';
 import {_decorator,Component,Node,Texture2D,SpriteFrame,resources,view,ResolutionPolicy,profiler,UITransform,EventTouch,EventMouse,Vec3,sys,input,Input,KeyCode,EventKeyboard,Font,director,Director,game,Game,native,AudioClip} from 'cc';
@@ -100,6 +100,7 @@ export class FarmApp extends Component {
       else{this.scene.burst([at[0],at[1]-35],'study_star',3);this.ui.toast(`${animalSpec(a.type).name} · ${animalSpec(a.type).role} · 还需${Math.ceil((a.readyAt-Date.now())/1000)}秒`);}
       return;
     }
+    if(hit.type==='scene-mouse'||hit.type==='scene-theft'){this.act(()=>resolveScene(this.state,true),at);return;}
     if(hit.type==='patrol'){
       const spot=Number(hit.id),patrol=this.state.activities.patrol,found=patrol?.spot===spot;
       const result=this.act(()=>searchPatrol(this.state,spot),at);
@@ -224,8 +225,8 @@ export class FarmApp extends Component {
         }
       }
       const changed=refreshFeatures(this.state)||false,lifeChanged=refreshLife(this.state);
-      const storm=recordStorm(this.state);
-      if(changed||lifeChanged||storm)this.save();
+      const storm=recordStorm(this.state),strike=damageStorm(this.state),scene=rollScene(this.state);
+      if(changed||lifeChanged||storm||strike||scene)this.save();
       const automation=this.state.life.automation;
       if(!this.state.advanced.auto.enabled&&!this.pointer&&!this.ui.panel&&this.ui.levelUp===null&&this.state.life.activeMap==='home'
         &&Date.now()-automation.lastAt>=5000&&(automation.harvest||automation.feed)){
@@ -239,7 +240,7 @@ export class FarmApp extends Component {
           return{ok:true,message:`小助手收获${ready.length}块田，喂养${fed}位伙伴`};
         });
       }
-      if(this.ui.panel!=='home'&&(changed||lifeChanged||storm||this.currentSignature()!==this.signature))this.refresh();
+      if(this.ui.panel!=='home'&&(changed||lifeChanged||storm||strike||scene||this.currentSignature()!==this.signature))this.refresh();
       else if(this.dirty&&!this.pointer)this.flush();
       if(!livePanel)this.ui.tick();
     }

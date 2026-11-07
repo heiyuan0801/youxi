@@ -15,9 +15,9 @@ import {animalsPanel,travelPanel,homePanel,seasonPanel} from './LifePanels';
 import {claimLevelReward,unclaimedLevels,animalCapacity} from './FarmProgression';
 import {worldPanel,levelsPanel,levelUpCard} from './ProgressionPanels';
 import {RegionId} from './WorldData';
-import { FLOWER_PALETTE, FlowerChoice, repairStormPlot } from './FarmActivities';
-import { areaStoryPanel, breakfastPanel, carpenterPanel, festivalGamesPanel, honorsPanel, iceFishingPanel, patrolPanel, racePanel, summerFishingPanel, townPanel } from './JourneyPanels';
-export type Panel='warehouse'|'orders'|'shop'|'tasks'|'workshop'|'fishing'|'world'|'levels'|'animals'|'travel'|'home'|'seasons'|'genetics'|'explore'|'automation'|'offline'|'ponds'|'growth'|'events'|'settings'|'privacy'|'confirm-reset'|'breakfast'|'story'|'honors'|'carpenter'|'festival-games'|'ice-fishing'|'patrol'|'town'|'race'|'summer-fishing'|'restore-save'|null;
+import { FLOWER_PALETTE, FlowerChoice, repairStormCrop, repairStormDeco, repairStormPlot, resolveScene } from './FarmActivities';
+import { areaStoryPanel, breakfastPanel, carpenterPanel, decorPanel, festivalGamesPanel, honorsPanel, iceFishingPanel, patrolPanel, racePanel, summerFishingPanel, townPanel } from './JourneyPanels';
+export type Panel='warehouse'|'orders'|'shop'|'tasks'|'workshop'|'fishing'|'world'|'levels'|'animals'|'travel'|'home'|'seasons'|'genetics'|'explore'|'automation'|'offline'|'ponds'|'growth'|'events'|'settings'|'privacy'|'confirm-reset'|'breakfast'|'story'|'honors'|'carpenter'|'festival-games'|'ice-fishing'|'patrol'|'town'|'race'|'summer-fishing'|'decor'|'restore-save'|null;
 export interface UICallbacks {act:(f:()=>Result)=>void;pick:(id:CropId)=>void;place:(id:DecoId)=>void;zoom:(factor:number)=>void;focus:(id:RegionId|'home')=>void;travel:(id:MapId)=>void;settings:(key:'sound'|'music'|'haptics')=>void;exportSave:()=>void;chooseSave:()=>void;restoreBackup:()=>void;confirmSave:()=>void;reset:()=>void;start:()=>void;}
 const PALE='#fffcf4',LINE='#f2d8ac',INK='#5a3e2b',SOFT='#997455';
 export class FarmUI {
@@ -64,6 +64,10 @@ export class FarmUI {
       this.button(p,this.root,state.journey.breakfast<5?'农场主线':'主线续章',w/2-14,w<650?92:sys.isNative?44:32,104,34,()=>this.open(state.journey.breakfast<5?'breakfast':'town'),'#ffb150','#dc8a29',13);
       if(state.animals.some(a=>a.type==='cat'||a.type==='dog'))this.button(p,this.root,state.activities.patrol?'巡院线索':'宠物巡院',80,256,118,35,()=>this.open('patrol'),'#ab89d3','#8360ac',13);
       if(state.activities.stormPlot!==null)this.button(p,this.root,'疏通积水',209,256,118,35,()=>this.cb.act(()=>repairStormPlot(state)),'#58bde4','#3295bd',13);
+      if(state.activities.stormCrop!==null)this.button(p,this.root,'扶起作物',80,300,118,35,()=>this.cb.act(()=>repairStormCrop(state)),'#67ca70','#3fa84d',13);
+      if(state.activities.stormDeco!==null)this.button(p,this.root,'扶正装饰',209,300,118,35,()=>this.cb.act(()=>repairStormDeco(state)),'#ffb150','#dc8a29',13);
+      if(state.activities.scene){this.button(p,this.root,state.activities.scene.kind==='mouse'?'猫抓田鼠':'狗看货袋',80,344,118,35,()=>this.cb.act(()=>resolveScene(state,true)),'#ab89d3','#8360ac',12);this.button(p,this.root,'先不管',209,344,118,35,()=>this.cb.act(()=>resolveScene(state,false)),'#cfbfa1','#ad9875',13);}
+      if(seasonIndex(state)%4===3)this.button(p,this.root,'冰窟控线',w-115,sys.isNative?310:298,178,33,()=>this.open('ice-fishing'),'#58bde4','#3295bd',13);
     }
     this.button(p,this.root,'自动农场',w-115,sys.isNative?224:212,178,35,()=>this.open('automation'),'#ab89d3','#8360ac',13);
     if(state.advanced.auto.report)this.button(p,this.root,state.advanced.auto.report.unread?'离线收获 · 查看':'离线报告',w-115,sys.isNative?266:254,178,33,()=>this.open('offline'),'#ffb150','#dc8a29',13);
@@ -122,14 +126,14 @@ export class FarmUI {
   }
   private renderPanel(panel:Exclude<Panel,null>){
     const state=this.state();
-    if(panel==='breakfast'||panel==='story'||panel==='honors'||panel==='carpenter'||panel==='festival-games'||panel==='ice-fishing'||panel==='patrol'||panel==='town'||panel==='race'||panel==='summer-fishing'){
+    if(panel==='breakfast'||panel==='story'||panel==='honors'||panel==='carpenter'||panel==='festival-games'||panel==='ice-fishing'||panel==='patrol'||panel==='town'||panel==='race'||panel==='summer-fishing'||panel==='decor'){
       const spec={
         breakfast:['农场主线','bread',515],story:['地区故事','signpost',640],honors:['晴野荣誉','star',440],
-        carpenter:['家具制作','planks',860],'festival-games':['四季比赛','sunflower',735],
-        'ice-fishing':['冰湖垂钓','fish',310],patrol:['宠物巡院','dog',330],town:['主线续章','bread',520],
-        race:['障碍赛','dog',420], 'summer-fishing':['夏日渔赛','fish',360],
+        carpenter:['家具制作','planks',860],'festival-games':['四季比赛','sunflower',1040],
+        'ice-fishing':['冰湖垂钓','fish',360],patrol:['宠物巡院','dog',330],town:['主线续章','bread',520],
+        race:['障碍赛','dog',420], 'summer-fishing':['夏日渔赛','fish',360], decor:['本地装饰赛','farmhouse',420],
       } as const;
-      const [title,icon,base]=spec[panel],height=panel==='race'?340+state.animals.length*52:base,c=this.featureContext(this.modal(title,icon,610,height+70,height));
+      const [title,icon,base]=spec[panel],height=panel==='race'?340+state.animals.length*52:panel==='decor'?380+state.activities.decorLog.length*48:base,c=this.featureContext(this.modal(title,icon,610,height+70,height));
       if(panel==='breakfast')breakfastPanel(c,target=>{
         if(target==='farm')this.close();
         else if(target==='honors')this.open('honors');
@@ -142,7 +146,8 @@ export class FarmUI {
       else if(panel==='festival-games')festivalGamesPanel(c,this.flowers,i=>{
         const next=(FLOWER_PALETTE.findIndex(f=>f.id===this.flowers[i])+1)%FLOWER_PALETTE.length;
         this.flowers[i]=FLOWER_PALETTE[next].id;this.render();
-      });
+      },()=>this.open('decor'));
+      else if(panel==='decor')decorPanel(c);
       else if(panel==='ice-fishing')iceFishingPanel(c);
       else if(panel==='race')racePanel(c);
       else if(panel==='summer-fishing')summerFishingPanel(c);
@@ -153,7 +158,7 @@ export class FarmUI {
       const height=panel==='genetics'?270+state.animals.length*196:panel==='explore'?720:panel==='automation'?500+RECIPES.length*61:panel==='home'?1450+state.advanced.room.items.length*66:500,title={genetics:'基因育种',explore:'分层探索',automation:'自动农场',offline:'离线收获',home:'我的小屋'}[panel],m=this.modal(title,panel==='genetics'?'goldenSheep':panel==='explore'?'mineEntrance':panel==='home'?'farmhouse':'harvester',700,height+70,height),c=this.featureContext(m);
       if(panel==='genetics')geneticsPanel(c,this.parents,this.geneFocus,id=>{this.parents=this.parents.includes(id)?this.parents.filter(v=>v!==id):[...this.parents.slice(-1),id];this.render();},t=>{this.geneFocus=t;this.render();});
       else if(panel==='explore')explorePanel(c,this.companion,()=>{const ids=[null,...state.animals.map(a=>a.id)];this.companion=ids[(ids.indexOf(this.companion)+1)%ids.length];this.render();},()=>{this.panel=null;this.cb.travel('home');});
-      else if(panel==='automation')automationPanel(c);else if(panel==='offline')offlinePanel(c,()=>this.close());else roomPanel(c,this.roomSelected,id=>{this.roomSelected=id;this.render();},this.p.h<500,()=>this.open('carpenter'));return;
+      else if(panel==='automation')automationPanel(c);else if(panel==='offline')offlinePanel(c,()=>this.close());else roomPanel(c,this.roomSelected,id=>{this.roomSelected=id;this.render();},this.p.h<500,()=>this.open('carpenter'),()=>this.open('decor'));return;
     }
     if(panel==='ponds'||panel==='growth'||panel==='events'){const height=panel==='ponds'?1120:panel==='growth'?220+state.animals.length*177:880,m=this.modal(panel==='ponds'?'水产养殖':panel==='growth'?'训练与比赛':'四季活动',panel==='ponds'?'carp':panel==='growth'?'star':'whitePeacock',660,height+70,height),c=this.featureContext(m);if(panel==='ponds')pondPanel(c);else if(panel==='growth')growthPanel(c,()=>this.open('race'));else eventsPanel(c,()=>this.open('festival-games'));return;}
     if(['animals','travel','seasons'].includes(panel)){

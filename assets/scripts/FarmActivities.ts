@@ -17,7 +17,13 @@ interface IceRound {
   attempt: number;
   hits: number;
   startedAt: number;
+  mode: 'lake' | 'control';
 }
+
+export interface FestivalScores { pumpkin: number; flower: number; ice: number }
+export interface DecorEntry { at: number; score: number; theme: string; placed: number; rare: number; balance: number; votes: number }
+export interface SceneEvent { kind: 'mouse' | 'theft'; plot: number; at: number; delay: number }
+const blankScores = (): FestivalScores => ({ pumpkin: 0, flower: 0, ice: 0 });
 
 interface SummerRound {
   serial: number;
@@ -58,10 +64,26 @@ export interface FarmActivities {
   raceSerial: number;
   raceSeason: number;
   raceAt: number;
-  pumpkinWeigh: { startedAt: number } | null;
+  pumpkinWeigh: { startedAt: number; daily?: boolean } | null;
   pumpkinWeighBonus: number;
   festivalRite: { startedAt: number } | null;
   festivalRiteBonus: number;
+  festivalDay: string;
+  festivalWeek: string;
+  dayScore: FestivalScores;
+  weekScore: FestivalScores;
+  lifeScore: FestivalScores;
+  dayClaim: string;
+  weekClaim: string;
+  calendarPlay: string[];
+  relics: string[];
+  decorLog: DecorEntry[];
+  scene: SceneEvent | null;
+  sceneAt: number;
+  stormCrop: number | null;
+  stormDelay: number;
+  stormDeco: number | null;
+  stormWindow: number;
 }
 
 export function newActivities(): FarmActivities {
@@ -71,6 +93,9 @@ export function newActivities(): FarmActivities {
     stormSeason: -1, stormPlot: null, calendar: [], reserve: 0, furniture: null,
     summer: null, summerSerial: 0, summerScore: 0, race: null, raceSerial: 0, raceSeason: -1, raceAt: 0,
     pumpkinWeigh: null, pumpkinWeighBonus: 0, festivalRite: null, festivalRiteBonus: 0,
+    festivalDay: '', festivalWeek: '', dayScore: blankScores(), weekScore: blankScores(), lifeScore: blankScores(),
+    dayClaim: '', weekClaim: '', calendarPlay: [], relics: [], decorLog: [],
+    scene: null, sceneAt: 0, stormCrop: null, stormDelay: 0, stormDeco: null, stormWindow: -1,
   };
 }
 
@@ -86,15 +111,34 @@ export function migrateActivities(a: FarmActivities) {
   if (!Number.isInteger(a.pumpkinWeighBonus)) a.pumpkinWeighBonus = 0;
   if (a.festivalRite === undefined) a.festivalRite = null;
   if (!Number.isInteger(a.festivalRiteBonus)) a.festivalRiteBonus = 0;
+  if (a.ice && !a.ice.mode) a.ice.mode = 'lake';
+  if (typeof a.festivalDay !== 'string') a.festivalDay = '';
+  if (typeof a.festivalWeek !== 'string') a.festivalWeek = '';
+  if (!a.dayScore) a.dayScore = blankScores();
+  if (!a.weekScore) a.weekScore = blankScores();
+  if (!a.lifeScore) a.lifeScore = blankScores();
+  if (typeof a.dayClaim !== 'string') a.dayClaim = '';
+  if (typeof a.weekClaim !== 'string') a.weekClaim = '';
+  if (!Array.isArray(a.calendarPlay)) a.calendarPlay = [];
+  if (!Array.isArray(a.relics)) a.relics = [];
+  if (!Array.isArray(a.decorLog)) a.decorLog = [];
+  if (a.scene === undefined) a.scene = null;
+  if (typeof a.sceneAt !== 'number') a.sceneAt = 0;
+  if (a.stormCrop === undefined) a.stormCrop = null;
+  if (!Number.isInteger(a.stormDelay)) a.stormDelay = 0;
+  if (a.stormDeco === undefined) a.stormDeco = null;
+  if (!Number.isInteger(a.stormWindow)) a.stormWindow = -1;
 }
 
+const scoreOk = (n: FestivalScores) => !!n && [n.pumpkin, n.flower, n.ice].every(v => Number.isSafeInteger(v) && v >= 0 && v <= 400);
 export function validActivities(a: FarmActivities, plots: Plot[]): boolean {
   const int = (n: number, min = 0, max = 1e9) => Number.isSafeInteger(n) && n >= min && n <= max;
   const time = (n: number) => Number.isFinite(n) && n >= 0 && n <= 1e15;
   return !!a && int(a.pumpkin, 0, 150) && int(a.pumpkinRecord, 0, 150)
     && int(a.flowerRecord, 0, 150) && int(a.pumpkinSeason, -1) && int(a.flowerSeason, -1)
     && int(a.iceSerial) && (a.ice === null || !!a.ice && a.ice.serial === a.iceSerial
-      && int(a.ice.serial, 1) && int(a.ice.attempt, 0, 2) && int(a.ice.hits, 0, a.ice.attempt) && time(a.ice.startedAt))
+      && int(a.ice.serial, 1) && int(a.ice.attempt, 0, 3) && int(a.ice.hits, 0, a.ice.attempt) && time(a.ice.startedAt)
+      && (a.ice.mode === 'lake' || a.ice.mode === 'control'))
     && !!a.patrolAt && time(a.patrolAt.cat) && time(a.patrolAt.dog) && int(a.patrolCount)
     && (a.patrol === null || !!a.patrol && ['cat', 'dog'].includes(a.patrol.kind)
       && int(a.patrol.spot, 0, PATROL_SPOTS.length - 1) && Array.isArray(a.patrol.tried)
@@ -111,8 +155,20 @@ export function validActivities(a: FarmActivities, plots: Plot[]): boolean {
     && int(a.raceSerial) && int(a.raceSeason, -1) && time(a.raceAt)
     && (a.race === null || !!a.race && a.race.serial === a.raceSerial && int(a.race.serial, 1)
       && int(a.race.animalId, 1) && int(a.race.gate, 0, 3) && int(a.race.hits, 0, a.race.gate) && time(a.race.gateAt))
-    && int(a.pumpkinWeighBonus, 0, 30) && (a.pumpkinWeigh === null || !!a.pumpkinWeigh && time(a.pumpkinWeigh.startedAt))
-    && int(a.festivalRiteBonus, 0, 200) && (a.festivalRite === null || !!a.festivalRite && time(a.festivalRite.startedAt));
+    && int(a.pumpkinWeighBonus, 0, 30) && (a.pumpkinWeigh === null || !!a.pumpkinWeigh && time(a.pumpkinWeigh.startedAt) && (a.pumpkinWeigh.daily === undefined || typeof a.pumpkinWeigh.daily === 'boolean'))
+    && int(a.festivalRiteBonus, 0, 200) && (a.festivalRite === null || !!a.festivalRite && time(a.festivalRite.startedAt))
+    && /^\d{4}-\d{2}-\d{2}$|^$/.test(a.festivalDay) && /^\d{4}-W\d{2}$|^$/.test(a.festivalWeek)
+    && /^\d{4}-\d{2}-\d{2}$|^$/.test(a.dayClaim) && /^\d{4}-W\d{2}$|^$/.test(a.weekClaim)
+    && scoreOk(a.dayScore) && scoreOk(a.weekScore) && scoreOk(a.lifeScore)
+    && Array.isArray(a.calendarPlay) && new Set(a.calendarPlay).size === a.calendarPlay.length && a.calendarPlay.length <= 128
+    && a.calendarPlay.every(key => typeof key === 'string' && /^\d{4}-(spring|summer|autumn|winter)$/.test(key))
+    && Array.isArray(a.relics) && new Set(a.relics).size === a.relics.length && a.relics.length <= 12
+    && a.relics.every(id => /^(forest|mine|beach|snow)-(4|8|12)$/.test(id))
+    && Array.isArray(a.decorLog) && a.decorLog.length <= 8
+    && a.decorLog.every(e => !!e && time(e.at) && int(e.score, 0, 500) && int(e.placed, 0, 40) && int(e.rare, 0, 40) && int(e.balance, 0, 40) && int(e.votes, 0, 1e6) && typeof e.theme === 'string' && e.theme.length <= 8)
+    && (a.scene === null || !!a.scene && (a.scene.kind === 'mouse' || a.scene.kind === 'theft') && int(a.scene.plot, -1, plots.length - 1) && time(a.scene.at) && int(a.scene.delay, 0, 120000))
+    && time(a.sceneAt) && (a.stormCrop === null || int(a.stormCrop, 0, plots.length - 1)) && int(a.stormDelay, 0, 120000)
+    && (a.stormDeco === null || int(a.stormDeco, 0, 39)) && int(a.stormWindow, -1);
 }
 
 const fail = (message: string): Result => ({ ok: false, message });
@@ -145,6 +201,7 @@ export function judgePumpkin(s: FarmState, now = Date.now()): Result {
   s.inventory[item]--;
   a.pumpkinSeason = season;
   a.pumpkinRecord = Math.max(a.pumpkinRecord, score);
+  recordBoard(s, 'pumpkin', score, now);
   a.pumpkin = 0;
   a.pumpkinWeighBonus = 0;
   a.pumpkinWeigh = null;
@@ -177,6 +234,7 @@ export function submitFlowers(s: FarmState, choices: readonly FlowerChoice[], no
   for (const id of choices) s.inventory[id]--;
   a.flowerSeason = season;
   a.flowerRecord = Math.max(a.flowerRecord, score);
+  recordBoard(s, 'flower', score, now);
   s.coins += score * 3;
   s.stars += score >= 100 ? 4 : 2;
   return ok(`花艺作品获${score}分 · ${score * 3}金币已入账`);
@@ -196,13 +254,34 @@ export function startIceFishing(s: FarmState, now = Date.now()): Result {
   refreshFeatures(s, now);
   if (s.features.fishing.bait < 1) return fail('鱼饵不足，可到钓鱼面板购买');
   s.features.fishing.bait--;
-  s.activities.ice = { serial: ++s.activities.iceSerial, attempt: 0, hits: 0, startedAt: now };
+  s.activities.ice = { serial: ++s.activities.iceSerial, attempt: 0, hits: 0, startedAt: now, mode: 'lake' };
   return ok('冰湖抛竿 · 指针进入绿色区时拉线');
+}
+
+export const ICE_CONTROL_MS = 4800;
+export function iceControlWindow(round: IceRound, now: number) {
+  const elapsed = now - round.startedAt;
+  const begin = 700 + ((round.serial * 113 + round.attempt * 197) % 400);
+  const end = begin + 900 - round.attempt * 140;
+  return { elapsed, begin, end, expired: elapsed > ICE_CONTROL_MS };
+}
+
+export function startIceControl(s: FarmState, now = Date.now()): Result {
+  const winter = seasonIndex(s, now) % 4 === 3;
+  if (s.life.activeMap !== 'snow' && !(s.life.activeMap === 'home' && winter)) return fail('到极光雪原，或在冬季的主农场冰窟控线');
+  if (s.activities.ice && !(s.activities.ice.mode === 'control' ? iceControlWindow(s.activities.ice, now) : iceWindow(s.activities.ice, now)).expired) return fail('这一竿还没收完');
+  refreshFeatures(s, now);
+  if (s.features.fishing.bait < 1) return fail('鱼饵不足，可到钓鱼面板购买');
+  s.features.fishing.bait--;
+  s.activities.ice = { serial: ++s.activities.iceSerial, attempt: 0, hits: 0, startedAt: now, mode: 'control' };
+  return ok('控线开始 · 四次把指针留在越来越窄的绿色区');
 }
 
 export function pullIceLine(s: FarmState, now = Date.now()): Result {
   const a = s.activities, round = a.ice;
-  if (s.life.activeMap !== 'snow' || !round) return fail('请先在冰湖抛竿');
+  if (!round) return fail('请先在冰湖抛竿');
+  if (round.mode === 'control') return pullIceControl(s, now);
+  if (s.life.activeMap !== 'snow') return fail('请先在冰湖抛竿');
   const timing = iceWindow(round, now);
   if (timing.expired) {
     a.ice = null;
@@ -215,6 +294,7 @@ export function pullIceLine(s: FarmState, now = Date.now()): Result {
     return ok(`第${round.attempt}次拉线完成 · 已命中${round.hits}次`);
   }
   a.ice = null;
+  recordBoard(s, 'ice', round.hits * 30, now);
   if (round.hits < 2) return ok('命中不足2次，鱼游走啦');
   const item: ProductId = round.hits === 3 ? 'goldenFish' : 'fish';
   rollDaily(s, now);
@@ -223,6 +303,32 @@ export function pullIceLine(s: FarmState, now = Date.now()): Result {
   s.xp += round.hits === 3 ? 20 : 10;
   discover(s, item);
   return { ok: true, item, message: round.hits === 3 ? '三次拉线全中 · 钓到金色锦鲤' : '冰钓成功 · 溪流鱼已入库' };
+}
+
+function pullIceControl(s: FarmState, now: number): Result {
+  const round = s.activities.ice!;
+  const timing = iceControlWindow(round, now);
+  if (timing.expired) {
+    s.activities.ice = null;
+    recordBoard(s, 'ice', round.hits * 25, now);
+    return ok('线绷断了，鱼已经钻回冰层');
+  }
+  if (timing.elapsed >= timing.begin && timing.elapsed <= timing.end) round.hits++;
+  round.attempt++;
+  if (round.attempt < 4) {
+    round.startedAt = now;
+    return ok(`第${round.attempt}次控线完成 · 已稳住${round.hits}次`);
+  }
+  s.activities.ice = null;
+  const noted = recordBoard(s, 'ice', round.hits * 25, now);
+  if (round.hits < 3) return ok(`控线不稳，只稳住${round.hits}次 · 今日最好 ${noted.best}分`);
+  const item: ProductId = round.hits === 4 ? 'goldenFish' : 'fish';
+  rollDaily(s, now);
+  s.inventory[item]++;
+  s.features.stats.catches++;
+  s.xp += round.hits === 4 ? 24 : 12;
+  discover(s, item);
+  return { ok: true, item, message: round.hits === 4 ? '四次控线全中 · 钓到金色锦鲤' : '控线成功 · 溪流鱼已入库' };
 }
 
 export function startPatrol(s: FarmState, kind: PatrolKind, now = Date.now()): Result {
@@ -318,8 +424,16 @@ export function pullPumpkinWeigh(s: FarmState, now = Date.now()): Result {
   if (!round) return fail('请先开始称重');
   const timing = weighWindow(round, now);
   s.activities.pumpkinWeigh = null;
-  if (!timing.expired && timing.elapsed >= timing.begin && timing.elapsed <= timing.end) {
+  const hit = !timing.expired && timing.elapsed >= timing.begin && timing.elapsed <= timing.end;
+  if (round.daily) {
+    const score = hit ? 75 : 20;
+    const noted = recordBoard(s, 'pumpkin', score, now);
+    if (noted.improved) s.coins += hit ? 35 : 8;
+    return ok(hit ? `今日称重 ${score}分 · 个人最好 ${noted.best}` : `秤晃过去了 · ${score}分已记入今日`);
+  }
+  if (hit) {
     s.activities.pumpkinWeighBonus = 15;
+    recordBoard(s, 'pumpkin', s.activities.pumpkin + 15, now);
     return ok('落秤正好 · 评选额外 +15 分');
   }
   s.activities.pumpkinWeighBonus = 0;
@@ -440,4 +554,216 @@ export function jumpRace(s: FarmState, now = Date.now()): Result {
   s.coins += tier * 150;
   s.stars += tier;
   return ok(`障碍赛完赛 · 命中${round.hits}/4 · ${tier === 3 ? '金牌' : '银牌'} · ${tier * 150}金币`);
+}
+
+export function festivalKeys(now = Date.now()) {
+  const date = new Date(now + 8 * 3600000);
+  const y = date.getUTCFullYear(), m = date.getUTCMonth(), d = date.getUTCDate();
+  const day = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const utc = Date.UTC(y, m, d);
+  const tmp = new Date(utc);
+  tmp.setUTCDate(tmp.getUTCDate() - ((tmp.getUTCDay() + 6) % 7) + 3);
+  const firstThursday = Date.UTC(tmp.getUTCFullYear(), 0, 4);
+  const week = 1 + Math.round((tmp.getTime() - firstThursday) / 604800000);
+  return { day, week: `${tmp.getUTCFullYear()}-W${String(week).padStart(2, '0')}` };
+}
+
+export function syncFestivalBoards(s: FarmState, now = Date.now()) {
+  const keys = festivalKeys(now), a = s.activities;
+  if (a.festivalDay !== keys.day) { a.festivalDay = keys.day; a.dayScore = blankScores(); }
+  if (a.festivalWeek !== keys.week) { a.festivalWeek = keys.week; a.weekScore = blankScores(); }
+}
+
+export function recordBoard(s: FarmState, game: keyof FestivalScores, score: number, now = Date.now()) {
+  syncFestivalBoards(s, now);
+  const a = s.activities, before = a.dayScore[game];
+  a.dayScore[game] = Math.max(before, score);
+  a.weekScore[game] = Math.max(a.weekScore[game], score);
+  a.lifeScore[game] = Math.max(a.lifeScore[game], score);
+  if (game === 'pumpkin') a.pumpkinRecord = Math.max(a.pumpkinRecord, score);
+  if (game === 'flower') a.flowerRecord = Math.max(a.flowerRecord, score);
+  return { improved: score > before, best: a.lifeScore[game] };
+}
+
+export function startDailyWeigh(s: FarmState, now = Date.now()): Result {
+  if (s.activities.pumpkinWeigh) return fail('秤还在摆动');
+  s.activities.pumpkinWeigh = { startedAt: now, daily: true };
+  return ok('今日称重开始 · 指针进入绿色区时落秤');
+}
+
+export function practiceFlowers(s: FarmState, choices: readonly FlowerChoice[], now = Date.now()): Result {
+  if (choices.length !== 3 || !choices.every(id => FLOWER_PALETTE.some(f => f.id === id))) return fail('请先选好三个花位');
+  const score = flowerScore(choices, Math.floor(seasonIndex(s, now) / 4));
+  const noted = recordBoard(s, 'flower', score, now);
+  if (noted.improved) s.coins += Math.floor(score / 5);
+  return ok(`今日插花 ${score}分 · 不消耗花材 · 个人最好 ${noted.best}`);
+}
+
+export function claimDailyFestival(s: FarmState, now = Date.now()): Result {
+  syncFestivalBoards(s, now);
+  const a = s.activities, sum = a.dayScore.pumpkin + a.dayScore.flower + a.dayScore.ice;
+  if (a.dayClaim === a.festivalDay) return fail('今日节日奖励已经领取');
+  if (sum < 40) return fail('先完成一项今日小游戏，再来领奖励');
+  a.dayClaim = a.festivalDay;
+  s.coins += 50 + Math.floor(sum / 2);
+  s.inventory.herb++;
+  discover(s, 'herb');
+  return ok(`今日节日 · ${50 + Math.floor(sum / 2)}金币 · 香草 ×1`);
+}
+
+export function claimWeeklyFestival(s: FarmState, now = Date.now()): Result {
+  syncFestivalBoards(s, now);
+  const a = s.activities, sum = a.weekScore.pumpkin + a.weekScore.flower + a.weekScore.ice;
+  if (a.weekClaim === a.festivalWeek) return fail('本周节日奖励已经领取');
+  if (sum < 150) return fail('本周三项合计还不到150分');
+  a.weekClaim = a.festivalWeek;
+  s.coins += 220;
+  const owned = s.advanced.room.items.some(item => item.type === 'teaTable');
+  if (!owned && s.advanced.room.items.length < 40) {
+    s.advanced.room.items.push({ id: ++s.advanced.room.serial, type: 'teaTable', x: null, y: null, rotation: 0 });
+    if (!s.life.home.owned.includes('teaTable')) s.life.home.owned.push('teaTable');
+    return ok('本周节日 · 220金币 · 花茶几已收入家具箱');
+  }
+  s.inventory.gem++;
+  discover(s, 'gem');
+  return ok('本周节日 · 220金币 · 蓝宝石 ×1');
+}
+
+const PUZZLE_RELIC: Record<string, FurnitureId> = {
+  'forest-4': 'lamp', 'forest-8': 'housePlant', 'forest-12': 'teaTable',
+  'mine-4': 'desk', 'mine-8': 'bookshelf', 'mine-12': 'cabinet',
+  'beach-4': 'rug', 'beach-8': 'sofa', 'beach-12': 'teaTable',
+  'snow-4': 'lamp', 'snow-8': 'housePlant', 'snow-12': 'cabinet',
+};
+
+export function grantPuzzleRelic(s: FarmState, map: string, depth: number): string {
+  const id = `${map}-${depth}`, type = PUZZLE_RELIC[id];
+  if (!type || s.activities.relics.includes(id)) return '';
+  s.activities.relics.push(id);
+  const name = FURNITURE.find(f => f.id === type)!.name;
+  if (s.advanced.room.items.length >= 40) {
+    s.coins += 80;
+    return `首次解开 · 家具箱已满，改为80金币`;
+  }
+  s.advanced.room.items.push({ id: ++s.advanced.room.serial, type, x: null, y: null, rotation: 0 });
+  if (!s.life.home.owned.includes(type)) s.life.home.owned.push(type);
+  return `首次解开 · ${name}已收入家具箱`;
+}
+
+export function scoreDecor(s: FarmState) {
+  const placed = s.advanced.room.items.filter(item => item.x !== null && item.y !== null);
+  const rare = placed.filter(item => item.type === 'cabinet' || item.type === 'teaTable' || item.type === 'bookshelf').length;
+  const xs = placed.map(item => item.x!), ys = placed.map(item => item.y!);
+  const balance = placed.length < 2 ? 0 : (Math.max(...xs) - Math.min(...xs) > .25 && Math.max(...ys) - Math.min(...ys) > .2 ? 24 : 8);
+  const theme = s.advanced.room.wall === s.advanced.room.floor ? '成套' : '混搭';
+  const yard = Math.min(12, s.decorations.length * 2);
+  const damaged = s.activities.stormDeco !== null ? 10 : 0;
+  const score = Math.max(0, placed.length * 8 + rare * 18 + balance + (theme === '成套' ? 16 : 10) + yard - damaged);
+  return { score, theme, placed: placed.length, rare, balance, votes: 0 };
+}
+
+export function submitDecor(s: FarmState, now = Date.now()): Result {
+  const card = scoreDecor(s);
+  if (card.placed < 3) return fail('至少在小屋摆好3件家具，再参加本地装饰赛');
+  const best = s.activities.decorLog.reduce((max, entry) => Math.max(max, entry.score), 0);
+  s.activities.decorLog.unshift({ at: now, score: card.score, theme: card.theme, placed: card.placed, rare: card.rare, balance: card.balance, votes: 0 });
+  if (s.activities.decorLog.length > 8) s.activities.decorLog.pop();
+  if (card.score > best) s.coins += 30 + card.score;
+  return ok(`本地装饰赛 ${card.score}分 · ${card.theme} · 最高 ${Math.max(best, card.score)}。票数留给以后的好友评选`);
+}
+
+export function rollScene(s: FarmState, now = Date.now()): boolean {
+  if (s.life.activeMap !== 'home' || s.activities.scene || now < s.activities.sceneAt || farmLevel(s.xp) < 4) return false;
+  const cat = s.animals.some(pet => pet.type === 'cat' && isAdult(s, pet, now));
+  const dog = s.animals.some(pet => pet.type === 'dog' && isAdult(s, pet, now));
+  if (!cat && !dog) return false;
+  const plot = s.plots.findIndex(p => p.unlocked && p.crop && now < p.plantedAt + (p.growSeconds || 20) * 1000);
+  const mouse = cat && (!dog || s.activities.patrolCount % 2 === 0) && plot !== -1;
+  if (mouse) {
+    s.plots[plot].plantedAt += 20000;
+    s.activities.scene = { kind: 'mouse', plot, at: now, delay: 20000 };
+  } else if (dog) {
+    s.activities.scene = { kind: 'theft', plot: -1, at: now, delay: 25 };
+  } else return false;
+  s.activities.sceneAt = now + 180000;
+  return true;
+}
+
+export function resolveScene(s: FarmState, help: boolean, now = Date.now()): Result {
+  const scene = s.activities.scene;
+  if (!scene || s.life.activeMap !== 'home') return fail('院子里现在没有需要处理的事');
+  if (help && scene.kind === 'mouse' && !s.animals.some(pet => pet.type === 'cat' && isAdult(s, pet, now))) return fail('需要一只成年猫咪来抓田鼠');
+  if (help && scene.kind === 'theft' && !s.animals.some(pet => pet.type === 'dog' && isAdult(s, pet, now))) return fail('需要一只成年小狗看住货袋');
+  s.activities.scene = null;
+  if (scene.kind === 'mouse') {
+    const plot = s.plots[scene.plot];
+    if (!help) return ok('先不管田鼠，这块作物会晚一点成熟');
+    if (plot) plot.plantedAt = Math.max(0, plot.plantedAt - scene.delay);
+    s.inventory.herb++;
+    s.coins += 15;
+    discover(s, 'herb');
+    return { ok: true, item: 'herb', message: '猫咪赶走田鼠 · 作物恢复 · 香草 ×1 · 15金币' };
+  }
+  if (!help) {
+    s.coins = Math.max(0, s.coins - scene.delay);
+    return ok(`货袋被搬走了 · 金币 -${scene.delay}`);
+  }
+  s.coins += 20;
+  s.inventory.wood++;
+  discover(s, 'wood');
+  return { ok: true, item: 'wood', message: '小狗看住货袋 · 木材 ×1 · 20金币' };
+}
+
+export function damageStorm(s: FarmState, now = Date.now()): boolean {
+  const weather = weatherAt(s, now), win = Math.floor((now - s.life.epoch) / 240000);
+  if (s.life.activeMap !== 'home' || farmLevel(s.xp) < 5 || (weather !== 'storm' && weather !== 'thunder') || s.activities.stormWindow === win) return false;
+  const plot = s.plots.findIndex((p, index) => p.unlocked && p.crop && index !== s.activities.stormPlot && now < p.plantedAt + (p.growSeconds || 20) * 1000);
+  if (plot !== -1) {
+    s.plots[plot].plantedAt += 15000;
+    s.activities.stormCrop = plot;
+    s.activities.stormDelay = 15000;
+    s.activities.stormWindow = win;
+    return true;
+  }
+  if (s.decorations.length) {
+    s.activities.stormDeco = 0;
+    s.activities.stormWindow = win;
+    return true;
+  }
+  return false;
+}
+
+export function repairStormCrop(s: FarmState): Result {
+  const index = s.activities.stormCrop;
+  if (index === null) return fail('没有被暴雨耽误的作物');
+  const plot = s.plots[index];
+  if (plot) plot.plantedAt = Math.max(0, plot.plantedAt - s.activities.stormDelay);
+  s.activities.stormCrop = null;
+  s.activities.stormDelay = 0;
+  return ok('扶好了被暴雨压倒的作物');
+}
+
+export function repairStormDeco(s: FarmState): Result {
+  if (s.activities.stormDeco === null) return fail('没有被暴雨刮倒的装饰');
+  if (s.inventory.planks > 0) s.inventory.planks--;
+  else if (s.coins >= 25) s.coins -= 25;
+  else return fail('修好装饰需要1木板或25金币');
+  s.activities.stormDeco = null;
+  return ok('装饰已经扶正');
+}
+
+export function claimCalendarPlay(s: FarmState, now = Date.now()): Result {
+  const event = calendarEvent(now);
+  if (!event) return fail('这个月没有节日小游戏');
+  if (s.activities.calendarPlay.includes(event.key)) return fail('本月节日小游戏已经领过');
+  syncFestivalBoards(s, now);
+  const game = event.key.endsWith('spring') ? 'flower' : event.key.endsWith('summer') ? 'ice' : event.key.endsWith('autumn') ? 'pumpkin' : null;
+  const scores = s.activities.lifeScore;
+  const score = game ? Math.max(scores[game], s.activities.weekScore[game], s.activities.dayScore[game]) : Math.max(scores.pumpkin, scores.flower, scores.ice);
+  if (score < 60) return fail('先在对应节日小游戏里留下60分');
+  s.activities.calendarPlay.push(event.key);
+  if (s.activities.calendarPlay.length > 128) s.activities.calendarPlay.shift();
+  s.coins += 120;
+  s.stars += 2;
+  return ok(`${event.title}小游戏 · 120金币与2农场星`);
 }
