@@ -1,4 +1,5 @@
 import type {FarmState,ProductId,Result} from './FarmModel';
+import {syncCodex} from './FarmRetention';
 import {TRAVEL_MAPS,TravelId,animalSpec} from './FarmCatalog';
 import {farmLevel,discover} from './FarmFeatures';
 import {isAdult,refreshLife} from './FarmLife';
@@ -20,10 +21,10 @@ export function resolveExploreEvent(s:FarmState,choice:number):Result{
  const r=s.advanced.explore.run;if(!r?.event||![0,1].includes(choice))return{ok:false,message:'没有待处理事件'};const e=r.event;if(choice===0){const item=e==='bridge'?'planks':e==='nest'?'feed':'herb';if(s.inventory[item]<1)return{ok:false,message:`需要1份${e==='bridge'?'木板':e==='nest'?'饲料':'香草'}`};s.inventory[item]--;r.bag.gem=(r.bag.gem||0)+1;r.stamina=Math.min(12,r.stamina+2);}else{if(r.stamina<1)return{ok:false,message:'绕行需要1探索体力，也可以直接返程'};r.stamina--;r.bag.wood=(r.bag.wood||0)+1;}r.event=null;r.step++;return{ok:true,message:choice===0?'帮助成功 · 获得宝石与2探索体力':'沿安全小径绕行 · 收集1木材'};
 }
 export function descendExplore(s:FarmState):Result{
- const r=s.advanced.explore.run;if(!r||r.event||r.step<3)return{ok:false,message:'先完成本层3处路线'};s.advanced.explore.best[r.map]=Math.max(s.advanced.explore.best[r.map]||0,r.depth);if(r.depth>=DEPTH_LIMIT)return{ok:false,message:'已到最深第12层，带着收获返程吧'};
+ const r=s.advanced.explore.run;if(!r||r.event||r.step<3)return{ok:false,message:'先完成本层3处路线'};s.advanced.explore.best[r.map]=Math.max(s.advanced.explore.best[r.map]||0,r.depth);syncCodex(s);if(r.depth>=DEPTH_LIMIT)return{ok:false,message:'已到最深第12层，带着收获返程吧'};
  const level=TRAVEL_MAPS.find(m=>m.id===r.map)!.level+r.depth*3;if(farmLevel(s.xp)<level)return{ok:false,message:`下一层需要农场${level}级`};if(r.stamina<1)return{ok:false,message:'下一层需要1探索体力'};r.stamina--;r.depth++;r.step=0;return{ok:true,message:`进入第${r.depth}层 · 资源更丰盛`};
 }
 export function finishExplore(s:FarmState):Result{
  const r=s.advanced.explore.run;if(!r)return{ok:false,message:'没有进行中的探索'};const completed=r.step>=3?r.depth:r.depth-1,old=s.advanced.explore.claimed[r.map]||0,bonus=Math.max(0,completed-old);let count=0;
- for(const [key,n]of Object.entries(r.bag)){const item=key as ProductId;s.inventory[item]+=n!;discover(s,item,n!);count+=n!;}s.xp+=count*8;s.stars+=bonus*2;s.coins+=bonus*80;s.advanced.explore.best[r.map]=Math.max(s.advanced.explore.best[r.map]||0,completed);s.advanced.explore.claimed[r.map]=Math.max(old,completed);s.advanced.explore.run=null;s.life.activeMap='home';return{ok:true,message:`安全返程 · ${count}份物资入库 · 首次通层奖励${bonus*80}金币、${bonus*2}星`};
+ for(const [key,n]of Object.entries(r.bag)){const item=key as ProductId;s.inventory[item]+=n!;discover(s,item,n!);count+=n!;}s.xp+=count*8;s.stars+=bonus*2;s.coins+=bonus*80;s.advanced.explore.best[r.map]=Math.max(s.advanced.explore.best[r.map]||0,completed);s.advanced.explore.claimed[r.map]=Math.max(old,completed);s.advanced.explore.run=null;s.life.activeMap='home';syncCodex(s);return{ok:true,message:`安全返程 · ${count}份物资入库 · 首次通层奖励${bonus*80}金币、${bonus*2}星`};
 }

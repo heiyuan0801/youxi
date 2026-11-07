@@ -21,6 +21,18 @@ export function beginNativeSaveImport():boolean{
  if(sys.os===sys.OS.ANDROID)return !!native.reflection.callStaticMethod('com/cocos/game/AppActivity','beginSaveImport','()Z');
  return false;
 }
+export function shareNative(text:string,svg:string):boolean{
+ if(!sys.isNative||sys.os!==sys.OS.IOS)return false;
+ try{return !!objc('shareText:imageSVG:',text,svg);}catch{return false;}
+}
+export function beginInvitePrompt():boolean{
+ if(!sys.isNative||sys.os!==sys.OS.IOS)return false;
+ try{return !!objc('beginInvitePrompt');}catch{return false;}
+}
+export function takeInvitePrompt():string{
+ if(!sys.isNative||sys.os!==sys.OS.IOS)return '!error';
+ try{return String(objc('takeInvitePrompt')||'');}catch{return '!error';}
+}
 export function takeNativeSaveImport():string{
  if(sys.os===sys.OS.IOS)return String(objc('takeSaveImport')||'');
  if(sys.os===sys.OS.ANDROID)return String(native.reflection.callStaticMethod('com/cocos/game/AppActivity','takeSaveImport','()Ljava/lang/String;')||'');

@@ -1,4 +1,4 @@
-import {nativeHaptic,exportNativeSave,beginNativeSaveImport,takeNativeSaveImport} from './NativePlatform';
+import {nativeHaptic,exportNativeSave,beginNativeSaveImport,takeNativeSaveImport,shareNative,beginInvitePrompt,takeInvitePrompt} from './NativePlatform';
 import {compostPumpkin,recordStorm,repairStormPlot,searchPatrol,PATROL_SPOTS} from './FarmActivities';
 import {settleAutomation} from './FarmAutomation';
 import {takeRoute} from './FarmExplore';
@@ -19,6 +19,9 @@ import {REGIONS,RegionId} from './WorldData';
 import {refreshFeatures,fishingPhase,rollDaily} from './FarmFeatures';
 import {PLOTS,unproject,freeGrass,project,BASE_Z,WIDTH,HEIGHT} from './SceneLayout';
 import {FarmState,Result,CropId,DecoId,SAVE_KEY,newFarm,parseSave,serialize,plant,harvest,water,readyPlot,secondsLeft,cropById,collectAnimal,buyDecoration,tendFlower,levelFor} from './FarmModel';
+import {audioMix,markShared,redeemInvite,setFarmLocale,setVolume,sharePayloadFor,toggleMute,touchRetention} from './FarmRetention';
+import {detectLocale,type Locale} from './FarmI18n';
+import {presentShare,type ShareHost} from './FarmShare';
 const {ccclass}=_decorator;
 const MAX_SAVE_BYTES=8*1024*1024;
 @ccclass('FarmApp')
@@ -29,7 +32,7 @@ export class FarmApp extends Component {
   private backdropFrames=0;private afterDraw=()=>{if(++this.backdropFrames%15===0)this.ui?.captureBackdrop(game.canvas);};
   private nativeClips=new Map<string,AudioClip>();private soundClips=new Map<SoundKey,AudioClip>();private sfx!:FarmAudio;private dragLevel=1;
   private saveInput:HTMLInputElement|null=null;
-  private nativeSavePending=false;
+  private nativeSavePending=false;private invitePending=false;
   private pendingSave:FarmState|null=null;
   onLoad(){
     view.setDesignResolutionSize(WIDTH,HEIGHT,ResolutionPolicy.SHOW_ALL);if(sys.isBrowser)view.resizeWithBrowserSize(true);profiler.hideStats();
@@ -46,8 +49,9 @@ export class FarmApp extends Component {
     Promise.all([...images,...fonts,...sounds,...nativeSounds]).then(()=>{loading.node.destroy();this.initialize(p);}).catch(err=>{loading.string='农场资源没有加载完整，请刷新重试';console.error(err);});
   }
   private initialize(p:Painter){
-    this.world=p.node(this.node,'FarmWorld',800,450,9000,7000);const hud=p.node(this.node,'ReferenceUI');this.scene=new FarmScene(this.world,this.art,()=>this.state);this.sfx=new FarmAudio(this.node,this.soundClips,this.nativeClips);this.sfx.setEnabled(this.state.sound);
-    this.ui=new FarmUI(hud,this.art,()=>this.state,{act:f=>this.act(f),pick:id=>this.pick(id),place:id=>{this.placing=id;this.ui.toast('点一块空草地，放下新的装饰');},zoom:f=>this.zoom(f),focus:id=>this.focus(id),travel:id=>this.travelTo(id),settings:key=>{this.state[key]=!this.state[key];if(key==='sound')this.sfx.setEnabled(this.state.sound);if(key==='music')this.sfx.setMusic(this.state.music&&this.audioStarted);this.save();this.ui.render();},exportSave:()=>this.exportSave(),chooseSave:()=>this.chooseSave(),restoreBackup:()=>this.restoreBackup(),confirmSave:()=>this.confirmSave(),reset:()=>this.reset(),start:()=>this.startAudio()});
+    this.world=p.node(this.node,'FarmWorld',800,450,9000,7000);const hud=p.node(this.node,'ReferenceUI');this.scene=new FarmScene(this.world,this.art,()=>this.state);    touchRetention(this.state);if(!this.state.retention.localeSet){this.state.retention.locale=detectLocale(typeof navigator!=='undefined'?navigator.language:'');this.state.retention.localeSet=true;}
+    this.sfx=new FarmAudio(this.node,this.soundClips,this.nativeClips);this.applyAudio();
+    this.ui=new FarmUI(hud,this.art,()=>this.state,{act:f=>this.act(f),pick:id=>this.pick(id),place:id=>{this.placing=id;this.ui.toast('点一块空草地，放下新的装饰');},zoom:f=>this.zoom(f),focus:id=>this.focus(id),travel:id=>this.travelTo(id),settings:key=>{this.state[key]=!this.state[key];this.applyAudio();this.save();this.ui.render();},setVolume:(kind,value)=>{const result=setVolume(this.state,kind,value);this.applyAudio();this.save();this.ui.toast(result.message);this.ui.render();},toggleMute:()=>{const result=toggleMute(this.state);this.applyAudio();this.save();this.ui.toast(result.message);this.ui.render();},setLocale:(locale:Locale)=>{setFarmLocale(this.state,locale);this.save();this.ui.render();},share:which=>void this.share(which),askRedeem:()=>this.askRedeem(),exportSave:()=>this.exportSave(),chooseSave:()=>this.chooseSave(),restoreBackup:()=>this.restoreBackup(),confirmSave:()=>this.confirmSave(),reset:()=>this.reset(),start:()=>this.startAudio()});
     this.ui.started=!!rawSession();
     this.world.on(Node.EventType.TOUCH_START,this.touchStart,this);this.world.on(Node.EventType.TOUCH_MOVE,this.touchMove,this);this.world.on(Node.EventType.TOUCH_END,this.touchEnd,this);this.world.on(Node.EventType.TOUCH_CANCEL,()=>{this.pointer=null;this.pinch=0;this.flush();});
     this.world.on(Node.EventType.MOUSE_WHEEL,(e:EventMouse)=>this.zoom(e.getScrollY()>0?1.08:1/1.08,e.getUILocation()));
@@ -56,15 +60,16 @@ export class FarmApp extends Component {
     (globalThis as any).__SUNNY_FARM__={ready:true,version:'0.8.0',snapshot:()=>JSON.parse(JSON.stringify(this.state)),motion:()=>this.scene.motion.snapshot(),audio:()=>this.sfx.snapshot(),levelPopup:()=>this.ui.levelUp,world:()=>({width:worldWidth(this.state),height:22,plots:this.state.plots.length}),point:(x:number,y:number,lift=0)=>this.mapPoint(x,y,lift),panel:()=>this.ui.panel,buttons:()=>this.ui.diagnostics,art:()=>Array.from(this.art.keys()),view:()=>({x:this.world.position.x,y:this.world.position.y,zoom:this.world.scale.x,selected:this.ui.selected,seedOpen:this.ui.seedOpen}),plot:(i:number)=>{const b=PLOTS[i];return this.mapPoint(b.x+.5,b.y+.5);}};
   }
   private hide=()=>{this.sfx?.setMusic(false);if(this.state){settleAutomation(this.state);this.save();}};
-  private show=()=>{if(this.ui){const r=settleAutomation(this.state);refreshFeatures(this.state);refreshLife(this.state);this.save();this.refresh();if(r?.unread)this.ui.open('offline');this.sfx.setMusic(this.state.music&&this.audioStarted);}};
+  private show=()=>{if(this.ui){const r=settleAutomation(this.state);refreshFeatures(this.state);refreshLife(this.state);touchRetention(this.state);this.save();this.refresh();if(r?.unread)this.ui.open('offline');this.applyAudio();}};
   private visibility=()=>{if(document.hidden)this.hide();else this.show();};
   private refresh(){this.scene.redraw();this.ui.render();this.signature=this.currentSignature();}
   private currentSignature(){const now=Date.now();return this.state.plots.map(p=>readyPlot(p,now)?1:0).join('')+this.state.animals.map(a=>a.readyAt<=now?1:0).join('')+this.state.beds.map(t=>t?Math.min(3,Math.floor((now-t)/20000)):0).join('')+'|'+this.state.features.jobs.map(j=>now>=j.readyAt?1:0).join('')+'|'+fishingPhase(this.state,now)+'|'+[...this.state.progression.appleAt,...this.state.progression.honeyAt].map(t=>now>=t?1:0).join('')+'|'+this.state.animals.map(a=>Date.now()>=careFor(this.state,a).adultAt?1:0).join('')+'|'+Object.values(this.state.life.nodes).map(t=>now>=t?1:0).join('');}
   private save(){try{sys.localStorage.setItem(SAVE_KEY,serialize(this.state));}catch{this.ui?.toast('当前设备无法保存进度，请导出存档备份');}}
   private recordDay(){const now=new Date(Date.now()+8*60*60*1000).toISOString().slice(0,10);if(this.state.activeDate!==now){this.state.days++;this.state.activeDate=now;}}
   private act(f:()=>Result,at?:XY){this.startAudio();const settlement=settleAutomation(this.state);if(settlement)this.save();const previous=levelFor(this.state.xp),orders=this.state.stats.deliveries,harvests=this.state.stats.harvests,result=f();if(result.ok){this.recordDay();this.save();this.refresh();if(this.state.stats.deliveries>orders)this.scene.motion.sendTruck();if(at)this.scene.burst(at,result.item||'star');if(this.state.stats.harvests>harvests||result.item==='apple'||result.item==='honey')this.sfx.play('harvest');else this.chime(true);if(this.state.haptics){if(sys.isNative){nativeHaptic();}else if(typeof navigator!=='undefined'&&navigator.vibrate)navigator.vibrate(10);}const level=levelFor(this.state.xp);if(level>previous){this.sfx.play('levelup');this.ui.celebrate(previous,level);}else this.ui.toast(result.message);}else this.ui.toast(result.message);return result;}
-  private startAudio(){if(!this.audioStarted){this.audioStarted=true;try{sessionStorage.setItem('sunny-farm-started','1');}catch{}}if(sys.isNative){this.sfx?.setMusic(this.state.music);return;}if(!sys.isBrowser)return;try{const Audio=window.AudioContext||(window as any).webkitAudioContext;if(Audio&&!this.audio)this.audio=new Audio();if(this.audio?.state==='suspended')void this.audio.resume();}catch{}}
-  private chime(good:boolean){if(!this.state.sound)return;if(sys.isNative){this.sfx.playUi();return;}if(!this.audio)return;const ctx=this.audio;[good?660:480,...(good?[880]:[])].forEach((f,i)=>this.note(f,ctx.currentTime+i*.07,.13,.025));}
+  private startAudio(){if(!this.audioStarted){this.audioStarted=true;try{sessionStorage.setItem('sunny-farm-started','1');}catch{}}this.applyAudio();if(sys.isNative||!sys.isBrowser)return;try{const Audio=window.AudioContext||(window as any).webkitAudioContext;if(Audio&&!this.audio)this.audio=new Audio();if(this.audio?.state==='suspended')void this.audio.resume();}catch{}}
+  private chime(good:boolean){const gain=audioMix(this.state).sfx;if(gain<=0)return;if(sys.isNative){this.sfx.playUi();return;}if(!this.audio)return;const ctx=this.audio;[good?660:480,...(good?[880]:[])].forEach((f,i)=>this.note(f,ctx.currentTime+i*.07,.13,.025*gain));}
+  private applyAudio(){const mix=audioMix(this.state);this.sfx?.applyMix({music:this.state.music,sound:this.state.sound,bgm:this.state.retention.audio.bgm,sfx:this.state.retention.audio.sfx,muted:this.state.retention.audio.muted});if(mix.bgm<=0)this.sfx?.setMusic(false);else if(this.audioStarted)this.sfx?.setMusic(true);}
   private note(f:number,start:number,len:number,volume:number){if(!this.audio)return;const o=this.audio.createOscillator(),g=this.audio.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,start);g.gain.exponentialRampToValueAtTime(volume,start+.015);g.gain.exponentialRampToValueAtTime(.0001,start+len);o.connect(g);g.connect(this.audio.destination);o.start(start);o.stop(start+len+.01);}
   private local(e:EventTouch):XY{const q=e.getUILocation(),p=this.world.getComponent(UITransform)!.convertToNodeSpaceAR(new Vec3(q.x,q.y));return[p.x+800,450-p.y];}
   private touchStart(e:EventTouch){if(this.ui.panel||this.ui.levelUp!==null||!this.ui.started)return;this.startAudio();const touches=e.getAllTouches();if(touches.length>=2){const [a,b]=touches.map(t=>t.getUILocation());this.pinch=Math.hypot(a.x-b.x,a.y-b.y);this.pointer=null;return;}const q=e.getUILocation();this.pointer=[q.x,q.y];this.moved=0;this.visited.clear();this.dragLevel=levelFor(this.state.xp);const i=this.scene.plotAt(this.local(e));this.drag=i>=0&&readyPlot(this.state.plots[i])?'harvest':i>=0&&!this.state.plots[i].crop&&this.state.plots[i].unlocked&&this.ui.seedOpen&&this.ui.selected?'plant':'pan';}
@@ -129,6 +134,41 @@ export class FarmApp extends Component {
   private focus(id:RegionId|'home'){if(this.state.life.activeMap!=='home'){this.state.life.activeMap='home';this.save();this.refresh();}if(id==='home'){this.world.setScale(1,1,1);this.world.setPosition(0,0);return;}const region=REGIONS.find(r=>r.id===id);if(!region||!hasRegion(this.state,id))return;const [x,y]=project(region.x+4,11),scale=.78;this.world.setScale(scale,scale,1);this.world.setPosition(-(x-800)*scale,(y-450)*scale);this.clampMap();}
   private clampMap(){const size=this.state.life.activeMap==='home'?worldWidth(this.state):22,scale=this.world.scale.x,points=[[0,0],[size,0],[size,22],[0,22]].map(([x,y])=>project(x,y)),xs=points.map(p=>(p[0]-800)*scale),ys=points.map(p=>(450-p[1])*scale),p=this.world.position;this.world.setPosition(Math.max(-Math.max(...xs)+160,Math.min(-Math.min(...xs)-160,p.x)),Math.max(-Math.max(...ys)+120,Math.min(-Math.min(...ys)-120,p.y)));}
   private key(e:EventKeyboard){if(e.keyCode===KeyCode.ESCAPE){this.pendingPlot=null;this.placing=null;this.ui.selected=null;this.ui.close();}}
+  private shareHost():ShareHost{
+    const nav=typeof navigator==='undefined'?undefined:navigator;
+    return {
+      platform:sys.isNative?(sys.os===sys.OS.IOS?'ios':sys.os===sys.OS.ANDROID?'android':'other'):'web',
+      iosShare:(text,svg)=>shareNative(text,svg),
+      webShare:nav&&typeof nav.share==='function'?(data)=>nav.share(data as ShareData):undefined,
+      canShareFiles:files=>!!nav?.canShare?.({files:files as File[]}),
+      makeFile:(filename,svg)=>typeof File==='undefined'?undefined:new File([svg],filename,{type:'image/svg+xml'}),
+      clipboard:nav?.clipboard?.writeText?.bind(nav.clipboard),
+      saveImage:(filename,svg)=>{if(typeof document==='undefined')return false;const blob=new Blob([svg],{type:'image/svg+xml'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);return true;},
+    };
+  }
+  private async share(which:'invite'|'pending'|'latest'){
+    const payload=sharePayloadFor(this.state,which);
+    if(!payload){this.ui.toast('还没有可以分享的卡片');return;}
+    const result=await presentShare(payload,this.shareHost());
+    if(result.ok)markShared(this.state,payload.momentId);
+    this.save();this.ui.toast(result.message);this.ui.render();
+  }
+  private askRedeem(){
+    if(sys.isNative&&sys.os===sys.OS.IOS){if(this.invitePending)return;try{this.invitePending=beginInvitePrompt();}catch{this.invitePending=false;}if(!this.invitePending)this.ui.toast('无法打开邀请码输入');return;}
+    const entered=typeof window!=='undefined'&&typeof window.prompt==='function'?window.prompt('输入朋友的 8 位邀请码。只在本机换一份新手礼物。'):null;
+    if(entered)this.finishRedeem(entered);
+  }
+  private pollInvite(){
+    if(!this.invitePending)return;
+    let result='';
+    try{result=takeInvitePrompt();}catch{result='!error';}
+    if(!result)return;
+    this.invitePending=false;
+    if(result==='!cancel')return;
+    if(result==='!error'){this.ui.toast('无法读取邀请码');return;}
+    this.finishRedeem(result);
+  }
+  private finishRedeem(code:string){const result=redeemInvite(this.state,code);this.save();this.ui.toast(result.message);this.ui.render();}
   private exportSave(){if(sys.isNative){try{exportNativeSave(serialize(this.state));this.ui.toast('请选择存档保存位置');}catch{this.ui.toast('存档导出未打开，请稍后重试');}return;}if(typeof document==='undefined')return;const blob=new Blob([serialize(this.state)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='晴野物语-存档.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);this.ui.toast('存档已导出');}
   private chooseSave(){
     if(sys.isNative){
@@ -190,14 +230,14 @@ export class FarmApp extends Component {
     this.pendingPlot=null;this.placing=null;this.pointer=null;this.dirty=false;
     this.ui.resetSelection();this.scene.motion.cancelPatrol();this.scene.motion.animals.clear();
     this.world.setPosition(0,0);this.world.setScale(1,1,1);
-    this.sfx.setEnabled(next.sound);this.sfx.setMusic(next.music&&this.audioStarted);
+    this.applyAudio();
     this.refresh();this.ui.toast('存档已恢复 · 原进度已备份');
   }
   private reset(){
     try{sys.localStorage.setItem(SAVE_KEY+'-before-reset',serialize(this.state));}
     catch{this.ui.toast('备份失败，当前农场已保留');return;}
     this.state=newFarm();
-    this.sfx.setEnabled(this.state.sound);this.sfx.setMusic(this.state.music&&this.audioStarted);
+    this.applyAudio();
     this.ui.resetSelection();this.pendingSave=null;this.pendingPlot=null;this.placing=null;this.pointer=null;this.dirty=false;
     this.scene.motion.cancelPatrol();this.scene.motion.animals.clear();this.world.setPosition(0,0);this.world.setScale(1,1,1);this.save();this.refresh();
   }
@@ -209,6 +249,7 @@ export class FarmApp extends Component {
     if(this.clock>.35){
       this.clock=0;
       this.pollSaveImport();
+      this.pollInvite();
       if(this.state.advanced.auto.enabled){
         const report=settleAutomation(this.state);
         if(report){
@@ -236,12 +277,13 @@ export class FarmApp extends Component {
       else if(this.dirty&&!this.pointer)this.flush();
       if(this.ui.panel!=='ice-fishing')this.ui.tick();
     }
-    if(this.audioStarted&&this.state.music&&this.audio){
+    const music=audioMix(this.state).bgm;
+    if(this.audioStarted&&music>0&&this.audio){
       this.musicClock+=dt;
       if(this.musicClock>.42){
         this.musicClock=0;
         const melody=[523.25,659.25,783.99,659.25,587.33,698.46,880,698.46,523.25,659.25,783.99,1046.5,880,783.99,659.25,587.33];
-        this.note(melody[this.musicNote++%melody.length],this.audio.currentTime,.32,.006);
+        this.note(melody[this.musicNote++%melody.length],this.audio.currentTime,.32,.006*music);
       }
     }
   }

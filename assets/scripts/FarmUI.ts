@@ -17,8 +17,13 @@ import {worldPanel,levelsPanel,levelUpCard} from './ProgressionPanels';
 import {RegionId} from './WorldData';
 import { FLOWER_PALETTE, FlowerChoice, repairStormPlot } from './FarmActivities';
 import { areaStoryPanel, breakfastPanel, carpenterPanel, festivalGamesPanel, honorsPanel, iceFishingPanel, patrolPanel } from './JourneyPanels';
-export type Panel='warehouse'|'orders'|'shop'|'tasks'|'workshop'|'fishing'|'world'|'levels'|'animals'|'travel'|'home'|'seasons'|'genetics'|'explore'|'automation'|'offline'|'ponds'|'growth'|'events'|'settings'|'privacy'|'confirm-reset'|'breakfast'|'story'|'honors'|'carpenter'|'festival-games'|'ice-fishing'|'patrol'|'restore-save'|null;
-export interface UICallbacks {act:(f:()=>Result)=>void;pick:(id:CropId)=>void;place:(id:DecoId)=>void;zoom:(factor:number)=>void;focus:(id:RegionId|'home')=>void;travel:(id:MapId)=>void;settings:(key:'sound'|'music'|'haptics')=>void;exportSave:()=>void;chooseSave:()=>void;restoreBackup:()=>void;confirmSave:()=>void;reset:()=>void;start:()=>void;}
+import {agendaHeight, agendaPanel, type AgendaTab} from './RetentionPanels';
+import {advanceTutorial, dismissShare, skipTutorial, tutorialPrompt} from './FarmRetention';
+import {upgradeSoilBatch} from './FarmSoil';
+import {itemName, localizeOrder, t, LOCALES, LOCALE_LABEL, type Locale} from './FarmI18n';
+import {momentText} from './FarmShare';
+export type Panel='warehouse'|'orders'|'shop'|'tasks'|'workshop'|'fishing'|'world'|'levels'|'animals'|'travel'|'home'|'seasons'|'genetics'|'explore'|'automation'|'offline'|'ponds'|'growth'|'events'|'settings'|'privacy'|'confirm-reset'|'breakfast'|'story'|'honors'|'carpenter'|'festival-games'|'ice-fishing'|'patrol'|'restore-save'|'agenda'|null;
+export interface UICallbacks {act:(f:()=>Result)=>void;pick:(id:CropId)=>void;place:(id:DecoId)=>void;zoom:(factor:number)=>void;focus:(id:RegionId|'home')=>void;travel:(id:MapId)=>void;settings:(key:'sound'|'music'|'haptics')=>void;setVolume:(kind:'bgm'|'sfx',value:number)=>void;toggleMute:()=>void;setLocale:(locale:Locale)=>void;share:(which:'invite'|'pending'|'latest')=>void;askRedeem:()=>void;exportSave:()=>void;chooseSave:()=>void;restoreBackup:()=>void;confirmSave:()=>void;reset:()=>void;start:()=>void;}
 const PALE='#fffcf4',LINE='#f2d8ac',INK='#5a3e2b',SOFT='#997455';
 export class FarmUI {
   panel:Panel=null;shopTab='土地';seedOpen=false;selected:CropId|null=null;started=true;
@@ -29,7 +34,7 @@ export class FarmUI {
   diaryTab:DiaryTab='成长';private liveUpdates:(()=>void)[]=[];
   private scrollId='';
   levelUp:number|null=null;private levelQueue:number[]=[];
-  landIndex:number|null=null;
+  landIndex:number|null=null;agendaTab:AgendaTab='morning';
   p!:Painter;private buttons:{label:string;n:Node}[]=[];private modalRoot!:Node;private toastRoot!:Node;
   private backdrop:SpriteFrame|null=null;private backdropTexture:Texture2D|null=null;private backdropCanvas:HTMLCanvasElement|null=null;
   constructor(public root:Node,private art:Map<string,SpriteFrame>,private state:()=>FarmState,private cb:UICallbacks){}
@@ -66,6 +71,7 @@ export class FarmUI {
       if(state.activities.stormPlot!==null)this.button(p,this.root,'疏通积水',209,256,118,35,()=>this.cb.act(()=>repairStormPlot(state)),'#58bde4','#3295bd',13);
     }
     this.button(p,this.root,'自动农场',w-115,sys.isNative?224:212,178,35,()=>this.open('automation'),'#ab89d3','#8360ac',13);
+    this.button(p,this.root,t('hud.agenda',{},state.retention?.locale),w-115,sys.isNative?310:298,178,35,()=>this.open('agenda'),'#67ca70','#3fa84d',13);
     if(state.advanced.auto.report)this.button(p,this.root,state.advanced.auto.report.unread?'离线收获 · 查看':'离线报告',w-115,sys.isNative?266:254,178,33,()=>this.open('offline'),'#ffb150','#dc8a29',13);
     const right=w-20,topY=sys.isNative?44:32,secondY=sys.isNative?90:78;p.pill(this.root,right-186,topY,114,40);p.contain(this.root,'coin',right-217,topY,44);p.label(this.root,String(state.coins),right-174,topY,20,INK,65,35);
     this.iconButton(p,this.root,'放大','ui_plus',right-104,topY,32,topY,()=>this.cb.zoom(1.2));
@@ -79,6 +85,7 @@ export class FarmUI {
     if(this.seedOpen)this.renderSeeds();
     this.modalRoot=p.node(this.root,'Modal');this.toastRoot=p.node(this.root,'ToastLayer');
     if(this.panel)this.renderPanel(this.panel);
+    if(!this.seedOpen){this.renderTutorialBar();this.renderShareChip();}
     if(offset){const scroll=this.modalRoot.getComponentInChildren(ScrollView);if(scroll)scroll.scrollToOffset(offset,0);}
     if(!this.started)this.title();
     if(this.levelUp!==null)this.renderLevelUp();
@@ -102,7 +109,7 @@ export class FarmUI {
     CROPS.slice(this.seedPage*6,this.seedPage*6+6).forEach((c,i)=>{const xx=start+i*(cardW+gap),cy=y+29,locked=levelFor(this.state().xp)<c.level&&!this.state().cropUnlocks.includes(c.id),selected=this.selected===c.id;
       const n=this.slot(p,root,xx,cy,cardW,151);if(selected)p.rect(n,p.w/2,p.h/2,cardW,151,'#f3ffe9',18,'#64c85b',3);
       const im=p.contain(root,c.id,xx,cy-36,64,70);if(locked){p.opacity(im,90);im.getComponent(Sprite)!.grayscale=true;}
-      p.label(root,c.name,xx,cy+12,14.5,INK,cardW-6,24);p.label(root,shortTime(c.seconds),xx,cy+32,11,SOFT,cardW-6,20);
+      p.label(root,itemName(c.id,c.name,this.state().retention?.locale),xx,cy+12,14.5,INK,cardW-6,24);p.label(root,shortTime(c.seconds),xx,cy+32,11,SOFT,cardW-6,20);
       p.rect(root,xx,cy+55,cardW-10,19,'#fff3d1',10);p.contain(root,'coin',xx-cardW/2+20,cy+55,16);p.label(root,`${c.cost} → ${c.sell}`,xx+6,cy+55,12,'#b97a00',cardW-22,18);
       if(locked){p.pill(root,xx,cy-33,57,24,'#82796d','#ffffff');p.label(root,`${c.level}级`,xx,cy-33,11,'#ffffff',54,22);}if(selected){p.rect(root,xx+cardW/2-4,cy-71,24,24,'#61c45b',12,'#ffffff',2);p.label(root,'✓',xx+cardW/2-4,cy-71,16,'#ffffff',22,22);}
       p.hit(n,()=>{if(locked){this.toast(`${c.level}级解锁${c.name}`);return;}this.selected=c.id;this.cb.pick(c.id);this.render();});this.buttons.push({label:'种子-'+c.name,n});
@@ -122,6 +129,7 @@ export class FarmUI {
   }
   private renderPanel(panel:Exclude<Panel,null>){
     const state=this.state();
+    if(panel==='agenda'){const height=agendaHeight(this.agendaTab),m=this.modal(t('hud.agenda',{},state.retention.locale),'school',700,Math.min(height+70,this.p.h*.9),height);agendaPanel(this.featureContext(m),this.agendaTab,tab=>{this.agendaTab=tab;this.render();});return;}
     if(panel==='breakfast'||panel==='story'||panel==='honors'||panel==='carpenter'||panel==='festival-games'||panel==='ice-fishing'||panel==='patrol'){
       const spec={
         breakfast:['农场主线','bread',515],story:['地区故事','signpost',388],honors:['晴野荣誉','star',440],
@@ -166,23 +174,23 @@ export class FarmUI {
       const items=PRODUCTS.filter(id=>state.inventory[id]>0),rows=Math.ceil(items.length/3),height=Math.max(250,rows*194+80),m=this.modal('仓库','barn',560,height+70,height),{p,root,w}=m;
       p.rect(root,w/2,24,w,42,'#fff1d6',16);p.label(root,'库存总价值',80,24,13.5,SOFT,138,32,true,'left');this.money(p,root,items.reduce((a,id)=>a+state.inventory[id]*PRICES[id],0),w-55,24,18,'coin',95);
       if(!items.length){p.contain(root,'hay',w/2,112,96);p.label(root,'仓库还是空的',w/2,181,19,INK,w-20,32);p.label(root,'收获蔬菜，收集鸡蛋和牛奶，让仓库热闹起来吧！',w/2,216,13.5,SOFT,w-24,40);}
-      items.forEach((id,i)=>{const ww=(w-20)/3,x=ww/2+(i%3)*(ww+10),y=146+Math.floor(i/3)*194;this.slot(p,root,x,y,ww,181);p.contain(root,id,x,y-45,68);p.pill(root,x+27,y-18,43,23,INK);p.label(root,`×${state.inventory[id]}`,x+27,y-18,13,'#ffffff',39,22);p.label(root,NAMES[id],x,y+8,15,INK,ww-8,25);this.money(p,root,`${PRICES[id]}/个`,x,y+31,12.5,'coin',82);this.button(p,root,'卖1个',x-ww/4,y+64,ww/2-7,36,()=>this.cb.act(()=>sell(state,id,1)),'#ffca55','#dfa432',13.5);this.button(p,root,'全部卖出',x+ww/4,y+64,ww/2-7,36,()=>this.cb.act(()=>sell(state,id,state.inventory[id])),'#6bcb70','#44a750',13);});
+      items.forEach((id,i)=>{const ww=(w-20)/3,x=ww/2+(i%3)*(ww+10),y=146+Math.floor(i/3)*194,name=itemName(id,NAMES[id],state.retention?.locale);this.slot(p,root,x,y,ww,181);p.contain(root,id,x,y-45,68);p.pill(root,x+27,y-18,43,23,INK);p.label(root,`×${state.inventory[id]}`,x+27,y-18,13,'#ffffff',39,22);p.label(root,name,x,y+8,15,INK,ww-8,25);this.money(p,root,`${PRICES[id]}/个`,x,y+31,12.5,'coin',82);this.button(p,root,'卖1个',x-ww/4,y+64,ww/2-7,36,()=>this.cb.act(()=>sell(state,id,1)),'#ffca55','#dfa432',13.5);this.button(p,root,'全部卖出',x+ww/4,y+64,ww/2-7,36,()=>this.cb.act(()=>sell(state,id,state.inventory[id])),'#6bcb70','#44a750',13);});
       p.label(root,'小提示：交订单比在集市零卖赚得多哦！',w/2,height-17,12,SOFT,w-10,28);return;
     }
     if(panel==='orders'){
       const m=this.modal('订单','truck',600,838,818),{p,root,w}=m;p.label(root,`已交付${state.stats.deliveries}单 · 把新鲜农产品送给邻居吧`,w/2,15,13,SOFT,w,30);
-      state.orders.forEach((o,i)=>{const y=166+i*260;this.slot(p,root,w/2,y,w,246);p.rect(root,43,y-81,56,56,['#ffe3ec','#e2f7ef','#e3f2fd'][i],16,'#ffffff',2);p.contain(root,['girl','grandpa','boy'][i],43,y-75,48,63);p.label(root,o.person,157,y-91,17,INK,154,29,true,'left');this.money(p,root,o.coins,117,y-64,15,'coin',76);this.money(p,root,o.xp,200,y-64,15,'star',72);this.button(p,root,'↻',w-30,y-80,34,34,()=>this.cb.act(()=>skipOrder(state,o.id)),'#d9c4a3','#bca381',20);
-        p.rect(root,w/2,y-20,w-24,53,'#f1f9ff',17,'#cfe9f7',2);p.label(root,`“${o.message}”`,w/2,y-20,15.5,'#1f5d80',w-48,47);
-        Object.entries(o.needs).forEach(([key,n],j)=>{const id=key as ProductId,ok=state.inventory[id]>=n!,xx=89+j*151;p.rect(root,xx,y+45,136,52,ok?'#effbe9':'#fffaf1',15,ok?'#bfe8b8':LINE,2);p.contain(root,id,xx-43,y+45,40);p.label(root,NAMES[id],xx+13,y+33,11.5,SOFT,78,22,true,'left');p.label(root,`${Math.min(state.inventory[id],n!)}/${n}`,xx+13,y+54,15,ok?'#3ca55a':'#d6553f',78,24,true,'left');});
+      state.orders.forEach((o,i)=>{const y=166+i*260,view=localizeOrder(o.person,o.message,state.retention?.locale);this.slot(p,root,w/2,y,w,246);p.rect(root,43,y-81,56,56,['#ffe3ec','#e2f7ef','#e3f2fd'][i],16,'#ffffff',2);p.contain(root,['girl','grandpa','boy'][i],43,y-75,48,63);p.label(root,view.person,157,y-91,17,INK,154,29,true,'left');this.money(p,root,o.coins,117,y-64,15,'coin',76);this.money(p,root,o.xp,200,y-64,15,'star',72);this.button(p,root,'↻',w-30,y-80,34,34,()=>this.cb.act(()=>skipOrder(state,o.id)),'#d9c4a3','#bca381',20);
+        p.rect(root,w/2,y-20,w-24,53,'#f1f9ff',17,'#cfe9f7',2);p.label(root,`“${view.message}”`,w/2,y-20,15.5,'#1f5d80',w-48,47);
+        Object.entries(o.needs).forEach(([key,n],j)=>{const id=key as ProductId,ok=state.inventory[id]>=n!,xx=89+j*151;p.rect(root,xx,y+45,136,52,ok?'#effbe9':'#fffaf1',15,ok?'#bfe8b8':LINE,2);p.contain(root,id,xx-43,y+45,40);p.label(root,itemName(id,NAMES[id],state.retention?.locale),xx+13,y+33,11.5,SOFT,78,22,true,'left');p.label(root,`${Math.min(state.inventory[id],n!)}/${n}`,xx+13,y+54,15,ok?'#3ca55a':'#d6553f',78,24,true,'left');});
         this.button(p,root,canDeliver(state,o)?'交货':'货不够',w/2,y+101,w-24,44,()=>this.cb.act(()=>deliver(state,o.id)),canDeliver(state,o)?'#3cc9a6':'#badacc',canDeliver(state,o)?'#269f84':'#9fbdad',16);
       });return;
     }
     if(panel==='shop'){
-      const contentH=this.shopTab==='装饰'?590:this.shopTab==='农场星'?1240:this.shopTab==='动物'?80+Math.ceil(ANIMALS.length/2)*325:390,m=this.modal('商店','market',600,contentH+70,contentH),{p,root,w}=m;
+      const contentH=this.shopTab==='装饰'?590:this.shopTab==='农场星'?1240:this.shopTab==='动物'?80+Math.ceil(ANIMALS.length/2)*325:this.shopTab==='土地'?470:390,m=this.modal('商店','market',600,contentH+70,contentH),{p,root,w}=m;
       p.rect(root,w/2,23,w,40,'#f5e6c8',20);['土地','动物','装饰','农场星'].forEach((tab,i)=>{const xx=w/8+i*w/4,n=p.rect(root,xx,23,w/4-4,34,this.shopTab===tab?'#ffffff':'#f5e6c8',18);p.label(root,tab,xx,23,14,this.shopTab===tab?INK:SOFT,w/4-8,28);p.hit(n,()=>{this.shopTab=tab;this.render();});this.buttons.push({label:'商店-'+tab,n});});
       if(this.shopTab==='土地'){
         const start=this.landIndex===null?0:this.landIndex<30?0:30+Math.floor((this.landIndex-30)/18)*18,end=this.landIndex===null?state.plots.length:start===0?30:start+18,target=state.plots.findIndex((plot,i)=>i>=start&&i<end&&!plot.unlocked),area=this.landIndex===null?'':start===0?'主农场':(['东侧草甸','甜蜜果林','阳光牧场'][Math.floor((start-30)/18)]||'');
-        this.slot(p,root,w/2,225,w,323);const cx=w/2,cy=124;p.poly(root,[[cx,cy-30],[cx+82,cy+12],[cx,cy+54],[cx-82,cy+12]],'#7cd36a','#ffffff',3);p.poly(root,[[cx-82,cy+12],[cx,cy+54],[cx,cy+66],[cx-82,cy+24]],'#c98a52');p.poly(root,[[cx+82,cy+12],[cx,cy+54],[cx,cy+66],[cx+82,cy+24]],'#a86c3c');p.poly(root,[[cx,cy-16],[cx+56,cy+12],[cx,cy+40],[cx-56,cy+12]],'#a8714a');p.contain(root,'wheat',cx+74,cy-20,56);p.label(root,area?`开垦${area}`:'扩建田地',cx,219,20,INK,w-30,34);const n=state.plots.filter(p=>p.unlocked).length;p.label(root,`已有${n}/${state.plots.length}块地。地越多，收成越多！`,cx,251,13.5,SOFT,w-30,27);p.rect(root,cx,276,260,10,'#f1e2c8',5);p.rect(root,cx-130+260*n/state.plots.length/2,276,260*n/state.plots.length,10,'#a7744a',5);this.button(p,root,target<0?'这片田地已全部开垦':`购买田地 · ${expansionCost(state)}`,cx,324,210,48,()=>this.cb.act(()=>target<0?{ok:false,message:'这片田地已经全部开垦'}:expand(state,target)),'#67ca70','#3fa84d',17);p.label(root,'也可以直接点田里的价格牌',cx,368,12.5,SOFT,w-20,27);
+        this.slot(p,root,w/2,225,w,323);const cx=w/2,cy=124;p.poly(root,[[cx,cy-30],[cx+82,cy+12],[cx,cy+54],[cx-82,cy+12]],'#7cd36a','#ffffff',3);p.poly(root,[[cx-82,cy+12],[cx,cy+54],[cx,cy+66],[cx-82,cy+24]],'#c98a52');p.poly(root,[[cx+82,cy+12],[cx,cy+54],[cx,cy+66],[cx+82,cy+24]],'#a86c3c');p.poly(root,[[cx,cy-16],[cx+56,cy+12],[cx,cy+40],[cx-56,cy+12]],'#a8714a');p.contain(root,'wheat',cx+74,cy-20,56);p.label(root,area?`开垦${area}`:'扩建田地',cx,219,20,INK,w-30,34);const n=state.plots.filter(p=>p.unlocked).length;p.label(root,`已有${n}/${state.plots.length}块地。地越多，收成越多！`,cx,251,13.5,SOFT,w-30,27);p.rect(root,cx,276,260,10,'#f1e2c8',5);p.rect(root,cx-130+260*n/state.plots.length/2,276,260*n/state.plots.length,10,'#a7744a',5);this.button(p,root,target<0?'这片田地已全部开垦':`购买田地 · ${expansionCost(state)}`,cx,324,210,48,()=>this.cb.act(()=>target<0?{ok:false,message:'这片田地已经全部开垦'}:expand(state,target)),'#67ca70','#3fa84d',17);p.label(root,'也可以直接点田里的价格牌',cx,368,12.5,SOFT,w-20,27);this.button(p,root,t('soil.batchBtn',{},state.retention?.locale),cx,414,230,42,()=>this.cb.act(()=>upgradeSoilBatch(state)),'#8d6b4a','#6a4c32',14);
       }else if(this.shopTab==='动物'){
         ANIMALS.forEach((spec,i)=>{const id=spec.id,x=w/4+i%2*w/2,y=213+Math.floor(i/2)*325,locked=levelFor(state.xp)<spec.level&&!(spec.id==='whitePeacock'&&state.ecology.auroraAnimal);this.slot(p,root,x,y,w/2-8,309);p.pill(root,x-51,y-118,58,25,'#fff1d6');p.label(root,`${state.animals.filter(a=>a.type===id).length}/${animalCapacity(state,id)}`,x-51,y-118,13,INK,54,23);const img=p.contain(root,spec.sprite,x,y-41,116,120);if(locked){p.opacity(img,130);img.getComponent(Sprite)!.grayscale=true;p.pill(root,x,y-43,94,27,INK);p.label(root,`${spec.level}级解锁`,x,y-43,12,'#ffffff',91,25);}p.label(root,spec.name,x,y+46,20,INK,w/2-20,31);p.label(root,`${NAMES[spec.product]} · ${shortTime(spec.seconds)}`,x,y+77,13,SOFT,w/2-20,27);this.button(p,root,`购买 · ${spec.cost}`,x,y+120,w/2-30,44,()=>this.cb.act(()=>buyAnimal(state,id)),'#ff7aa2','#d64f7d',15.5);});
       }else if(this.shopTab==='装饰'){
@@ -199,10 +207,17 @@ export class FarmUI {
       p.rect(root,w/2,23,w,40,'#f5e6c8',20);(['成长','今日','建设','图鉴'] as const).forEach((tab,i)=>{const x=w/8+i*w/4,n=p.rect(root,x,23,w/4-4,34,this.diaryTab===tab?'#ffffff':'#f5e6c8',18);p.label(root,tab,x,23,14,this.diaryTab===tab?INK:SOFT,w/4-8,28);p.hit(n,()=>{this.diaryTab=tab;this.render();});this.buttons.push({label:'手记-'+tab,n});});journalPanel(this.featureContext(m),this.diaryTab);return;
     }
     if(panel==='settings'){
-      const m=this.modal('设置','',500,650,574),{p,root,w}=m;p.label(root,'声音与触感',w/2,18,18,'#7755a6',w-20,33);(['music','sound','haptics'] as const).forEach((key,i)=>{const y=80+i*63;this.slot(p,root,w/2,y,w,53);p.label(root,{music:'背景音乐',sound:'音效',haptics:'振动'}[key],100,y,16,INK,175,35,true,'left');const on=state[key];this.button(p,root,on?'开启':'关闭',w-52,y,80,34,()=>this.cb.settings(key),on?'#67ca70':'#c9bca5',on?'#3fa84d':'#ad9b7e',14);});
-      this.button(p,root,'导出存档',w/2,292,w-20,43,this.cb.exportSave,'#5ebde8','#3397c2',16);this.button(p,root,'隐私与存档说明',w/2,351,w-20,43,()=>this.open('privacy'),'#ab89d3','#8360ac',16);this.button(p,root,'重新开始',w/2,410,w-20,43,()=>this.open('confirm-reset'),'#ff7aa2','#d64f7d',16);
-      this.button(p,root,'导入存档',w/2,469,w-20,43,this.cb.chooseSave,'#67ca70','#3fa84d',16);
-      this.button(p,root,'恢复本机备份',w/2,528,w-20,43,this.cb.restoreBackup,'#ffb150','#dc8a29',16);return;
+      const locale=state.retention?.locale,m=this.modal('设置','',560,820,980),{p,root,w}=m;p.label(root,t('settings.audio',{},locale),w/2,18,18,'#7755a6',w-20,33);(['music','sound','haptics'] as const).forEach((key,i)=>{const y=72+i*52;this.slot(p,root,w/2,y,w,46);p.label(root,{music:'背景音乐',sound:'音效',haptics:'振动'}[key],100,y,16,INK,175,32,true,'left');const on=state[key];this.button(p,root,on?'开启':'关闭',w-52,y,80,34,()=>this.cb.settings(key),on?'#67ca70':'#c9bca5',on?'#3fa84d':'#ad9b7e',14);});
+      (['bgm','sfx'] as const).forEach((kind,i)=>{const y=236+i*52,value=state.retention.audio[kind];this.slot(p,root,w/2,y,w,46);p.label(root,t(kind==='bgm'?'settings.bgm':'settings.sfx',{},locale),88,y,14,INK,120,30,true,'left');this.button(p,root,'−',w-132,y,44,34,()=>this.cb.setVolume(kind,value-10),'#d9c4a3','#bca381',18);p.label(root,`${value}%`,w-78,y,14,INK,52,28);this.button(p,root,'+',w-36,y,44,34,()=>this.cb.setVolume(kind,value+10),'#d9c4a3','#bca381',18);});
+      this.button(p,root,t(state.retention.audio.muted?'settings.unmute':'settings.mute',{},locale),w/2,344,w-20,40,()=>this.cb.toggleMute(),state.retention.audio.muted?'#67ca70':'#c9bca5','#3fa84d',14);
+      p.label(root,t('settings.lang',{},locale),w/2,388,16,'#7755a6',w-20,28);LOCALES.forEach((id,i)=>{const ww=(w-16)/5,x=ww/2+8+i*ww;this.button(p,root,LOCALE_LABEL[id],x,424,ww-6,36,()=>this.cb.setLocale(id),locale===id?'#67ca70':'#cfbfa1',locale===id?'#3fa84d':'#ad9875',12);});
+      p.label(root,t('settings.code',{code:state.retention.share.code},locale),w/2,470,14,INK,w-16,28);
+      this.button(p,root,t('hud.share',{},locale),w/2,516,w-20,42,()=>this.cb.share('invite'),'#5ebde8','#3397c2',15);
+      if(state.retention.share.latest)this.button(p,root,t('settings.shareLatest',{},locale),w/2,566,w-20,40,()=>this.cb.share('latest'),'#ffb150','#dc8a29',14);
+      this.button(p,root,t('settings.redeem',{},locale),w/2,618,w-20,40,()=>this.cb.askRedeem(),'#ab89d3','#8360ac',14);
+      this.button(p,root,'导出存档',w/2,674,w-20,40,this.cb.exportSave,'#5ebde8','#3397c2',15);this.button(p,root,'隐私与存档说明',w/2,722,w-20,40,()=>this.open('privacy'),'#ab89d3','#8360ac',15);this.button(p,root,'重新开始',w/2,770,w-20,40,()=>this.open('confirm-reset'),'#ff7aa2','#d64f7d',15);
+      this.button(p,root,'导入存档',w/2,818,w-20,40,this.cb.chooseSave,'#67ca70','#3fa84d',15);
+      this.button(p,root,'恢复本机备份',w/2,866,w-20,40,this.cb.restoreBackup,'#ffb150','#dc8a29',15);return;
     }
     if(panel==='restore-save'){
       const m=this.modal('确认恢复存档','',590,360,285),{p,root,w}=m,preview=this.restorePreview;
@@ -217,13 +232,15 @@ export class FarmUI {
       p.label(root,'晴野物语 · 单机离线版',w/2,28,23,INK,w,38);
       p.label(root,'农场进度、库存和声音设置保存在本机。\n本游戏不设账号，不集成广告、跟踪或分析SDK，\n不主动收集或上传个人信息。',w/2,112,16,SOFT,w-20,116);
       p.label(root,'你主动导出时，存档由系统文件选择器保存到你选择的位置；云盘等目标位置按对应服务规则处理文件。\n卸载或清除应用数据可能删除本机进度，请先导出备份。',w/2,255,16,SOFT,w-20,145);
-      p.label(root,'通过TestFlight测试时，Apple可能按其隐私政策处理测试诊断与反馈。\n在设置中可导入备份文件或恢复本机备份。',w/2,399,16,SOFT,w-20,117);
+      p.label(root,'通过TestFlight测试时，Apple可能按其隐私政策处理测试诊断与反馈。\n在设置中可导入备份文件或恢复本机备份。\n分享只打开系统分享面板，附上你确认发出的卡片。没有好友列表，也不会上传农场。邀请码只在本机换一份新手礼物。',w/2,420,16,SOFT,w-20,140);
       this.button(p,root,'返回设置',w/2,510,w-20,44,()=>this.open('settings'));return;
     }
     const m=this.modal('重新开始','',450,264,190),{p,root,w}=m;p.label(root,'确定重新开始这座农场吗？\n当前进度会先保存为本地备份。',w/2,50,17,INK,w-20,70);this.button(p,root,'继续经营',w*.27,132,w*.43,44,()=>this.open('settings'),'#67ca70','#3fa84d',16);this.button(p,root,'重新开始',w*.75,132,w*.43,44,this.cb.reset,'#ff7aa2','#d64f7d',16);
   }
   private renderLevelUp(){const level=this.levelUp!,p=this.p,root=p.node(this.root,'LevelUpOverlay');if(this.backdrop){const n=p.node(root,'BlurredFarm',p.w/2,p.h/2,p.w,p.h),s=n.addComponent(Sprite);s.sizeMode=Sprite.SizeMode.CUSTOM;s.spriteFrame=this.backdrop;n.getComponent(UITransform)!.setContentSize(p.w,p.h);}const shade=p.rect(root,p.w/2,p.h/2,p.w+4,p.h+4,'#423d31',0,undefined,2,105);shade.addComponent(BlockInputEvents);levelUpCard(p,root,this.state(),level,(label,x,y,w,h,run,color,dark,font)=>this.button(p,root,label,x,y,w,h,run,color,dark,font),()=>{this.levelUp=this.levelQueue.shift()??null;if(level>levelFor(this.state().xp)||this.state().progression.claimedLevels.includes(level))this.render();else this.cb.act(()=>claimLevelReward(this.state(),level));});}
   private featureContext(m:{p:Painter;root:Node;w:number;h:number}):FeaturePanelContext{return{...m,state:this.state(),act:this.cb.act,button:(label,x,y,w,h,run,color,dark,font)=>this.button(m.p,m.root,label,x,y,w,h,run,color,dark,font),slot:(x,y,w,h)=>this.slot(m.p,m.root,x,y,w,h),live:f=>this.liveUpdates.push(f)};}
+  private renderTutorialBar(){const state=this.state(),prompt=state.retention?tutorialPrompt(state):null;if(!prompt)return;const p=this.p,y=p.h-148,w=Math.min(560,p.w-24),root=p.node(this.root,'Tutorial');p.rect(root,p.w/2,y,w,78,'#fff7e8',18,'#e7c48a',2);p.label(root,prompt.title,p.w/2,y-22,15,INK,w-24,24);p.label(root,prompt.body,p.w/2,y+2,12,SOFT,w-24,28);if(prompt.canContinue)this.button(p,root,t('tut.next',{},state.retention.locale),p.w/2-70,y+28,120,30,()=>this.cb.act(()=>advanceTutorial(state)),'#67ca70','#3fa84d',13);this.button(p,root,t('tut.skip',{},state.retention.locale),p.w/2+70,y+28,120,30,()=>this.cb.act(()=>skipTutorial(state)),'#c9bca5','#ad9b7e',13);}
+  private renderShareChip(){const state=this.state(),card=state.retention?.share.pending;if(!card)return;const p=this.p,y=p.h-214,copy=momentText(card,state.retention.locale,state.retention.share.code),w=Math.min(520,p.w-24);p.rect(this.root,p.w/2,y,w,64,'#e8f6ea',16,'#b7dfb4',2);p.label(this.root,copy.line,p.w/2,y-14,12,INK,w-24,22);this.button(p,this.root,t('hud.share',{},state.retention.locale),p.w/2-64,y+16,140,28,()=>this.cb.share('pending'),'#67ca70','#3fa84d',12);this.button(p,this.root,t('hud.later',{},state.retention.locale),p.w/2+84,y+16,88,28,()=>this.cb.act(()=>dismissShare(state)),'#c9bca5','#ad9b7e',12);}
   toast(message:string){if(!this.toastRoot)return;empty(this.toastRoot);const p=this.p,w=Math.min(p.w-24,message.length*15+60),n=p.pill(this.toastRoot,p.w/2,135,w,42);p.label(this.toastRoot,message,p.w/2,135,14.5,INK,w-20,35);setTimeout(()=>{if(n.isValid&&this.toastRoot.isValid)empty(this.toastRoot);},2300);}
   private title(){const p=this.p,n=p.node(this.root,'Title');p.rect(n,p.w/2,p.h/2,p.w,p.h,'#bfe1d2',0).addComponent(BlockInputEvents);const f=this.art.get('cover')!,ratio=f.rect.width/f.rect.height,ww=Math.max(p.w,p.h*ratio);p.image(n,'cover',p.w/2,ww/ratio/2,ww,ww/ratio);this.button(p,n,'开始游戏',p.w/2,p.h*.87,Math.min(300,p.w*.45),p.h<500?44:57,()=>{this.started=true;this.cb.start();this.panel=this.state().advanced.auto.report?.unread?'offline':null;this.render();},'#67ca70','#3fa84d',p.h<500?20:25);p.label(n,'种田 · 育种 · 装修 · 探索',p.w/2,p.h*.96,13,'#ffffff',300,25,true,'center','#5a3e2b');} 
 }

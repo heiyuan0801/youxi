@@ -92,10 +92,11 @@ export function enqueueCraft(s:FarmState,id:RecipeId,now=Date.now()):Result{
  const start=Math.max(now,...s.features.jobs.filter(j=>recipeFactory(RECIPES.find(r=>r.id===j.recipe)!)===recipeFactory(r)).map(j=>j.readyAt));s.features.jobs.push({id:s.features.nextJobId++,recipe:id,startedAt:start,readyAt:start+recipeSeconds(s,r)*1000});
  return ok(`${r.name}加入制作队列，离线也会继续加工`);
 }
+export const craftHooks:{onCraft?:(s:FarmState,id:string)=>void}={};
 export function collectCraft(s:FarmState,id:number,now=Date.now()):Result{
  const i=s.features.jobs.findIndex(j=>j.id===id),job=s.features.jobs[i];if(!job)return fail('这份成品已经领取');if(now<job.readyAt)return fail('还在制作中，再等一会儿吧');
  rollDaily(s,now);const r=RECIPES.find(r=>r.id===job.recipe)!;s.features.jobs.splice(i,1);const item=recipeProduct(r),amount=r.amount||1;s.inventory[item]+=amount;s.xp+=r.xp;s.features.stats.crafted++;discover(s,item,amount);
- return ok(`${r.name} +${amount} · 经验 +${r.xp}`,item);
+ craftHooks.onCraft?.(s,job.recipe);return ok(`${r.name} +${amount} · 经验 +${r.xp}`,item);
 }
 export function upgradeCost(s:FarmState,id:UpgradeId){const lv=s.features.upgrades[id];return{coins:[180,450,900][lv]||0,stars:[2,4,6][lv]||0,level:2+lv*2};}
 export function buyUpgrade(s:FarmState,id:UpgradeId):Result{

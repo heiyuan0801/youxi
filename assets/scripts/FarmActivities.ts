@@ -2,6 +2,7 @@ import type { FarmState, Plot, ProductId, Result } from './FarmModel';
 import { discover, farmLevel, refreshFeatures, rollDaily } from './FarmFeatures';
 import { isAdult, seasonIndex, weatherAt } from './FarmLife';
 import { FURNITURE, FurnitureId } from './FarmCatalog';
+import { noteFestivalPlay, noteFestivalScore } from './FarmRetention';
 
 export type PatrolKind = 'cat' | 'dog';
 export const PATROL_SPOTS = [
@@ -95,6 +96,7 @@ export function judgePumpkin(s: FarmState, now = Date.now()): Result {
   a.pumpkin = 0;
   s.coins += tier * 180;
   s.stars += tier * 2;
+  noteFestivalScore(s, 'pumpkin', score, now);
   return ok(`南瓜评选 · ${score}分 · ${tier * 180}金币和${tier * 2}农场星`);
 }
 
@@ -124,6 +126,7 @@ export function submitFlowers(s: FarmState, choices: readonly FlowerChoice[], no
   a.flowerRecord = Math.max(a.flowerRecord, score);
   s.coins += score * 3;
   s.stars += score >= 100 ? 4 : 2;
+  noteFestivalScore(s, 'flower', score, now);
   return ok(`花艺作品获${score}分 · ${score * 3}金币已入账`);
 }
 
@@ -167,6 +170,7 @@ export function pullIceLine(s: FarmState, now = Date.now()): Result {
   s.features.stats.catches++;
   s.xp += round.hits === 3 ? 20 : 10;
   discover(s, item);
+  noteFestivalPlay(s, now);
   return { ok: true, item, message: round.hits === 3 ? '三次拉线全中 · 钓到金色锦鲤' : '冰钓成功 · 溪流鱼已入库' };
 }
 
@@ -239,5 +243,6 @@ export function claimCalendar(s: FarmState, now = Date.now()): Result {
   if (s.activities.calendar.length > 128) s.activities.calendar.shift();
   s.coins += event.coins;
   s.stars += 4;
+  noteFestivalPlay(s, now);
   return ok(`${event.title}完成 · ${event.coins}金币与4农场星`);
 }
