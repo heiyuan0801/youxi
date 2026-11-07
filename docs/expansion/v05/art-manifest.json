@@ -1,0 +1,650 @@
+[
+  {
+    "key": "duck",
+    "atlas": "animals-atlas.png",
+    "cell": 0,
+    "width": 202,
+    "height": 256,
+    "sha256": "713850c1463cb6740d9099664c415ef398c14d58ce184509e575c58065af7f2a"
+  },
+  {
+    "key": "sheep",
+    "atlas": "animals-atlas.png",
+    "cell": 1,
+    "width": 251,
+    "height": 256,
+    "sha256": "378d35d9cb5386ded7af33ff808979ec53ee73a4f3a91c7f8ca80c53f5dd22dc"
+  },
+  {
+    "key": "pig",
+    "atlas": "animals-atlas.png",
+    "cell": 2,
+    "width": 256,
+    "height": 244,
+    "sha256": "837f734043e9eb99eea68d577e636f9422219d0b4c1dbe6f46dc169de930a3bd"
+  },
+  {
+    "key": "goat",
+    "atlas": "animals-atlas.png",
+    "cell": 3,
+    "width": 240,
+    "height": 256,
+    "sha256": "8b6711b4da9123909664e934bae83527f8c82a05eb86d3ba5cdb8f643f31ff2e"
+  },
+  {
+    "key": "rabbit",
+    "atlas": "animals-atlas.png",
+    "cell": 4,
+    "width": 208,
+    "height": 256,
+    "sha256": "06c9a5cee990d3b3c3f482e7751f1b2f8a20796032985af3d7762477e712f30d"
+  },
+  {
+    "key": "cat",
+    "atlas": "animals-atlas.png",
+    "cell": 5,
+    "width": 256,
+    "height": 248,
+    "sha256": "58a200229dd50e36bcc0c8847f5de99ebdcc45a1b588a0c24f5ab454dc0f6418"
+  },
+  {
+    "key": "dog",
+    "atlas": "animals-atlas.png",
+    "cell": 6,
+    "width": 256,
+    "height": 237,
+    "sha256": "d4a41c04eb3b6394e1ffed6fa8f47a4a8a53c4c3bbe490fb8cade206b45c583f"
+  },
+  {
+    "key": "horse",
+    "atlas": "animals-atlas.png",
+    "cell": 7,
+    "width": 244,
+    "height": 256,
+    "sha256": "acf19506bfced36540f64a7b0893c48c7e4d84f3a89c720d4f6cf1e974d1102a"
+  },
+  {
+    "key": "peacock",
+    "atlas": "animals-atlas.png",
+    "cell": 8,
+    "width": 233,
+    "height": 256,
+    "sha256": "29b8d51580be20455f7f022b247ffb34950c2c5fddf1af1a1e9cbac8c5f33741"
+  },
+  {
+    "key": "goldenSheep",
+    "atlas": "animals-atlas.png",
+    "cell": 9,
+    "width": 251,
+    "height": 256,
+    "sha256": "306cd0b2abed2b265257511dfe77793b660f5c3b829f65a155285382b1b02e98"
+  },
+  {
+    "key": "rainbowCow",
+    "atlas": "animals-atlas.png",
+    "cell": 10,
+    "width": 256,
+    "height": 239,
+    "sha256": "57b8a7737e419768c184155376a5e2237ed6663cc09025c570b292ee5d297314"
+  },
+  {
+    "key": "unicorn",
+    "atlas": "animals-atlas.png",
+    "cell": 11,
+    "width": 256,
+    "height": 254,
+    "sha256": "fb8033f116b1966e4d9d2327f6edddcae5da3d720598b1cadcffbc43a3fd9763"
+  },
+  {
+    "key": "rice",
+    "atlas": "crops-atlas.png",
+    "cell": 0,
+    "width": 256,
+    "height": 247,
+    "sha256": "31a8ebb37a3a6496b53ffae244ae743ec08842a640095b421cfc4e6a6abeb0da"
+  },
+  {
+    "key": "potato",
+    "atlas": "crops-atlas.png",
+    "cell": 1,
+    "width": 256,
+    "height": 248,
+    "sha256": "5457c649952c900969a5ee24805bbecace96cbf14818d1345639880852290554"
+  },
+  {
+    "key": "cabbage",
+    "atlas": "crops-atlas.png",
+    "cell": 2,
+    "width": 256,
+    "height": 225,
+    "sha256": "f6d306fe6e45144e70dce68db9379e4bd3cde15a442d1c8d4f84d611385d6834"
+  },
+  {
+    "key": "cucumber",
+    "atlas": "crops-atlas.png",
+    "cell": 3,
+    "width": 256,
+    "height": 250,
+    "sha256": "f5797a3405346220fa5f192aab1bd760d13efb12b664c2c53c855611f2bc1636"
+  },
+  {
+    "key": "soybean",
+    "atlas": "crops-atlas.png",
+    "cell": 4,
+    "width": 254,
+    "height": 256,
+    "sha256": "626386cf208292a59b465f43be39d2394101f7da3135621130e94d8ee89aaeb2"
+  },
+  {
+    "key": "cotton",
+    "atlas": "crops-atlas.png",
+    "cell": 5,
+    "width": 256,
+    "height": 253,
+    "sha256": "f80cb19a0e0e0e3b47b11a68201f3398ac962da767dfd4a6a0b69278ba81c15a"
+  },
+  {
+    "key": "sugarcane",
+    "atlas": "crops-atlas.png",
+    "cell": 6,
+    "width": 256,
+    "height": 246,
+    "sha256": "672478972bc9712944df17ca812443eeaa30c461f4178adab6803e1a887d34f2"
+  },
+  {
+    "key": "cocoa",
+    "atlas": "crops-atlas.png",
+    "cell": 7,
+    "width": 256,
+    "height": 245,
+    "sha256": "aacbb82b8dd414b5452a475e472ac87919b6b529085e46c3aa068bc1b84685f3"
+  },
+  {
+    "key": "coffee",
+    "atlas": "crops-atlas.png",
+    "cell": 8,
+    "width": 256,
+    "height": 245,
+    "sha256": "4b1853ffb31e405acbfb148ad64f372fe9b186e27bccc773ac6fecf2b77358de"
+  },
+  {
+    "key": "watermelon",
+    "atlas": "crops-atlas.png",
+    "cell": 9,
+    "width": 256,
+    "height": 253,
+    "sha256": "188587e9708713041c4c772f48838025421acfcc0a643a7cfa10a70c02ec03a1"
+  },
+  {
+    "key": "grape",
+    "atlas": "crops-atlas.png",
+    "cell": 10,
+    "width": 224,
+    "height": 256,
+    "sha256": "8c9a458d0f4fe7a3d53f2b0f9e5b39220d55e06a012971f1d31e855bb1952268"
+  },
+  {
+    "key": "orange",
+    "atlas": "crops-atlas.png",
+    "cell": 11,
+    "width": 256,
+    "height": 240,
+    "sha256": "0529e03dcabbfa6b3baefc9995ebec2c23360e85530803d311237c7902bd3a47"
+  },
+  {
+    "key": "sunflowerCrop",
+    "atlas": "crops-atlas.png",
+    "cell": 12,
+    "width": 233,
+    "height": 256,
+    "sha256": "b9af341e5c59c6213d46b391addab7847f65e87a14dfb828a82d9707c9565ba7"
+  },
+  {
+    "key": "lavender",
+    "atlas": "crops-atlas.png",
+    "cell": 13,
+    "width": 226,
+    "height": 256,
+    "sha256": "aca698c6270023c81a226e5cbedcac9c329612e19a6efdc921e96e41cc85f91b"
+  },
+  {
+    "key": "auroraBerry",
+    "atlas": "crops-atlas.png",
+    "cell": 14,
+    "width": 250,
+    "height": 256,
+    "sha256": "18fea2f70cd91dfd19eaee9238d19b5a4a2507f7b23c177f5155f437c1628b21"
+  },
+  {
+    "key": "goldenPumpkin",
+    "atlas": "crops-atlas.png",
+    "cell": 15,
+    "width": 256,
+    "height": 246,
+    "sha256": "508e9b0f25b4ee95ea9b9da3e268417df9ddc025c86d1ba2ad4e38f8091f9685"
+  },
+  {
+    "key": "flour",
+    "atlas": "goods-a-atlas.png",
+    "cell": 0,
+    "width": 242,
+    "height": 256,
+    "sha256": "13d2fc7fdb0c05949bcac1024c8e311521411138cecc8ad62e06c814759d7958"
+  },
+  {
+    "key": "feed",
+    "atlas": "goods-a-atlas.png",
+    "cell": 1,
+    "width": 232,
+    "height": 256,
+    "sha256": "1cc7622bd65c85d75667841f75f0faaed5b9d37baa2677599bebb25f025cf8e4"
+  },
+  {
+    "key": "wool",
+    "atlas": "goods-a-atlas.png",
+    "cell": 2,
+    "width": 256,
+    "height": 227,
+    "sha256": "2d937d34f626b32b9ce87efc9f97bd58712f26f41feb12ae6d9b5cda5025aa2b"
+  },
+  {
+    "key": "truffle",
+    "atlas": "goods-a-atlas.png",
+    "cell": 3,
+    "width": 256,
+    "height": 223,
+    "sha256": "8f357e53863e2919b66c49d4dd81aed568701313273438d9185b603f2460b92e"
+  },
+  {
+    "key": "goatMilk",
+    "atlas": "goods-a-atlas.png",
+    "cell": 4,
+    "width": 148,
+    "height": 256,
+    "sha256": "9149a84c4486a10cb5915bad25f35c6cf281ac6b9bebf8c52a4dd96f1b6e3cff"
+  },
+  {
+    "key": "duckEgg",
+    "atlas": "goods-a-atlas.png",
+    "cell": 5,
+    "width": 256,
+    "height": 203,
+    "sha256": "8929debde7e787a8e189f104df7df6596db2353e573a8b4246514dc2b6fa0af1"
+  },
+  {
+    "key": "fur",
+    "atlas": "goods-a-atlas.png",
+    "cell": 6,
+    "width": 256,
+    "height": 213,
+    "sha256": "02eae907c53c328ef062e9402fc1e43d04a6c98d6f4857260ddcc78e99f24fe8"
+  },
+  {
+    "key": "feather",
+    "atlas": "goods-a-atlas.png",
+    "cell": 7,
+    "width": 256,
+    "height": 240,
+    "sha256": "44b1ebc71b1922a9278db26dd6bc68a9e17b81a74edf5286c914104b4d9cf473"
+  },
+  {
+    "key": "butter",
+    "atlas": "goods-a-atlas.png",
+    "cell": 8,
+    "width": 256,
+    "height": 206,
+    "sha256": "c78153e679544e9a52cf3fb6acaa2d4c9f90ed0edc6d43925805e62e9ee1ce97"
+  },
+  {
+    "key": "yogurt",
+    "atlas": "goods-a-atlas.png",
+    "cell": 9,
+    "width": 226,
+    "height": 256,
+    "sha256": "fe1285671dbbbf433fb05f81b59d251bc988a8d6d9e496ee19758609129a693a"
+  },
+  {
+    "key": "appleJuice",
+    "atlas": "goods-a-atlas.png",
+    "cell": 10,
+    "width": 225,
+    "height": 256,
+    "sha256": "bdd9f3e659fbbf4e9b512f64f55c2afc54e539869994eb5afdec1ab802848823"
+  },
+  {
+    "key": "orangeJuice",
+    "atlas": "goods-a-atlas.png",
+    "cell": 11,
+    "width": 234,
+    "height": 256,
+    "sha256": "d6d8241321216d115ba40516dba253952f6ef5790bfe05549f1798bf9f418164"
+  },
+  {
+    "key": "grapeJuice",
+    "atlas": "goods-a-atlas.png",
+    "cell": 12,
+    "width": 221,
+    "height": 256,
+    "sha256": "d86d42a81035561cd664587200e26df5c518a2b30fd28eb99ca1a7f871d3f654"
+  },
+  {
+    "key": "cloth",
+    "atlas": "goods-a-atlas.png",
+    "cell": 13,
+    "width": 256,
+    "height": 220,
+    "sha256": "3a7f70533c77013790f07c22778596fe64b63fe3b00bcd61187a1df25378d68a"
+  },
+  {
+    "key": "clothes",
+    "atlas": "goods-a-atlas.png",
+    "cell": 14,
+    "width": 256,
+    "height": 216,
+    "sha256": "8146d1fda32c714fad54a7070886fd76d065680747d6f12fee2a22ca28f9dc45"
+  },
+  {
+    "key": "sugar",
+    "atlas": "goods-a-atlas.png",
+    "cell": 15,
+    "width": 256,
+    "height": 230,
+    "sha256": "ad58a3ffe72f1ffa2a37a6e0a620d269d58126c9123068dd4c1f195a40229c3f"
+  },
+  {
+    "key": "chocolate",
+    "atlas": "goods-b-atlas.png",
+    "cell": 0,
+    "width": 256,
+    "height": 242,
+    "sha256": "a68997695fb9a202881dd126f04c7888b42b1cb47936c89c06a40df431f358ca"
+  },
+  {
+    "key": "candy",
+    "atlas": "goods-b-atlas.png",
+    "cell": 1,
+    "width": 256,
+    "height": 241,
+    "sha256": "c1cb41daae44a3900b1e9e402096e9b41cca05dcc66cc0a8839c86bb50d14e4d"
+  },
+  {
+    "key": "vinegar",
+    "atlas": "goods-b-atlas.png",
+    "cell": 2,
+    "width": 177,
+    "height": 256,
+    "sha256": "6c1843f01033c419fe74bc38cc00c47a88861ede08a669270c5e2a5eaaa28da0"
+  },
+  {
+    "key": "planks",
+    "atlas": "goods-b-atlas.png",
+    "cell": 3,
+    "width": 256,
+    "height": 238,
+    "sha256": "d7ab4243bb9dd668d37b0aa46231acbd0e7f28684a405bd20bb11b0510edd19b"
+  },
+  {
+    "key": "fruitCan",
+    "atlas": "goods-b-atlas.png",
+    "cell": 4,
+    "width": 216,
+    "height": 256,
+    "sha256": "e5c962d123c0b4bf0703f0ea73d14c02bfffc8b6f65e863138e16788bf3808d0"
+  },
+  {
+    "key": "vegCan",
+    "atlas": "goods-b-atlas.png",
+    "cell": 5,
+    "width": 215,
+    "height": 256,
+    "sha256": "7bf1db348e8d8b500d916626debbd72f89813542b1fc836f14617724c1dd9157"
+  },
+  {
+    "key": "cake",
+    "atlas": "goods-b-atlas.png",
+    "cell": 6,
+    "width": 247,
+    "height": 256,
+    "sha256": "76905f39369d73f731cbf68def692ae5a8149b4a417efd7412c88260aa4d9e37"
+  },
+  {
+    "key": "cookies",
+    "atlas": "goods-b-atlas.png",
+    "cell": 7,
+    "width": 256,
+    "height": 248,
+    "sha256": "8f367810466d0e9c52ff39c8375ae159758f98434c91c051bef846d2011800fe"
+  },
+  {
+    "key": "wood",
+    "atlas": "goods-b-atlas.png",
+    "cell": 8,
+    "width": 256,
+    "height": 244,
+    "sha256": "e599a416330d4dfd31579827cd2cbc94a81ce930bbbd446da47f135a9573b051"
+  },
+  {
+    "key": "ore",
+    "atlas": "goods-b-atlas.png",
+    "cell": 9,
+    "width": 254,
+    "height": 255,
+    "sha256": "ab98f1d1f01e876e11f292bf3023434f4b53f9d543954dbdfe4806b47564d62e"
+  },
+  {
+    "key": "coal",
+    "atlas": "goods-b-atlas.png",
+    "cell": 10,
+    "width": 256,
+    "height": 216,
+    "sha256": "5f69bc63e2da18183689c3f4a15f95f4c9dcad236e3bd617c8f480f4bd4f9cfb"
+  },
+  {
+    "key": "gem",
+    "atlas": "goods-b-atlas.png",
+    "cell": 11,
+    "width": 234,
+    "height": 230,
+    "sha256": "2a4181d0a5d761b61dd95e06df602c38b1ac8ac3198814b5a619a907a10d9601"
+  },
+  {
+    "key": "herb",
+    "atlas": "goods-b-atlas.png",
+    "cell": 12,
+    "width": 248,
+    "height": 256,
+    "sha256": "8b25498b38fa187255776816af83d90ced5599aec7aece313b251996d797acff"
+  },
+  {
+    "key": "ice",
+    "atlas": "goods-b-atlas.png",
+    "cell": 13,
+    "width": 241,
+    "height": 256,
+    "sha256": "840f0846458c1c70aed8b3a67c8d72aab6085bb8d5957ea70c82c36eb6b77b4e"
+  },
+  {
+    "key": "rainbowMilk",
+    "atlas": "goods-b-atlas.png",
+    "cell": 14,
+    "width": 159,
+    "height": 256,
+    "sha256": "0b73559448ff82dcb21ec72a185bae88a1281f9308a2bb72767e93982700e7bd"
+  },
+  {
+    "key": "goldenWool",
+    "atlas": "goods-b-atlas.png",
+    "cell": 15,
+    "width": 256,
+    "height": 237,
+    "sha256": "b7c1552acaabd77b6bddaf2a42ff19ebf20b2c7226efe89a345486d91b329cee"
+  },
+  {
+    "key": "factory_mill",
+    "atlas": "buildings-atlas.png",
+    "cell": 0,
+    "width": 335,
+    "height": 372,
+    "sha256": "cc218b0138ddff2c7f73044b83ceb583fac2ea0763fecbd3c8661cb55aaa8368"
+  },
+  {
+    "key": "factory_bakery",
+    "atlas": "buildings-atlas.png",
+    "cell": 1,
+    "width": 346,
+    "height": 378,
+    "sha256": "b3833ef84a27b87073f55cd4ad65b56240273c9f26d4bb0074313a4b79fa5cad"
+  },
+  {
+    "key": "factory_dairy",
+    "atlas": "buildings-atlas.png",
+    "cell": 2,
+    "width": 356,
+    "height": 384,
+    "sha256": "a335d7b9f36c3daaa3ccd5d497656062a24640b2a1187047bedc2bdd0ae44b1e"
+  },
+  {
+    "key": "factory_juice",
+    "atlas": "buildings-atlas.png",
+    "cell": 3,
+    "width": 342,
+    "height": 384,
+    "sha256": "05e0be28ff3538afa34e6fe23f88097bf8f8586602000372d4ff861af1c18ab8"
+  },
+  {
+    "key": "factory_textile",
+    "atlas": "buildings-atlas.png",
+    "cell": 4,
+    "width": 341,
+    "height": 384,
+    "sha256": "c79840398620b4bc8488a51a65b4684c58cdbba397bd6e8fb2c77d8aecbb199c"
+  },
+  {
+    "key": "factory_candy",
+    "atlas": "buildings-atlas.png",
+    "cell": 5,
+    "width": 353,
+    "height": 384,
+    "sha256": "055b064afe34853785e8edd6881fca48cdf04beeb3e340d63a6f31dbf4dd02eb"
+  },
+  {
+    "key": "factory_brewing",
+    "atlas": "buildings-atlas.png",
+    "cell": 6,
+    "width": 381,
+    "height": 372,
+    "sha256": "c28bf9eb1273eff79f05035eefb67267e653fd2d9c94ef47586150b1973d752f"
+  },
+  {
+    "key": "factory_lumber",
+    "atlas": "buildings-atlas.png",
+    "cell": 7,
+    "width": 384,
+    "height": 351,
+    "sha256": "8321b02c426a1d0f0aa51dc6660b335b48987014bff99272f9802dd5e9389a39"
+  },
+  {
+    "key": "factory_cannery",
+    "atlas": "buildings-atlas.png",
+    "cell": 8,
+    "width": 384,
+    "height": 348,
+    "sha256": "2f285eb3b6987147cf17a3d1cc58e51dceaac6c98df61f3fb0f1178ab5faf93f"
+  },
+  {
+    "key": "mineEntrance",
+    "atlas": "places-atlas.png",
+    "cell": 0,
+    "width": 337,
+    "height": 315,
+    "sha256": "2e2e906e6b486db84e1eebf9ccc87acc639562f19e78420dfc7ecc057b347c88"
+  },
+  {
+    "key": "forestCamp",
+    "atlas": "places-atlas.png",
+    "cell": 1,
+    "width": 341,
+    "height": 342,
+    "sha256": "18b3b360e6849f3e24208cf8c50b26fa92282cd81eb8b296b689328ed6c713f7"
+  },
+  {
+    "key": "beachPier",
+    "atlas": "places-atlas.png",
+    "cell": 2,
+    "width": 351,
+    "height": 357,
+    "sha256": "6a449894c66d90565c0006f345da85ae988afe874a9600984b92153b03de757c"
+  },
+  {
+    "key": "snowCabin",
+    "atlas": "places-atlas.png",
+    "cell": 3,
+    "width": 341,
+    "height": 336,
+    "sha256": "508ac8eb707c4f4dd5310cd6469d3d5f5224a3da1a4f9e3adee7817d82f74c6a"
+  },
+  {
+    "key": "bed",
+    "atlas": "places-atlas.png",
+    "cell": 4,
+    "width": 256,
+    "height": 250,
+    "sha256": "428d3d5933c3a7681c9a33fb36d12eaa92957c026226056bb65225024e289f42"
+  },
+  {
+    "key": "sofa",
+    "atlas": "places-atlas.png",
+    "cell": 5,
+    "width": 256,
+    "height": 211,
+    "sha256": "54674e62daef600ff67f0da5aa89f2e08ac86c9cf11d7eb99f770e42f510231c"
+  },
+  {
+    "key": "desk",
+    "atlas": "places-atlas.png",
+    "cell": 6,
+    "width": 255,
+    "height": 256,
+    "sha256": "9d3561ac3f31fe9d46022dfdf641cbace2e185f91e61629d74a2c44932d49c1c"
+  },
+  {
+    "key": "rug",
+    "atlas": "places-atlas.png",
+    "cell": 7,
+    "width": 256,
+    "height": 182,
+    "sha256": "812d52da39e87d9e28b7b3b347ba298d93bae7e9613e7c80720eec1f01dbca35"
+  },
+  {
+    "key": "housePlant",
+    "atlas": "places-atlas.png",
+    "cell": 8,
+    "width": 240,
+    "height": 256,
+    "sha256": "d78b9482a643c2a000a93b99df96f498066cb5ad4f9d03babb91253dfa20c44f"
+  },
+  {
+    "key": "lamp",
+    "atlas": "places-atlas.png",
+    "cell": 9,
+    "width": 138,
+    "height": 256,
+    "sha256": "4937045ecb0b048198d3b84d2d8cf700b4e6e286d642c1433ee1f53ea26b7e65"
+  },
+  {
+    "key": "bookshelf",
+    "atlas": "places-atlas.png",
+    "cell": 10,
+    "width": 199,
+    "height": 256,
+    "sha256": "56d74e03040bd2e366ff0e354fe2833fc5b8b6cbf31aaf91261b7db3c9c7d35d"
+  },
+  {
+    "key": "woodenSign",
+    "atlas": "places-atlas.png",
+    "cell": 11,
+    "width": 183,
+    "height": 256,
+    "sha256": "7a49ce8cd0368ed43eba41bb999b117a4f4b8fadb5fc0793dbbca30004ae0afb"
+  }
+]

@@ -1,0 +1,141 @@
+[
+  {
+    "name": "animals",
+    "cols": 4,
+    "rows": 3,
+    "ref": "cow",
+    "subjects": [
+      "white duck with orange bill",
+      "fluffy cream sheep",
+      "cute pink pig",
+      "small tan goat with horns",
+      "soft white rabbit",
+      "ginger farm cat",
+      "friendly brown farm dog",
+      "chestnut horse with dark mane",
+      "blue peacock with compact fanned tail",
+      "rare sheep with golden wool",
+      "white cow with pastel rainbow patches",
+      "white unicorn with pastel mane and gold horn"
+    ],
+    "prompt": "Use case stylized-concept. Production sprite atlas for the same cozy 2D isometric farming game as the reference. Warm delicate brown outlines, rounded readable volumes, soft painted shading, bright farm palette, light from upper left. Strict invisible grid, ONE subject per cell, centered with generous fully transparent margins, no overlap across cells. True alpha transparent background. No text, no numbers, no UI, no ground, no cast shadows outside objects, no labels, no watermark. Exactly 4 columns by 3 rows. Cell order left to right, top to bottom: 1: white duck with orange bill; 2: fluffy cream sheep; 3: cute pink pig; 4: small tan goat with horns; 5: soft white rabbit; 6: ginger farm cat; 7: friendly brown farm dog; 8: chestnut horse with dark mane; 9: blue peacock with compact fanned tail; 10: rare sheep with golden wool; 11: white cow with pastel rainbow patches; 12: white unicorn with pastel mane and gold horn. All subjects isolated. Animals face three-quarter front-left with feet on the same baseline; objects have elevated three-quarter game view.",
+    "source": "/Users/jiesen/.codex/generated_images/01a1af6c-bba5-7531-8a7b-ecb1febbb50f/exec-0589ed87-edd9-4f6d-bda6-4654068868b8.png"
+  },
+  {
+    "name": "crops",
+    "cols": 4,
+    "rows": 4,
+    "ref": "carrot",
+    "subjects": [
+      "ripe rice stalks bundle",
+      "three potatoes with green leaves",
+      "round cabbage with outer leaves",
+      "two cucumbers and vine leaves",
+      "soybean pods with leaves",
+      "cotton bolls on a short stem",
+      "two sugarcane stalks with leaves",
+      "cocoa pod split to show beans",
+      "coffee branch with red berries",
+      "watermelon with one cut slice",
+      "purple grape bunch with vine leaf",
+      "two oranges with green leaf",
+      "sunflower plant with leaves",
+      "lavender flower bundle",
+      "magical aurora-colored blueberry plant with tiny glow",
+      "golden pumpkin with green stem"
+    ],
+    "prompt": "Use case stylized-concept. Production sprite atlas for the same cozy 2D isometric farming game as the reference. Warm delicate brown outlines, rounded readable volumes, soft painted shading, bright farm palette, light from upper left. Strict invisible grid, ONE subject per cell, centered with generous fully transparent margins, no overlap across cells. True alpha transparent background. No text, no numbers, no UI, no ground, no cast shadows outside objects, no labels, no watermark. Exactly 4 columns by 4 rows. Cell order left to right, top to bottom: 1: ripe rice stalks bundle; 2: three potatoes with green leaves; 3: round cabbage with outer leaves; 4: two cucumbers and vine leaves; 5: soybean pods with leaves; 6: cotton bolls on a short stem; 7: two sugarcane stalks with leaves; 8: cocoa pod split to show beans; 9: coffee branch with red berries; 10: watermelon with one cut slice; 11: purple grape bunch with vine leaf; 12: two oranges with green leaf; 13: sunflower plant with leaves; 14: lavender flower bundle; 15: magical aurora-colored blueberry plant with tiny glow; 16: golden pumpkin with green stem. All subjects isolated. Animals face three-quarter front-left with feet on the same baseline; objects have elevated three-quarter game view.",
+    "source": "/Users/jiesen/.codex/generated_images/01a1af6c-bba5-7531-8a7b-ecb1febbb50f/exec-cc02de8e-a688-4aea-8465-8ec900e5d003.png"
+  },
+  {
+    "name": "goods-a",
+    "cols": 4,
+    "rows": 4,
+    "ref": "carrot",
+    "subjects": [
+      "small cloth sack of flour",
+      "small wooden bucket of grain animal feed",
+      "cream wool yarn ball",
+      "three dark earthy truffle mushrooms",
+      "small glass bottle of goat milk with blue cap",
+      "two large pale duck eggs in nest",
+      "bundle of soft white rabbit fur",
+      "three colorful peacock feathers",
+      "slab of butter on small wooden plate",
+      "yogurt jar with white cloth lid",
+      "bottle of golden apple juice with apple beside",
+      "bottle of orange juice with orange beside",
+      "bottle of purple grape juice with grapes beside",
+      "folded pale cotton cloth",
+      "small blue farm shirt",
+      "small bowl of white sugar with sugar cubes"
+    ],
+    "prompt": "Use case stylized-concept. Production sprite atlas for the same cozy 2D isometric farming game as the reference. Warm delicate brown outlines, rounded readable volumes, soft painted shading, bright farm palette, light from upper left. Strict invisible grid, ONE subject per cell, centered with generous fully transparent margins, no overlap across cells. True alpha transparent background. No text, no numbers, no UI, no ground, no cast shadows outside objects, no labels, no watermark. Exactly 4 columns by 4 rows. Cell order left to right, top to bottom: 1: small cloth sack of flour; 2: small wooden bucket of grain animal feed; 3: cream wool yarn ball; 4: three dark earthy truffle mushrooms; 5: small glass bottle of goat milk with blue cap; 6: two large pale duck eggs in nest; 7: bundle of soft white rabbit fur; 8: three colorful peacock feathers; 9: slab of butter on small wooden plate; 10: yogurt jar with white cloth lid; 11: bottle of golden apple juice with apple beside; 12: bottle of orange juice with orange beside; 13: bottle of purple grape juice with grapes beside; 14: folded pale cotton cloth; 15: small blue farm shirt; 16: small bowl of white sugar with sugar cubes. All subjects isolated. Animals face three-quarter front-left with feet on the same baseline; objects have elevated three-quarter game view.",
+    "source": "/Users/jiesen/.codex/generated_images/01a1af6c-bba5-7531-8a7b-ecb1febbb50f/exec-41906086-5111-4256-ac29-993db41069e0.png"
+  },
+  {
+    "name": "goods-b",
+    "cols": 4,
+    "rows": 4,
+    "ref": "carrot",
+    "subjects": [
+      "chocolate bar with two cocoa beans",
+      "three wrapped pastel candies",
+      "bottle of amber fruit vinegar",
+      "three neatly stacked wooden planks",
+      "small glass jar of canned peaches",
+      "small glass jar of canned vegetables",
+      "small round berry cake",
+      "stack of golden cookies",
+      "two short logs of wood",
+      "rough copper ore rock",
+      "three black coal stones",
+      "one faceted blue gemstone",
+      "small bundle of fresh green herbs",
+      "pale blue ice crystal cluster",
+      "small glass bottle of pastel rainbow milk",
+      "golden wool yarn ball"
+    ],
+    "prompt": "Use case stylized-concept. Production sprite atlas for the same cozy 2D isometric farming game as the reference. Warm delicate brown outlines, rounded readable volumes, soft painted shading, bright farm palette, light from upper left. Strict invisible grid, ONE subject per cell, centered with generous fully transparent margins, no overlap across cells. True alpha transparent background. No text, no numbers, no UI, no ground, no cast shadows outside objects, no labels, no watermark. Exactly 4 columns by 4 rows. Cell order left to right, top to bottom: 1: chocolate bar with two cocoa beans; 2: three wrapped pastel candies; 3: bottle of amber fruit vinegar; 4: three neatly stacked wooden planks; 5: small glass jar of canned peaches; 6: small glass jar of canned vegetables; 7: small round berry cake; 8: stack of golden cookies; 9: two short logs of wood; 10: rough copper ore rock; 11: three black coal stones; 12: one faceted blue gemstone; 13: small bundle of fresh green herbs; 14: pale blue ice crystal cluster; 15: small glass bottle of pastel rainbow milk; 16: golden wool yarn ball. All subjects isolated. Animals face three-quarter front-left with feet on the same baseline; objects have elevated three-quarter game view.",
+    "source": "/Users/jiesen/.codex/generated_images/01a1af6c-bba5-7531-8a7b-ecb1febbb50f/exec-26535c36-9207-4d0c-9253-80260512160f.png"
+  },
+  {
+    "name": "buildings",
+    "cols": 3,
+    "rows": 3,
+    "subjects": [
+      "cozy stone windmill with wheat sack, milling flour",
+      "brick bakery with bread counter",
+      "blue roof dairy creamery with milk can",
+      "orange roof fruit juice factory with fruit crates",
+      "purple roof textile workshop with wool yarn",
+      "pink roof candy kitchen with wrapped candy",
+      "green roof vinegar and jam brewing workshop",
+      "timber sawmill workshop with stacked planks",
+      "teal roof cannery with fruit jars"
+    ],
+    "prompt": "Production sprite atlas for the cozy isometric farming game in the reference, warm delicate brown outlines, rounded volumes, soft painted shading, light upper left. Strict invisible grid exactly 3 columns x 3 rows, ONE isolated subject per cell. Generous fully transparent padding separating every cell. True transparent alpha background. NO labels, text, numbers, watermark, no floating UI. Three quarter elevated game view. Row major subjects: 1: cozy stone windmill with wheat sack, milling flour; 2: brick bakery with bread counter; 3: blue roof dairy creamery with milk can; 4: orange roof fruit juice factory with fruit crates; 5: purple roof textile workshop with wool yarn; 6: pink roof candy kitchen with wrapped candy; 7: green roof vinegar and jam brewing workshop; 8: timber sawmill workshop with stacked planks; 9: teal roof cannery with fruit jars. No overlap between cells.",
+    "source": "/Users/jiesen/.codex/generated_images/01a1af6c-bba5-7531-8a7b-ecb1febbb50f/exec-c63ceefc-2b39-4aed-8171-511c839270cf.png"
+  },
+  {
+    "name": "places",
+    "cols": 4,
+    "rows": 3,
+    "subjects": [
+      "rocky mine entrance with timber beams and mine cart",
+      "wooden forest ranger camp with pine tree",
+      "small tropical fishing pier with palm",
+      "snowy wooden cabin with pine",
+      "cozy wooden single bed with green quilt",
+      "soft orange two seat sofa",
+      "wooden writing desk with blue notebook",
+      "woven circular blue rug",
+      "potted leafy house plant",
+      "warm standing floor lamp",
+      "wooden bookshelf with colorful books",
+      "rustic wooden direction sign"
+    ],
+    "prompt": "Production sprite atlas for the cozy isometric farming game in the reference, warm delicate brown outlines, rounded volumes, soft painted shading, light upper left. Strict invisible grid exactly 4 columns x 3 rows, ONE isolated subject per cell. Generous fully transparent padding separating every cell. True transparent alpha background. NO labels, text, numbers, watermark, no floating UI. Three quarter elevated game view. Row major subjects: 1: rocky mine entrance with timber beams and mine cart; 2: wooden forest ranger camp with pine tree; 3: small tropical fishing pier with palm; 4: snowy wooden cabin with pine; 5: cozy wooden single bed with green quilt; 6: soft orange two seat sofa; 7: wooden writing desk with blue notebook; 8: woven circular blue rug; 9: potted leafy house plant; 10: warm standing floor lamp; 11: wooden bookshelf with colorful books; 12: rustic wooden direction sign. No overlap between cells.",
+    "source": "/Users/jiesen/.codex/generated_images/01a1af6c-bba5-7531-8a7b-ecb1febbb50f/exec-4627ac13-7028-47ab-903f-dfdfd97b392a.png"
+  }
+]

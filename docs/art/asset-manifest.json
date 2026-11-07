@@ -1,0 +1,313 @@
+{
+  "atlasSize": [
+    1254,
+    1254
+  ],
+  "animationSourceSize": [
+    2172,
+    724
+  ],
+  "generator": "Built-in image_gen; no model/version selector exposed.",
+  "items": [
+    {
+      "key": "house",
+      "size": [
+        384,
+        384
+      ],
+      "sourceCell": 0,
+      "pivot": "bottom-center",
+      "alpha": [
+        0,
+        255
+      ],
+      "source": "image_gen built-in",
+      "role": "game-runtime"
+    },
+    {
+      "key": "barn",
+      "size": [
+        384,
+        384
+      ],
+      "sourceCell": 1,
+      "pivot": "bottom-center",
+      "alpha": [
+        0,
+        255
+      ],
+      "source": "image_gen built-in",
+      "role": "game-runtime"
+    },
+    {
+      "key": "windmill",
+      "size": [
+        384,
+        384
+      ],
+      "sourceCell": 2,
+      "pivot": "bottom-center",
+      "alpha": [
+        0,
+        255
+      ],
+      "source": "image_gen built-in",
+      "role": "game-runtime"
+    },
+    {
+      "key": "coop",
+      "size": [
+        384,
+        384
+      ],
+      "sourceCell": 3,
+      "pivot": "bottom-center",
+      "alpha": [
+        0,
+        255
+      ],
+      "source": "image_gen built-in",
+      "role": "game-runtime"
+    },
+    {
+      "key": "market",
+      "size": [
+        384,
+        384
+      ],
+      "sourceCell": 4,
+      "pivot": "bottom-center",
+      "alpha": [
+        0,
+        255
+      ],
+      "source": "image_gen built-in",
+      "role": "game-runtime"
+    },
+    {
+      "key": "tree",
+      "size": [
+        384,
+        384
+      ],
+      "sourceCell": 5,
+      "pivot": "bottom-center",
+      "alpha": [
+        0,
+        255
+      ],
+      "source": "image_gen built-in",
+      "role": "game-runtime"
+    },
+    {
+      "key": "cherry",
+      "size": [
+        384,
+        384
+      ],
+      "sourceCell": 6,
+      "pivot": "bottom-center",
+      "alpha": [
+        0,
+        255
+      ],
+      "source": "image_gen built-in",
+      "role": "game-runtime"
+    },
+    {
+      "key": "pond",
+      "size": [
+        384,
+        384
+      ],
+      "sourceCell": 7,
+      "pivot": "bottom-center",
+      "alpha": [
+        0,
+        255
+      ],
+      "source": "image_gen built-in",
+      "role": "game-runtime"
+    },
+    {
+      "key": "wheat",
+      "size": [
+        192,
+        192
+      ],
+      "sourceCell": 8,
+      "pivot": "bottom-center",
+      "alpha": [
+        0,
+        255
+      ],
+      "source": "image_gen built-in",
+      "role": "game-runtime"
+    },
+    {
+      "key": "carrot",
+      "size": [
+        192,
+        192
+      ],
+      "sourceCell": 9,
+      "pivot": "bottom-center",
+      "alpha": [
+        0,
+        255
+      ],
+      "source": "image_gen built-in",
+      "role": "game-runtime"
+    },
+    {
+      "key": "strawberry",
+      "size": [
+        192,
+        192
+      ],
+      "sourceCell": 10,
+      "pivot": "bottom-center",
+      "alpha": [
+        0,
+        255
+      ],
+      "source": "image_gen built-in",
+      "role": "game-runtime"
+    },
+    {
+      "key": "tomato",
+      "size": [
+        192,
+        192
+      ],
+      "sourceCell": 11,
+      "pivot": "bottom-center",
+      "alpha": [
+        0,
+        255
+      ],
+      "source": "image_gen built-in",
+      "role": "game-runtime"
+    },
+    {
+      "key": "corn",
+      "size": [
+        192,
+        192
+      ],
+      "sourceCell": 12,
+      "pivot": "bottom-center",
+      "alpha": [
+        0,
+        255
+      ],
+      "source": "image_gen built-in",
+      "role": "game-runtime"
+    },
+    {
+      "key": "pumpkin",
+      "size": [
+        192,
+        192
+      ],
+      "sourceCell": 13,
+      "pivot": "bottom-center",
+      "alpha": [
+        0,
+        255
+      ],
+      "source": "image_gen built-in",
+      "role": "game-runtime"
+    },
+    {
+      "key": "hen",
+      "size": [
+        192,
+        192
+      ],
+      "sourceCell": 14,
+      "pivot": "bottom-center",
+      "alpha": [
+        0,
+        255
+      ],
+      "source": "image_gen built-in",
+      "role": "game-runtime"
+    },
+    {
+      "key": "cow",
+      "size": [
+        192,
+        192
+      ],
+      "sourceCell": 15,
+      "pivot": "bottom-center",
+      "alpha": [
+        0,
+        255
+      ],
+      "source": "image_gen built-in",
+      "role": "game-runtime"
+    },
+    {
+      "key": "hen-idle-0",
+      "size": [
+        192,
+        192
+      ],
+      "pivot": "bottom-center",
+      "source": "image_gen built-in",
+      "role": "animation-frame"
+    },
+    {
+      "key": "hen-idle-1",
+      "size": [
+        192,
+        192
+      ],
+      "pivot": "bottom-center",
+      "source": "image_gen built-in",
+      "role": "animation-frame"
+    },
+    {
+      "key": "hen-idle-2",
+      "size": [
+        192,
+        192
+      ],
+      "pivot": "bottom-center",
+      "source": "image_gen built-in",
+      "role": "animation-frame"
+    },
+    {
+      "key": "hen-idle-3",
+      "size": [
+        192,
+        192
+      ],
+      "pivot": "bottom-center",
+      "source": "image_gen built-in",
+      "role": "animation-frame"
+    },
+    {
+      "key": "hen-idle-4",
+      "size": [
+        192,
+        192
+      ],
+      "pivot": "bottom-center",
+      "source": "image_gen built-in",
+      "role": "animation-frame"
+    },
+    {
+      "key": "hen-idle-5",
+      "size": [
+        192,
+        192
+      ],
+      "pivot": "bottom-center",
+      "source": "image_gen built-in",
+      "role": "animation-frame"
+    }
+  ]
+}

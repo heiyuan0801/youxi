@@ -1,0 +1,36 @@
+[
+  {
+    "name": "chicken",
+    "start": 7.616553287981859,
+    "seconds": 1.2
+  },
+  {
+    "name": "cow",
+    "start": 0.8196371882086168,
+    "seconds": 2.2499773242630385
+  },
+  {
+    "file": "assets/resources/audio/cow.wav",
+    "seconds": 2.2499773242630385,
+    "bytes": 99268,
+    "sha256": "aacc8cca78884b18620e531288fdcbfa50d1a3d0824d4524fe77278bd07f90f7"
+  },
+  {
+    "file": "assets/resources/audio/chicken.wav",
+    "seconds": 1.2,
+    "bytes": 52964,
+    "sha256": "5e8addab214e5b10acd3aac18791b9000cbc3c00aeb4acf3954f8d416d581961"
+  },
+  {
+    "file": "assets/resources/audio/harvest.wav",
+    "seconds": 0.32,
+    "bytes": 14156,
+    "sha256": "859efc12ce215a55e0c1019749f09134a4b1aa2ec9a36a3af10a2376b5750c14"
+  },
+  {
+    "file": "assets/resources/audio/levelup.wav",
+    "seconds": 1.3499773242630386,
+    "bytes": 59578,
+    "sha256": "458ba1be53b1059f8dd9c3ca62a4ef84b8f202031b1e0a7432f5dd4b61ce7338"
+  }
+]

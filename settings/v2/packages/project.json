@@ -1,0 +1,20 @@
+{
+  "__version__": "1.0.6",
+  "splashScreen": {
+    "totalTime": 0,
+    "logo": {
+      "type": "none"
+    },
+    "background": {
+      "type": "default"
+    }
+  },
+  "general": {
+    "designResolution": {
+      "width": 1600,
+      "height": 900,
+      "fitWidth": true,
+      "fitHeight": true
+    }
+  }
+}

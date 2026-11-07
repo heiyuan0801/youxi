@@ -1,0 +1,5 @@
+/* Keep browser scrolling/pinch gestures out of the farm's touch input. */
+html, body, #GameDiv, #GameCanvas {
+  touch-action: none;
+  overscroll-behavior: none;
+}

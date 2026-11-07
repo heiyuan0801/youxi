@@ -1,0 +1,15 @@
+import {writeFileSync} from 'node:fs';
+import {CROPS,PRODUCTS,NAMES,PRICES} from '../assets/scripts/FarmModel';
+import {AQUATIC,ANIMALS,FACTORIES,TRAVEL_MAPS,FURNITURE} from '../assets/scripts/FarmCatalog';
+import {RECIPES,recipeFactory,recipeProduct} from '../assets/scripts/FarmFeatures';
+const table=(heads:string[],rows:(string|number)[][])=>`| ${heads.join(' | ')} |\n| ${heads.map(()=> '---').join(' | ')} |\n${rows.map(r=>'| '+r.join(' | ')+' |').join('\n')}\n`;
+let doc=`# 0.7.0 内容与数值\n\n由实际配置导出：${CROPS.length}作物、${ANIMALS.length}陆地动物＋${AQUATIC.length}水产、${FACTORIES.length}工厂、${RECIPES.length}配方、${PRODUCTS.length}产品、主农场＋${TRAVEL_MAPS.length}旅行地图。\n\n`;
+doc+='## 作物\n\n'+table(['作物','等级','秒','种子金币','售价','经验'],CROPS.map(c=>[c.name,c.level,c.seconds,c.cost,c.sell,c.xp]));
+doc+='\n## 动物\n\n'+table(['动物','等级','金币','产物','基础秒','作用'],ANIMALS.map(a=>[a.name,a.level,a.cost,NAMES[a.product],a.seconds,a.role]));
+doc+='\n生产效率＝max(55%,100%＋(成长等级－1)×2%＋高心情加成＋亲密×0.1%＋稀有度×10%－饥饿／低健康减益)。升级照料另缩短下一轮时间。旧鸡牛初始效率100%；等待中产物不因升级或照料改期。\n\n## 工厂\n\n'+table(['建筑','等级','建设金币','用途'],FACTORIES.map(f=>[f.name,f.level,f.cost,f.description]));
+doc+='\n## 配方\n\n'+table(['配方','工厂','等级','秒','原料','输出','批次售价'],RECIPES.map(r=>[r.name,FACTORIES.find(f=>f.id===recipeFactory(r))!.name,r.level,r.seconds,Object.entries(r.needs).map(([id,n])=>`${NAMES[id as keyof typeof NAMES]}×${n}`).join('、'),`${NAMES[recipeProduct(r)]}×${r.amount||1}`,PRICES[recipeProduct(r)]*(r.amount||1)]));
+doc+='\n## 地图\n\n'+table(['地图','等级','通行金币','玩法'],TRAVEL_MAPS.map(m=>[m.name,m.level,m.cost,m.description]));
+doc+='\n主农场三个扩张区继续保留，22→30→38→46格宽，30→48→66→84田位；旅行地图独立绘制，资源进入同一仓库。\n\n## 家具\n\n'+table(['家具','金币','木板','棉布'],FURNITURE.map(f=>[f.name,f.cost,f.planks,f.cloth]));
+doc+='\n## 节奏\n\n- 四季每20分钟轮转、天气每4分钟轮转；当季基线统计，领奖一次。\n- 体力24，每2分钟恢复1；采集2、探险4；节点10分钟恢复。\n- 探险30秒，马22.5秒，独角兽18秒；狗额外1份产物。\n- 繁殖100金币＋4饲料、育幼2分钟、幼崽5分钟成年、父母冷却1小时；羊／牛5%变种。\n- 家具6个摆放槽，同件不能复制。自动化前台每5秒检查，不离线自动循环。\n- 100级经验阈值147510；每级金币40＋20L，农场星1＋floor(L/5)，3的倍数级另送2鱼饵。\n';
+doc+='\n## 水产养殖\n\n'+table(['水产','等级','建池金币','生长秒','每轮产量'],AQUATIC.map(f=>[f.name,f.level,f.cost,f.seconds,f.output]));
+writeFileSync('docs/expansion/v07/content.md',doc);

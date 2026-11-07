@@ -1,0 +1,50 @@
+{
+  "tool": "built-in image_gen",
+  "atlas": "world-items-atlas.png",
+  "images": [
+    {
+      "key": "apple",
+      "size": [
+        256,
+        250
+      ],
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "honey",
+      "size": [
+        229,
+        256
+      ],
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "orchardBasket",
+      "size": [
+        224,
+        256
+      ],
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "beehive",
+      "size": [
+        361,
+        384
+      ],
+      "alpha": [
+        0,
+        255
+      ]
+    }
+  ]
+}

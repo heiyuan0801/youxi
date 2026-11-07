@@ -1,0 +1,146 @@
+[
+  {
+    "key": "goose",
+    "atlas": "animals-a-atlas.png",
+    "cell": 0,
+    "width": 196,
+    "height": 256,
+    "sha256": "c2c7540faa1430c7aacfd59ab630ab393f6e532503c285637a27bb70cb7533fa"
+  },
+  {
+    "key": "turkey",
+    "atlas": "animals-a-atlas.png",
+    "cell": 1,
+    "width": 248,
+    "height": 256,
+    "sha256": "67954b2c699f8b043e6bf5b745f526ae887a8a940dc9eb9dda59a96dc3f8e29b"
+  },
+  {
+    "key": "quail",
+    "atlas": "animals-a-atlas.png",
+    "cell": 2,
+    "width": 211,
+    "height": 256,
+    "sha256": "9cc870be9f389e31fdf46ca4b20aae777912f65cb6d8d8395faa342679484e23"
+  },
+  {
+    "key": "pigeon",
+    "atlas": "animals-a-atlas.png",
+    "cell": 3,
+    "width": 238,
+    "height": 256,
+    "sha256": "4449085414af169dbd9581a14ad94d96a6f70d5758aa8bfcfd262fb00777a904"
+  },
+  {
+    "key": "buffalo",
+    "atlas": "animals-a-atlas.png",
+    "cell": 4,
+    "width": 256,
+    "height": 243,
+    "sha256": "9063944289b38e7c6decf99f8ad71845c9e807981c0f23e2cc8b7878b92c4a19"
+  },
+  {
+    "key": "hamster",
+    "atlas": "animals-a-atlas.png",
+    "cell": 5,
+    "width": 256,
+    "height": 205,
+    "sha256": "df384fb3a94266c431781ba684970347fdf7656bc2f4e3c0edde11ca055b8657"
+  },
+  {
+    "key": "donkey",
+    "atlas": "animals-a-atlas.png",
+    "cell": 6,
+    "width": 256,
+    "height": 255,
+    "sha256": "b22f1ebf748dac9bf78dd754821037e87e9c4d2fa60727ea30e8cabb4647aa9a"
+  },
+  {
+    "key": "camel",
+    "atlas": "animals-a-atlas.png",
+    "cell": 7,
+    "width": 256,
+    "height": 254,
+    "sha256": "b56e2a4921448c2a35c4be8684b6768bb379ff0354d552092ddf91619f5a7835"
+  },
+  {
+    "key": "yak",
+    "atlas": "animals-a-atlas.png",
+    "cell": 8,
+    "width": 256,
+    "height": 239,
+    "sha256": "5afcc044d5fa3e7382c249a4548a78bd623382c9c75ff0e4ab638ff344e65a6a"
+  },
+  {
+    "key": "ostrich",
+    "atlas": "animals-b-atlas.png",
+    "cell": 0,
+    "width": 179,
+    "height": 256,
+    "sha256": "be26d87b3705f3f024ea67ed2e37e374b268a5622d6af3bc328acc4adc60162a"
+  },
+  {
+    "key": "alpaca",
+    "atlas": "animals-b-atlas.png",
+    "cell": 1,
+    "width": 178,
+    "height": 256,
+    "sha256": "aff73d4fd367dbee05a03f6c75ee5b661381ac15a1a38658d5379e25f3443684"
+  },
+  {
+    "key": "deer",
+    "atlas": "animals-b-atlas.png",
+    "cell": 2,
+    "width": 183,
+    "height": 256,
+    "sha256": "1e6d1a9d688eb54819799ecd4983a4a52b906aef6e5caadb822c88be52f09927"
+  },
+  {
+    "key": "whitePeacock",
+    "atlas": "animals-b-atlas.png",
+    "cell": 3,
+    "width": 253,
+    "height": 256,
+    "sha256": "111587969a86a2dd6e359172578fe46419b6b4333671e4d760434a16808ce61d"
+  },
+  {
+    "key": "carp",
+    "atlas": "animals-b-atlas.png",
+    "cell": 4,
+    "width": 256,
+    "height": 173,
+    "sha256": "10149200c2d88655d0c052a26214a8a6cf4ae0eb8336fd31750aed92ea00570f"
+  },
+  {
+    "key": "crucian",
+    "atlas": "animals-b-atlas.png",
+    "cell": 5,
+    "width": 256,
+    "height": 175,
+    "sha256": "8f00fb261a110ca895bae657f92b11623e5fb246c18070876fbe71a6ce55672b"
+  },
+  {
+    "key": "bass",
+    "atlas": "animals-b-atlas.png",
+    "cell": 6,
+    "width": 256,
+    "height": 172,
+    "sha256": "fa8f8c80e0d8f19e3147c62335d9ffa611da71ca2223d6117a93e2a22753963f"
+  },
+  {
+    "key": "lobster",
+    "atlas": "animals-b-atlas.png",
+    "cell": 7,
+    "width": 256,
+    "height": 204,
+    "sha256": "b290020442ac6733dc1234b2f080fb75b31e3ef58cfd477b866871812aef566e"
+  },
+  {
+    "key": "crab",
+    "atlas": "animals-b-atlas.png",
+    "cell": 8,
+    "width": 256,
+    "height": 171,
+    "sha256": "01738016eade37b404cfb99c5506eac71e5514bfbea7ec232877572a40b3cb51"
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "name": "SunnyFarm",
+  "platform": "web-desktop",
+  "buildPath": "project://build",
+  "debug": true,
+  "startScene": "a926d98d-e0eb-413a-a0de-0a0b9b951ed1",
+  "scenes": [
+    {
+      "url": "db://assets/scenes/Farm.scene",
+      "uuid": "a926d98d-e0eb-413a-a0de-0a0b9b951ed1"
+    }
+  ],
+  "packages": {
+    "web-desktop": {
+      "resolution": {
+        "designWidth": 1600,
+        "designHeight": 900
+      }
+    }
+  }
+}

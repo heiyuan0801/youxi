@@ -1,0 +1,126 @@
+{
+  "tool": "built-in image_gen",
+  "source": "items-atlas.png",
+  "images": [
+    {
+      "key": "bread",
+      "cell": [
+        0,
+        0
+      ],
+      "size": [
+        268,
+        233
+      ],
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "cheese",
+      "cell": [
+        1,
+        0
+      ],
+      "size": [
+        268,
+        250
+      ],
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "jam",
+      "cell": [
+        2,
+        0
+      ],
+      "size": [
+        268,
+        261
+      ],
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "pie",
+      "cell": [
+        3,
+        0
+      ],
+      "size": [
+        268,
+        219
+      ],
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "fish",
+      "cell": [
+        0,
+        1
+      ],
+      "size": [
+        268,
+        171
+      ],
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "goldenFish",
+      "cell": [
+        1,
+        1
+      ],
+      "size": [
+        268,
+        193
+      ],
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "bait",
+      "cell": [
+        2,
+        1
+      ],
+      "size": [
+        252,
+        268
+      ],
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "watering",
+      "cell": [
+        3,
+        1
+      ],
+      "size": [
+        268,
+        222
+      ],
+      "alpha": [
+        0,
+        255
+      ]
+    }
+  ]
+}

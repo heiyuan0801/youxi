@@ -1,0 +1,18 @@
+[
+  {
+    "name": "animals-a",
+    "keys": "goose turkey quail pigeon buffalo hamster donkey camel yak",
+    "prompt": "Game production sprite atlas, exactly 3 columns x 3 rows equally sized on square canvas. Each cell exactly one isolated full-body cute farm animal, centered with generous clear margins; no overlap, no text, no grid lines, no backgrounds or ground shadows. Row1: white goose, brown turkey with fan tail, tiny speckled quail. Row2: blue-grey pigeon, dark water buffalo with wide horns, golden hamster. Row3: grey donkey with long ears, tan two-hump camel, shaggy brown yak. Match existing cozy mobile farming artwork: polished hand-painted 2.5D chibi cartoon, warm brown outlines, rounded forms, glossy friendly eyes, soft cream highlights, facing three-quarter left. Slightly overhead isometric farm perspective. Aquatic creatures shown side/three-quarter, isolated without water. True transparent RGBA canvas. Clear silhouette readable at 64px. No missing or additional animals.",
+    "source": "/Users/jiesen/.codex/generated_images/01a1af6c-bba5-7531-8a7b-ecb1febbb50f/exec-dfca27c1-e430-44b8-bd8f-ae0cb4717b72.png",
+    "cols": 3,
+    "rows": 3
+  },
+  {
+    "name": "animals-b",
+    "keys": "ostrich alpaca deer whitePeacock carp crucian bass lobster crab",
+    "prompt": "Game production sprite atlas, exactly 3 columns x 3 rows equally sized on square canvas. Each cell exactly one isolated full-body cute farm animal, centered with generous clear margins; no overlap, no text, no grid lines, no backgrounds or ground shadows. Row1: black and white ostrich, cream alpaca with long neck, spotted sika deer with small antlers. Row2: pure white peacock with open tail, orange carp fish, silver crucian carp fish. Row3: green largemouth bass fish, red lobster with claws, orange crab. Match existing cozy mobile farming artwork: polished hand-painted 2.5D chibi cartoon, warm brown outlines, rounded forms, glossy friendly eyes, soft cream highlights, facing three-quarter left. Slightly overhead isometric farm perspective. Aquatic creatures shown side/three-quarter, isolated without water. True transparent RGBA canvas. Clear silhouette readable at 64px. No missing or additional animals.",
+    "source": "/Users/jiesen/.codex/generated_images/01a1af6c-bba5-7531-8a7b-ecb1febbb50f/exec-3ad75f24-ca83-4019-94f8-77610b818e60.png",
+    "cols": 3,
+    "rows": 3
+  }
+]

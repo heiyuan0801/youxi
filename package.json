@@ -1,0 +1,31 @@
+{
+  "name": "sunny-farm",
+  "uuid": "757b16d4-b1a9-4dc2-8b40-e12754bf6b43",
+  "version": "0.8.0",
+  "creator": {
+    "version": "3.8.7"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.check.json",
+    "test": "tsx --test tests/*.test.ts",
+    "build": "node tools/build.mjs",
+    "serve": "node tools/serve.mjs",
+    "smoke": "node tools/smoke.mjs",
+    "smoke:features": "node tools/smoke-features.mjs",
+    "smoke:progression": "node tools/smoke-progression.mjs",
+    "smoke:life": "node tools/smoke-life.mjs",
+    "smoke:ecology": "node tools/smoke-ecology.mjs",
+    "smoke:advanced": "node tools/smoke-advanced.mjs",
+    "smoke:journey": "tsx tools/smoke-journey.mjs",
+    "build:android": "node tools/build-android.mjs",
+    "package:android": "node tools/package-android.mjs",
+    "build:ios": "node tools/build-ios.mjs",
+    "package:ios": "node tools/package-ios.mjs"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "tsx": "4.20.6",
+    "@types/node": "24.10.0",
+    "playwright": "1.65.0"
+  }
+}

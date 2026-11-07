@@ -1,0 +1,1378 @@
+[
+  {
+    "key": "boy_blink",
+    "source": "reference-site/sprites/anim/boy_blink.webp",
+    "nativeSize": [
+      183,
+      263
+    ],
+    "runtimeSize": [
+      183,
+      263
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "boy_sit",
+    "source": "reference-site/sprites/anim/boy_sit.webp",
+    "nativeSize": [
+      183,
+      263
+    ],
+    "runtimeSize": [
+      183,
+      263
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "boy_talk",
+    "source": "reference-site/sprites/anim/boy_talk.webp",
+    "nativeSize": [
+      183,
+      263
+    ],
+    "runtimeSize": [
+      183,
+      263
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "boy_walk0",
+    "source": "reference-site/sprites/anim/boy_walk0.webp",
+    "nativeSize": [
+      183,
+      263
+    ],
+    "runtimeSize": [
+      183,
+      263
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "boy_walk1",
+    "source": "reference-site/sprites/anim/boy_walk1.webp",
+    "nativeSize": [
+      183,
+      263
+    ],
+    "runtimeSize": [
+      183,
+      263
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "boy_walk2",
+    "source": "reference-site/sprites/anim/boy_walk2.webp",
+    "nativeSize": [
+      183,
+      263
+    ],
+    "runtimeSize": [
+      183,
+      263
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "boy_walk3",
+    "source": "reference-site/sprites/anim/boy_walk3.webp",
+    "nativeSize": [
+      183,
+      263
+    ],
+    "runtimeSize": [
+      183,
+      263
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "boy_wave",
+    "source": "reference-site/sprites/anim/boy_wave.webp",
+    "nativeSize": [
+      183,
+      263
+    ],
+    "runtimeSize": [
+      183,
+      263
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "chicken_flap",
+    "source": "reference-site/sprites/anim/chicken_flap.webp",
+    "nativeSize": [
+      211,
+      203
+    ],
+    "runtimeSize": [
+      211,
+      203
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "chicken_peck",
+    "source": "reference-site/sprites/anim/chicken_peck.webp",
+    "nativeSize": [
+      211,
+      203
+    ],
+    "runtimeSize": [
+      211,
+      203
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "chicken_scratch",
+    "source": "reference-site/sprites/anim/chicken_scratch.webp",
+    "nativeSize": [
+      211,
+      203
+    ],
+    "runtimeSize": [
+      211,
+      203
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "chicken_sleep",
+    "source": "reference-site/sprites/anim/chicken_sleep.webp",
+    "nativeSize": [
+      211,
+      203
+    ],
+    "runtimeSize": [
+      211,
+      203
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "chicken_stand",
+    "source": "reference-site/sprites/anim/chicken_stand.webp",
+    "nativeSize": [
+      211,
+      203
+    ],
+    "runtimeSize": [
+      211,
+      203
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "chicken_startle",
+    "source": "reference-site/sprites/anim/chicken_startle.webp",
+    "nativeSize": [
+      211,
+      203
+    ],
+    "runtimeSize": [
+      211,
+      203
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "chicken_walk0",
+    "source": "reference-site/sprites/anim/chicken_walk0.webp",
+    "nativeSize": [
+      211,
+      203
+    ],
+    "runtimeSize": [
+      211,
+      203
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "chicken_walk1",
+    "source": "reference-site/sprites/anim/chicken_walk1.webp",
+    "nativeSize": [
+      211,
+      203
+    ],
+    "runtimeSize": [
+      211,
+      203
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "chicken_walk2",
+    "source": "reference-site/sprites/anim/chicken_walk2.webp",
+    "nativeSize": [
+      211,
+      203
+    ],
+    "runtimeSize": [
+      211,
+      203
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "chicken_walk3",
+    "source": "reference-site/sprites/anim/chicken_walk3.webp",
+    "nativeSize": [
+      211,
+      203
+    ],
+    "runtimeSize": [
+      211,
+      203
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "cow_graze",
+    "source": "reference-site/sprites/anim/cow_graze.webp",
+    "nativeSize": [
+      304,
+      255
+    ],
+    "runtimeSize": [
+      304,
+      255
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "cow_happy",
+    "source": "reference-site/sprites/anim/cow_happy.webp",
+    "nativeSize": [
+      304,
+      255
+    ],
+    "runtimeSize": [
+      304,
+      255
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "cow_moo",
+    "source": "reference-site/sprites/anim/cow_moo.webp",
+    "nativeSize": [
+      304,
+      255
+    ],
+    "runtimeSize": [
+      304,
+      255
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "cow_sleep",
+    "source": "reference-site/sprites/anim/cow_sleep.webp",
+    "nativeSize": [
+      304,
+      255
+    ],
+    "runtimeSize": [
+      304,
+      255
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "cow_stand",
+    "source": "reference-site/sprites/anim/cow_stand.webp",
+    "nativeSize": [
+      304,
+      255
+    ],
+    "runtimeSize": [
+      304,
+      255
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "cow_tail",
+    "source": "reference-site/sprites/anim/cow_tail.webp",
+    "nativeSize": [
+      304,
+      255
+    ],
+    "runtimeSize": [
+      304,
+      255
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "cow_walk0",
+    "source": "reference-site/sprites/anim/cow_walk0.webp",
+    "nativeSize": [
+      304,
+      255
+    ],
+    "runtimeSize": [
+      304,
+      255
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "cow_walk1",
+    "source": "reference-site/sprites/anim/cow_walk1.webp",
+    "nativeSize": [
+      304,
+      255
+    ],
+    "runtimeSize": [
+      304,
+      255
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "cow_walk2",
+    "source": "reference-site/sprites/anim/cow_walk2.webp",
+    "nativeSize": [
+      304,
+      255
+    ],
+    "runtimeSize": [
+      304,
+      255
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "cow_walk3",
+    "source": "reference-site/sprites/anim/cow_walk3.webp",
+    "nativeSize": [
+      304,
+      255
+    ],
+    "runtimeSize": [
+      304,
+      255
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "girl_blink",
+    "source": "reference-site/sprites/anim/girl_blink.webp",
+    "nativeSize": [
+      211,
+      266
+    ],
+    "runtimeSize": [
+      211,
+      266
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "girl_sit",
+    "source": "reference-site/sprites/anim/girl_sit.webp",
+    "nativeSize": [
+      211,
+      266
+    ],
+    "runtimeSize": [
+      211,
+      266
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "girl_talk",
+    "source": "reference-site/sprites/anim/girl_talk.webp",
+    "nativeSize": [
+      211,
+      266
+    ],
+    "runtimeSize": [
+      211,
+      266
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "girl_walk0",
+    "source": "reference-site/sprites/anim/girl_walk0.webp",
+    "nativeSize": [
+      211,
+      266
+    ],
+    "runtimeSize": [
+      211,
+      266
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "girl_walk1",
+    "source": "reference-site/sprites/anim/girl_walk1.webp",
+    "nativeSize": [
+      211,
+      266
+    ],
+    "runtimeSize": [
+      211,
+      266
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "girl_walk2",
+    "source": "reference-site/sprites/anim/girl_walk2.webp",
+    "nativeSize": [
+      211,
+      266
+    ],
+    "runtimeSize": [
+      211,
+      266
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "girl_walk3",
+    "source": "reference-site/sprites/anim/girl_walk3.webp",
+    "nativeSize": [
+      211,
+      266
+    ],
+    "runtimeSize": [
+      211,
+      266
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "girl_wave",
+    "source": "reference-site/sprites/anim/girl_wave.webp",
+    "nativeSize": [
+      211,
+      266
+    ],
+    "runtimeSize": [
+      211,
+      266
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "grandpa_blink",
+    "source": "reference-site/sprites/anim/grandpa_blink.webp",
+    "nativeSize": [
+      180,
+      263
+    ],
+    "runtimeSize": [
+      180,
+      263
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "grandpa_sit",
+    "source": "reference-site/sprites/anim/grandpa_sit.webp",
+    "nativeSize": [
+      180,
+      263
+    ],
+    "runtimeSize": [
+      180,
+      263
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "grandpa_talk",
+    "source": "reference-site/sprites/anim/grandpa_talk.webp",
+    "nativeSize": [
+      180,
+      263
+    ],
+    "runtimeSize": [
+      180,
+      263
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "grandpa_walk0",
+    "source": "reference-site/sprites/anim/grandpa_walk0.webp",
+    "nativeSize": [
+      180,
+      263
+    ],
+    "runtimeSize": [
+      180,
+      263
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "grandpa_walk1",
+    "source": "reference-site/sprites/anim/grandpa_walk1.webp",
+    "nativeSize": [
+      180,
+      263
+    ],
+    "runtimeSize": [
+      180,
+      263
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "grandpa_walk2",
+    "source": "reference-site/sprites/anim/grandpa_walk2.webp",
+    "nativeSize": [
+      180,
+      263
+    ],
+    "runtimeSize": [
+      180,
+      263
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "grandpa_walk3",
+    "source": "reference-site/sprites/anim/grandpa_walk3.webp",
+    "nativeSize": [
+      180,
+      263
+    ],
+    "runtimeSize": [
+      180,
+      263
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "grandpa_wave",
+    "source": "reference-site/sprites/anim/grandpa_wave.webp",
+    "nativeSize": [
+      180,
+      263
+    ],
+    "runtimeSize": [
+      180,
+      263
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "bakery",
+    "source": "reference-site/sprites/bakery.webp",
+    "nativeSize": [
+      327,
+      384
+    ],
+    "runtimeSize": [
+      327,
+      384
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "barn",
+    "source": "reference-site/sprites/barn.webp",
+    "nativeSize": [
+      412,
+      512
+    ],
+    "runtimeSize": [
+      412,
+      512
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "bench",
+    "source": "reference-site/sprites/bench.webp",
+    "nativeSize": [
+      315,
+      320
+    ],
+    "runtimeSize": [
+      315,
+      320
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "boy",
+    "source": "reference-site/sprites/boy.webp",
+    "nativeSize": [
+      286,
+      512
+    ],
+    "runtimeSize": [
+      214,
+      384
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "bush",
+    "source": "reference-site/sprites/bush.webp",
+    "nativeSize": [
+      512,
+      495
+    ],
+    "runtimeSize": [
+      384,
+      371
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "car",
+    "source": "reference-site/sprites/car.webp",
+    "nativeSize": [
+      512,
+      438
+    ],
+    "runtimeSize": [
+      384,
+      329
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "carrot",
+    "source": "reference-site/sprites/carrot.webp",
+    "nativeSize": [
+      512,
+      457
+    ],
+    "runtimeSize": [
+      384,
+      343
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "chicken",
+    "source": "reference-site/sprites/chicken.webp",
+    "nativeSize": [
+      452,
+      512
+    ],
+    "runtimeSize": [
+      339,
+      384
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "coin",
+    "source": "reference-site/sprites/coin.webp",
+    "nativeSize": [
+      503,
+      512
+    ],
+    "runtimeSize": [
+      377,
+      384
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "coop",
+    "source": "reference-site/sprites/coop.webp",
+    "nativeSize": [
+      430,
+      512
+    ],
+    "runtimeSize": [
+      322,
+      384
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "corn",
+    "source": "reference-site/sprites/corn.webp",
+    "nativeSize": [
+      382,
+      512
+    ],
+    "runtimeSize": [
+      286,
+      384
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "cow",
+    "source": "reference-site/sprites/cow.webp",
+    "nativeSize": [
+      512,
+      444
+    ],
+    "runtimeSize": [
+      384,
+      333
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "egg",
+    "source": "reference-site/sprites/egg.webp",
+    "nativeSize": [
+      512,
+      428
+    ],
+    "runtimeSize": [
+      384,
+      321
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "farmhouse",
+    "source": "reference-site/sprites/farmhouse.webp",
+    "nativeSize": [
+      446,
+      512
+    ],
+    "runtimeSize": [
+      446,
+      512
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "girl",
+    "source": "reference-site/sprites/girl.webp",
+    "nativeSize": [
+      394,
+      512
+    ],
+    "runtimeSize": [
+      295,
+      384
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "grandpa",
+    "source": "reference-site/sprites/grandpa.webp",
+    "nativeSize": [
+      293,
+      512
+    ],
+    "runtimeSize": [
+      220,
+      384
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "hay",
+    "source": "reference-site/sprites/hay.webp",
+    "nativeSize": [
+      512,
+      478
+    ],
+    "runtimeSize": [
+      384,
+      359
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "logo",
+    "source": "reference-site/sprites/logo.webp",
+    "nativeSize": [
+      760,
+      498
+    ],
+    "runtimeSize": [
+      760,
+      498
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "market",
+    "source": "reference-site/sprites/market.webp",
+    "nativeSize": [
+      418,
+      512
+    ],
+    "runtimeSize": [
+      418,
+      512
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "milk",
+    "source": "reference-site/sprites/milk.webp",
+    "nativeSize": [
+      258,
+      512
+    ],
+    "runtimeSize": [
+      193,
+      384
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "pumpkin",
+    "source": "reference-site/sprites/pumpkin.webp",
+    "nativeSize": [
+      512,
+      420
+    ],
+    "runtimeSize": [
+      384,
+      315
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "scarecrow",
+    "source": "reference-site/sprites/scarecrow.webp",
+    "nativeSize": [
+      460,
+      512
+    ],
+    "runtimeSize": [
+      345,
+      384
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "school",
+    "source": "reference-site/sprites/school.webp",
+    "nativeSize": [
+      487,
+      512
+    ],
+    "runtimeSize": [
+      487,
+      512
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "signpost",
+    "source": "reference-site/sprites/signpost.webp",
+    "nativeSize": [
+      212,
+      320
+    ],
+    "runtimeSize": [
+      212,
+      320
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "star",
+    "source": "reference-site/sprites/star.webp",
+    "nativeSize": [
+      512,
+      479
+    ],
+    "runtimeSize": [
+      384,
+      359
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "strawberry",
+    "source": "reference-site/sprites/strawberry.webp",
+    "nativeSize": [
+      512,
+      477
+    ],
+    "runtimeSize": [
+      384,
+      358
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "study_star",
+    "source": "reference-site/sprites/study_star.webp",
+    "nativeSize": [
+      256,
+      251
+    ],
+    "runtimeSize": [
+      256,
+      251
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "sunflower",
+    "source": "reference-site/sprites/sunflower.webp",
+    "nativeSize": [
+      244,
+      320
+    ],
+    "runtimeSize": [
+      244,
+      320
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "swing",
+    "source": "reference-site/sprites/swing.webp",
+    "nativeSize": [
+      351,
+      384
+    ],
+    "runtimeSize": [
+      351,
+      384
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "tomato",
+    "source": "reference-site/sprites/tomato.webp",
+    "nativeSize": [
+      440,
+      512
+    ],
+    "runtimeSize": [
+      330,
+      384
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "tree_pine",
+    "source": "reference-site/sprites/tree_pine.webp",
+    "nativeSize": [
+      228,
+      512
+    ],
+    "runtimeSize": [
+      171,
+      384
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "tree_pink",
+    "source": "reference-site/sprites/tree_pink.webp",
+    "nativeSize": [
+      512,
+      505
+    ],
+    "runtimeSize": [
+      384,
+      379
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "tree_round",
+    "source": "reference-site/sprites/tree_round.webp",
+    "nativeSize": [
+      479,
+      512
+    ],
+    "runtimeSize": [
+      359,
+      384
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "truck",
+    "source": "reference-site/sprites/truck.webp",
+    "nativeSize": [
+      512,
+      443
+    ],
+    "runtimeSize": [
+      384,
+      332
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "well",
+    "source": "reference-site/sprites/well.webp",
+    "nativeSize": [
+      367,
+      512
+    ],
+    "runtimeSize": [
+      275,
+      384
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "wheat",
+    "source": "reference-site/sprites/wheat.webp",
+    "nativeSize": [
+      448,
+      512
+    ],
+    "runtimeSize": [
+      336,
+      384
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "windmill",
+    "source": "reference-site/sprites/windmill.webp",
+    "nativeSize": [
+      369,
+      512
+    ],
+    "runtimeSize": [
+      369,
+      512
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "wp_flower",
+    "source": "reference-site/sprites/wp_flower.webp",
+    "nativeSize": [
+      152,
+      222
+    ],
+    "runtimeSize": [
+      152,
+      222
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "wp_leaf",
+    "source": "reference-site/sprites/wp_leaf.webp",
+    "nativeSize": [
+      152,
+      222
+    ],
+    "runtimeSize": [
+      152,
+      222
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "wp_seed",
+    "source": "reference-site/sprites/wp_seed.webp",
+    "nativeSize": [
+      152,
+      222
+    ],
+    "runtimeSize": [
+      152,
+      222
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "wp_sprout",
+    "source": "reference-site/sprites/wp_sprout.webp",
+    "nativeSize": [
+      152,
+      222
+    ],
+    "runtimeSize": [
+      152,
+      222
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "key": "wp_wilt",
+    "source": "reference-site/sprites/wp_wilt.webp",
+    "nativeSize": [
+      152,
+      222
+    ],
+    "runtimeSize": [
+      152,
+      222
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  }
+]

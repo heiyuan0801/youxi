@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "target": "ES2020", "module": "ESNext", "moduleResolution": "bundler",
+    "strict": true, "skipLibCheck": true, "experimentalDecorators": true,
+    "useDefineForClassFields": false, "types": [], "lib": ["ES2020", "DOM"]
+  },
+  "include": ["assets/scripts/**/*.ts", "/Volumes/mac/tools/cocos/3.8.7/CocosCreator.app/Contents/Resources/resources/3d/engine/bin/.declarations/cc.d.ts"]
+}
