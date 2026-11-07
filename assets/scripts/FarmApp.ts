@@ -10,10 +10,10 @@ import {REF_ART} from './RefArtData';
 import {EXPANSION_ART} from './ExpansionArt';
 import {WORLD_ART} from './WorldArt';
 import {LIFE_ART} from './LifeArt';
-import {MapId,FactoryId,animalSpec} from './FarmCatalog';
+import {ART_PLACEHOLDERS,AquaticId,MapId,FactoryId,animalSpec} from './FarmCatalog';
 import {NEXT_ART} from './NextArt';
 import {refreshLife,travel,gather,autoFeed,careFor,isAdult} from './FarmLife';
-import {FarmAudio,SOUND_KEYS,SoundKey,animalVoice} from './FarmAudio';
+import {FarmAudio,SOUND_KEYS,SoundKey,animalVoice,aquaticVoice} from './FarmAudio';
 import {worldWidth,hasRegion,collectOrchard} from './FarmProgression';
 import {REGIONS,RegionId} from './WorldData';
 import {refreshFeatures,fishingPhase,rollDaily} from './FarmFeatures';
@@ -46,6 +46,7 @@ export class FarmApp extends Component {
     Promise.all([...images,...fonts,...sounds,...nativeSounds]).then(()=>{loading.node.destroy();this.initialize(p);}).catch(err=>{loading.string='农场资源没有加载完整，请刷新重试';console.error(err);});
   }
   private initialize(p:Painter){
+    for(const [alias,source] of Object.entries(ART_PLACEHOLDERS)){const frame=this.art.get(source);if(frame&&!this.art.has(alias))this.art.set(alias,frame);}
     this.world=p.node(this.node,'FarmWorld',800,450,9000,7000);const hud=p.node(this.node,'ReferenceUI');this.scene=new FarmScene(this.world,this.art,()=>this.state);this.sfx=new FarmAudio(this.node,this.soundClips,this.nativeClips);this.sfx.setEnabled(this.state.sound);
     this.ui=new FarmUI(hud,this.art,()=>this.state,{act:f=>this.act(f),pick:id=>this.pick(id),place:id=>{this.placing=id;this.ui.toast('点一块空草地，放下新的装饰');},zoom:f=>this.zoom(f),focus:id=>this.focus(id),travel:id=>this.travelTo(id),settings:key=>{this.state[key]=!this.state[key];if(key==='sound')this.sfx.setEnabled(this.state.sound);if(key==='music')this.sfx.setMusic(this.state.music&&this.audioStarted);this.save();this.ui.render();},exportSave:()=>this.exportSave(),chooseSave:()=>this.chooseSave(),restoreBackup:()=>this.restoreBackup(),confirmSave:()=>this.confirmSave(),reset:()=>this.reset(),start:()=>this.startAudio()});
     this.ui.started=!!rawSession();
@@ -109,6 +110,8 @@ export class FarmApp extends Component {
     }
     if(hit.type==='story'){this.ui.open('story');return;}
     if(hit.type==='ice-fishing'){this.ui.open('ice-fishing');return;}
+    if(hit.type==='summer-fishing'){this.ui.open('summer-fishing');return;}
+    if(hit.type==='automation'){this.ui.open('automation');return;}
     if(hit.type==='deep-route'){this.act(()=>takeRoute(this.state,Number(hit.id)),at);this.ui.open('explore');return;}
     if(hit.type==='explore'){this.ui.open('explore');return;}
     if(hit.type==='resource'){this.act(()=>gather(this.state,Number(hit.id)),at);return;}
@@ -116,7 +119,7 @@ export class FarmApp extends Component {
     if(hit.type==='building'){const key=String(hit.id);if(key==='barn')this.ui.open('warehouse');else if(key==='market')this.ui.open('shop');else if(key==='farmhouse')this.ui.open('orders');else if(key==='school')this.ui.open('tasks');else if(key==='windmill')this.ui.open('workshop');else if(key==='coop'){this.ui.shopTab='动物';this.ui.open('shop');}return;}
     if(hit.type==='region'){this.ui.open('world');return;}
     if(hit.type==='apple'||hit.type==='honey'){const kind=hit.type;this.act(()=>collectOrchard(this.state,kind,Number(hit.id)),at);return;}
-    if(hit.type==='aquatic'){this.sfx.play('pondSplash');this.ui.open('ponds');return;}
+    if(hit.type==='aquatic'){this.sfx.play(aquaticVoice(String(hit.id) as AquaticId));this.ui.open('ponds');return;}
     if(hit.type==='pond'){this.ui.open('fishing');return;}
     if(hit.type==='villager'){const w=this.scene.motion.walkers.find(w=>w.kind===hit.id);if(w){w.say=['农场里的蔬菜长得真好！','早上好，今天也大丰收吧。','来集市看看新鲜收获吧！'][Math.floor(Math.random()*3)];w.sayUntil=this.scene.motion.time+3;w.state='wave';w.left=2.2;}this.chime(false);return;}
     if(hit.type==='bed')this.act(()=>tendFlower(this.state,Number(hit.id)),at);else if(hit.type==='garden-sign')this.ui.toast('花圃：点空花坑种花，盛开后收获金币和农场星');else this.scene.burst(at,'star',5);
@@ -204,7 +207,8 @@ export class FarmApp extends Component {
   update(dt:number){
     if(!this.scene)return;
     this.scene.update(Math.min(dt,.05));
-    if(this.ui.panel==='ice-fishing')this.ui.tick();
+    const livePanel=this.ui.panel==='ice-fishing'||this.ui.panel==='race'||this.ui.panel==='summer-fishing';
+    if(livePanel)this.ui.tick();
     this.clock+=dt;
     if(this.clock>.35){
       this.clock=0;
@@ -234,7 +238,7 @@ export class FarmApp extends Component {
       }
       if(this.ui.panel!=='home'&&(changed||lifeChanged||storm||this.currentSignature()!==this.signature))this.refresh();
       else if(this.dirty&&!this.pointer)this.flush();
-      if(this.ui.panel!=='ice-fishing')this.ui.tick();
+      if(!livePanel)this.ui.tick();
     }
     if(this.audioStarted&&this.state.music&&this.audio){
       this.musicClock+=dt;

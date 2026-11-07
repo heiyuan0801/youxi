@@ -27,9 +27,10 @@ export function travelPanel(c:FeaturePanelContext,go:(id:MapId)=>void,explore:()
  button('分层探索 · 路线与奇遇',w/2,195,w-16,40,explore,'#ab89d3','#8360ac',14);
  TRAVEL_MAPS.forEach((m,i)=>{const y=311+i*170,owned=s.life.maps.includes(m.id);slot(w/2,y,w,155);p.contain(root,m.icon,62,y-17,104,102);p.label(root,m.name,w/2+65,y-49,21,INK,w-150,34,true,'left');p.label(root,m.description,w/2+65,y-13,12,SOFT,w-150,38,true,'left');p.label(root,owned?'通行证已获得':`${m.level}级 · ${m.cost}金币`,w/2-90,y+47,12,SOFT,w-210,30);button(owned?'前往'+m.name:'解锁'+m.name,w-95,y+47,170,40,()=>owned?go(m.id):act(()=>unlockMap(s,m.id)),owned?'#58bde4':'#67ca70',owned?'#3295bd':'#3fa84d',13);});
 }
-export function seasonPanel(c:FeaturePanelContext,events:()=>void,games:()=>void=()=>{}){
+export function seasonPanel(c:FeaturePanelContext,events:()=>void,games:()=>void=()=>{},summer:()=>void=()=>{}){
  const {p,root,w,state:s,button,slot,act}=c,index=seasonIndex(s),weather=weatherAt(s),f=festival(s),progress=Math.max(0,f.value-s.life.festivalBaseline);
  p.contain(root,weather==='snow'||weather==='aurora'?'snowCabin':weather==='rainbow'?'rainbowCow':'sunflower',w/2,70,108,110);p.label(root,`${SEASONS[index%4]}季 · ${WEATHER_NAMES[weather]}`,w/2,151,26,INK,w-20,42);
+ button('限时渔赛',w*.18,70,w*.28,36,summer,'#58bde4','#3295bd',13);
  button('四季比赛与日历',w*.82,70,w*.32,40,games,'#ffb150','#dc8a29',14);
  p.label(root,'一季20分钟 · 天气每4分钟变化 · 离线也会轮转',w/2,192,12,SOFT,w-10,30);
  slot(w/2,290,w,132);p.contain(root,f.icon,55,273,76);p.label(root,f.name,w/2+65,252,22,INK,w-150,35,true,'left');p.label(root,`${f.description} · ${Math.min(f.target,progress)}/${f.target}`,w/2+65,283,14,SOFT,w-150,31,true,'left');button(s.life.festivalClaimed?'本季已领':'领取季节奖励',w-100,327,177,38,()=>act(()=>claimFestival(s)),'#ffb150','#dc8a29',13);p.label(root,`${f.coins}金币 + 5农场星`,132,327,12,SOFT,240,28,true,'left');

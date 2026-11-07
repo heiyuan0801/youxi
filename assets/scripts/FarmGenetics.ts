@@ -7,6 +7,9 @@ export const TRAIT_NAMES={production:'产能',temper:'温顺',vitality:'体质'}
 export const baseGenome=():Genome=>({production:[1,1],temper:[1,1],vitality:[1,1],parents:null,generation:0,mutated:false});
 export const genome=(s:FarmState,id:number)=>s.advanced.genes[id]||baseGenome();
 export const geneValue=(g:Genome,t:Trait)=>(g[t][0]+g[t][1])/2;
+export type DominanceMode='homo'|'complete'|'incomplete';
+export function dominance(pair:[number,number]){const dominant=Math.max(pair[0],pair[1]),recessive=Math.min(pair[0],pair[1]),gap=dominant-recessive;const mode:DominanceMode=gap===0?'homo':gap===1?'incomplete':'complete';return {mode,dominant,recessive,phenotype:mode==='incomplete'?(dominant+recessive)/2:dominant};}
+export function transmitAllele(pair:[number,number],roll:number){if(pair[0]===pair[1])return pair[0];const dominant=Math.max(pair[0],pair[1]),recessive=Math.min(pair[0],pair[1]);if(dominant-recessive>=2)return roll<.75?dominant:recessive;return roll<.5?pair[0]:pair[1];}
 export const geneBonus=(s:FarmState,id:number)=>Math.max(0,geneValue(genome(s,id),'production')-1)*.06;
 export function seedGenome(s:FarmState,a:Animal){const g=baseGenome();for(const [i,t]of TRAITS.entries()){const n=Math.abs(Math.imul(a.id+animalSpec(a.type).level+i*17,2654435761));g[t]=[1+n%3,1+Math.floor(n/7)%3];}s.advanced.genes[a.id]=g;}
 export function family(id:AnimalId){return ['cow','rainbowCow'].includes(id)?'cow':['sheep','goldenSheep'].includes(id)?'sheep':['peacock','whitePeacock'].includes(id)?'peacock':['horse','unicorn'].includes(id)?'horse':id;}
@@ -31,7 +34,7 @@ export function related(s:FarmState,a:number,b:number){
 }
 export function inherit(s:FarmState,a:number,b:number,serial:number,focus:Trait|null):Genome{
  const p=genome(s,a),q=genome(s,b);let seed=(Math.imul(serial+1,1664525)^Math.imul(a,1013904223)^b)>>>0;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
- const g:Genome={...baseGenome(),parents:[a,b],generation:Math.max(p.generation,q.generation)+1};for(const t of TRAITS){const alleles:[number,number]=t===focus?[Math.max(...p[t]),Math.max(...q[t])]:[p[t][random()<.5?0:1],q[t][random()<.5?0:1]];if(random()<.02){const i=random()<.5?0:1;alleles[i]=Math.min(3,alleles[i]+1);g.mutated=true;}g[t]=alleles;}return g;
+ const g:Genome={...baseGenome(),parents:[a,b],generation:Math.max(p.generation,q.generation)+1};for(const t of TRAITS){const alleles:[number,number]=t===focus?[Math.max(...p[t]),Math.max(...q[t])]:[transmitAllele(p[t],random()),transmitAllele(q[t],random())];if(random()<.02){const i=random()<.5?0:1;alleles[i]=Math.min(3,alleles[i]+1);g.mutated=true;}g[t]=alleles;}return g;
 }
 export function pairAnimals(s:FarmState,aid:number,bid:number,focus:Trait,now=Date.now()):Result{
  const fail=(message:string)=>({ok:false,message}),a=s.animals.find(a=>a.id===aid),b=s.animals.find(a=>a.id===bid);if(!a||!b||!TRAITS.includes(focus))return fail('请选择两位伙伴和培育方向');if(family(a.type)!==family(b.type))return fail('请选择同一品种家族，稀有品种可与普通品种配对');if(related(s,aid,bid))return fail('不能选择自身或三代内有共同祖先的伙伴');

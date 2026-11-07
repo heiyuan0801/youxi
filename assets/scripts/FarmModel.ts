@@ -1,8 +1,8 @@
 import {Advanced,newAdvanced,migrateAdvanced} from './FarmAdvanced';
 import {validateAdvanced} from './AdvancedValidation';
 import {seedGenome} from './FarmGenetics';
-import {Journey,newJourney,validJourney} from './FarmJourney';
-import {FarmActivities,newActivities,validActivities,recordPumpkin} from './FarmActivities';
+import {Journey,migrateJourney,newJourney,validJourney} from './FarmJourney';
+import {FarmActivities,migrateActivities,newActivities,validActivities,recordPumpkin} from './FarmActivities';
 import {Ecology,newEcology,validateEcology,growAnimal} from './FarmEcology';
 import {FEATURE_ITEMS,FEATURE_NAMES,FEATURE_PRICES,FeatureProductId,FarmFeatures,newFeatures,validateFeatures,rollDaily,refreshFeatures,discover,farmLevel,RECIPES,recipeFactory,recipeProduct} from './FarmFeatures';
 import {FarmProgression,newProgression,validateProgression,animalCapacity} from './FarmProgression';
@@ -78,6 +78,10 @@ const artisanOrders=[
  {level:7,person:'牧场裁缝',message:'需要柔软的羊毛，给伙伴做一条围巾。',needs:{wool:2,cotton:1},coins:355,xp:38},
  {level:12,person:'小镇早餐铺',message:'今天想供应酸奶和现烤的曲奇。',needs:{yogurt:1,cookies:1},coins:960,xp:55},
  {level:16,person:'葡园旅人',message:'一瓶果醋，一杯葡萄汁，带着果香出发。',needs:{vinegar:1,grapeJuice:1},coins:1080,xp:65},
+ {level:22,person:'凉亭店主',message:'葵花凉茶和果醋，给赶路的人解解渴。',needs:{sunTea:1,vinegar:1},coins:980,xp:52},
+ {level:30,person:'午后茶会',message:'想用一杯手冲咖啡，配上刚出炉的面包。',needs:{coffeeBrew:1,bread:1},coins:860,xp:48},
+ {level:35,person:'花茶铺主',message:'薰衣草花茶和香草，招待今晚的客人。',needs:{floralTea:1,herb:1},coins:920,xp:54},
+ {level:45,person:'极光旅人',message:'极光莓茶和手冲咖啡，暖一暖雪原的夜晚。',needs:{berryTea:1,coffeeBrew:1},coins:1680,xp:80},
  {level:26,person:'节庆甜品师',message:'想用巧克力和糖果装点丰收节的餐桌。',needs:{chocolate:1,candy:1},coins:2050,xp:95},
  {level:40,person:'稀有动物研究员',message:'收集彩虹奶和黄金羊毛，记录小院里的奇迹。',needs:{rainbowMilk:1,goldenWool:1},coins:1100,xp:120},
  {level:60,person:'金色丰收宴',message:'把黄金南瓜和极光莓做成丰收展品吧。',needs:{goldenPumpkin:2,auroraBerry:1},coins:2200,xp:180}
@@ -198,6 +202,7 @@ export function parseSave(raw:string|null,now=Date.now(),refresh=true):FarmState
     if(beforeV05){s.life=newLife(now);if(s.inventory)for(const id of PRODUCTS)if(s.inventory[id]===undefined)s.inventory[id]=0;if(Array.isArray(s.animals))for(const a of s.animals)s.life.care[a.id]=newCare(now);}
     if(s.ecology===undefined){s.ecology=newEcology();if(s.inventory)for(const id of ['carp','crucian','bass','lobster','crab'] as const)if(s.inventory[id]===undefined)s.inventory[id]=0;}
     if(!validateProgression(s.progression))return null;
+    if(s.inventory)for(const id of PRODUCTS)if(s.inventory[id]===undefined)s.inventory[id]=0;
     if(s.version!==1||!int(s.coins)||!int(s.xp)||!num(s.savedAt,1e15)||!s.inventory||!PRODUCTS.every(id=>int(s.inventory[id])))return null;
     if(!Array.isArray(s.plots)||s.plots.length!==30+18*s.progression.regions.length||!s.plots.every(p=>typeof p.unlocked==='boolean'&&typeof p.watered==='boolean'&&(p.crop===null||CROPS.some(c=>c.id===p.crop))&&num(p.plantedAt,1e15)&&(!p.crop||p.unlocked)&&(p.growSeconds===undefined||(num(p.growSeconds,3600)&&p.growSeconds>0))&&((p.pauseAt===undefined&&p.pauseUntil===undefined)||(num(p.pauseAt,1e15)&&num(p.pauseUntil,1e15)&&p.pauseUntil!>=p.pauseAt!&&p.pauseUntil!-p.pauseAt!<=240000))))return null;
     if(!Array.isArray(s.animals)||s.animals.length>60||!s.animals.every(a=>int(a.id)&&ANIMALS.some(v=>v.id===a.type)&&num(a.readyAt,1e15))||new Set(s.animals.map(a=>a.id)).size!==s.animals.length)return null;
@@ -218,8 +223,9 @@ export function parseSave(raw:string|null,now=Date.now(),refresh=true):FarmState
     if(s.advanced===undefined)s.advanced=migrateAdvanced(s,now);
     if(!validateAdvanced(s,PRODUCTS))return null;
     if(!validateEcology(s.ecology,s.animals))return null;
-    if(s.journey===undefined)s.journey=newJourney(s);
-    if(s.activities===undefined)s.activities=newActivities();
+    if(s.journey===undefined)s.journey=newJourney(s);else migrateJourney(s.journey);
+    if(s.activities===undefined)s.activities=newActivities();else migrateActivities(s.activities);
+    if(s.activities.race&&Array.isArray(s.animals)&&!s.animals.some(a=>a.id===s.activities.race!.animalId))s.activities.race=null;
     if(!validJourney(s.journey)||!validActivities(s.activities,s.plots))return null;
     if(s.activities.furniture&&s.advanced.room.items.length>=40)return null;
     if(s.plots.some(p=>p.composted!==undefined&&(p.composted!==true||p.crop!=='pumpkin'&&p.crop!=='goldenPumpkin')))return null;

@@ -1,9 +1,9 @@
 import type { FeaturePanelContext } from './FeaturePanels';
-import { FURNITURE, TRAVEL_MAPS } from './FarmCatalog';
-import { NAMES } from './FarmModel';
+import { FURNITURE, TRAVEL_MAPS, animalSpec } from './FarmCatalog';
+import { NAMES, ProductId } from './FarmModel';
 import { seasonIndex } from './FarmLife';
-import { AREA_STORIES, BREAKFAST_STEPS, HONORS, advanceBreakfast, breakfastReady, claimHonor, finishStory, honorReady } from './FarmJourney';
-import { FLOWER_PALETTE, FlowerChoice, ICE_ROUND_MS, calendarEvent, claimCalendar, flowerScore, iceWindow, judgePumpkin, pullIceLine, startIceFishing, startPatrol, submitFlowers } from './FarmActivities';
+import { AREA_STORIES, BREAKFAST_STEPS, COMMISSIONS, HONORS, TOWN_CHAPTERS, advanceBreakfast, advanceTown, breakfastReady, claimHonor, commissionLap, currentCommission, finishStory, honorReady, turnInCommission } from './FarmJourney';
+import { FLOWER_PALETTE, FlowerChoice, ICE_ROUND_MS, RACE_MS, SUMMER_LIMIT_MS, calendarEvent, claimCalendar, flowerScore, iceWindow, judgePumpkin, jumpRace, pullIceLine, pullSummerLine, raceWindow, startIceFishing, startPatrol, startRace, startSummerContest, submitFlowers, summerWindow } from './FarmActivities';
 import { collectFurniture, startFurniture } from './FarmRoom';
 import { buyBait } from './FarmFeatures';
 
@@ -36,6 +36,45 @@ export function breakfastPanel(c: FeaturePanelContext, go: (target: 'farm' | 'mi
     p.label(root, '阿禾已经摆好早餐。接着去各地看看，或挑战农场荣誉吧。', w / 2, 424, 16, SOFT, w - 16, 65);
     button('查看农场荣誉', w / 2, 472, w - 14, 44, () => go('honors'));
   }
+}
+
+export function townPanel(c: FeaturePanelContext, honors: () => void, breakfast: () => void) {
+  const { p, root, w, state: s, button, slot, act } = c;
+  if (s.journey.breakfast < BREAKFAST_STEPS.length) {
+    p.label(root, '第一炉面包还没烤完。', w / 2, 80, 18, INK, w - 20, 40);
+    p.label(root, '跟着阿禾做完早餐，小镇才会把后面的章节交给你。', w / 2, 130, 14, SOFT, w - 24, 50);
+    button('回到第一炉面包', w / 2, 200, w - 18, 44, breakfast);
+    return;
+  }
+  const chapter = TOWN_CHAPTERS[s.journey.chapter];
+  if (chapter) {
+    const step = chapter.steps[s.journey.step];
+    p.label(root, chapter.title, w / 2, 24, 22, INK, w, 36);
+    p.label(root, chapter.intro, w / 2, 64, 14, SOFT, w - 16, 44);
+    chapter.steps.forEach((goal, i) => {
+      const y = 130 + i * 58;
+      slot(w / 2, y, w, 52);
+      p.contain(root, goal.icon, 28, y, 34);
+      p.label(root, goal.title, w / 2 - 20, y, 15, INK, w - 180, 30, true, 'left');
+      p.label(root, i < s.journey.step ? '已完成' : i === s.journey.step ? '当前目标' : '未开启', w - 58, y, 13, i === s.journey.step ? '#42985c' : SOFT, 96, 28);
+    });
+    p.label(root, step.hint, w / 2, 318, 15, SOFT, w - 16, 58);
+    button(step.ready(s) ? '完成这一步' : step.blocked, w / 2, 390, w - 16, 44, () => act(() => advanceTown(s)), step.ready(s) ? '#67ca70' : '#cfbfa1');
+    button('查看晴野荣誉', w / 2, 448, w - 16, 40, honors, '#ffb150', '#dc8a29', 14);
+    return;
+  }
+  const job = currentCommission(s), lap = commissionLap(s);
+  const needs = Object.entries(job.needs) as [ProductId, number][];
+  const ready = needs.every(([id, n]) => s.inventory[id] >= n);
+  p.label(root, '小镇常驻委托', w / 2, 24, 22, INK, w, 36);
+  p.label(root, `第${lap + 1}轮 · 交完8单会再开一轮，金币会略微提高。`, w / 2, 62, 13, SOFT, w - 16, 36);
+  slot(w / 2, 168, w, 150);
+  p.label(root, job.title, w / 2, 118, 20, INK, w - 20, 34);
+  p.label(root, needs.map(([id, n]) => `${NAMES[id]} ${Math.min(s.inventory[id], n)}/${n}`).join('  ·  '), w / 2, 160, 15, INK, w - 24, 36);
+  p.label(root, `${job.coins + Math.min(lap, 5) * 30}金币 · 经验${job.xp}`, w / 2, 198, 14, SOFT, w, 28);
+  button(ready ? '交付委托' : '材料还没备齐', w / 2, 268, w - 16, 44, () => act(() => turnInCommission(s)), ready ? '#67ca70' : '#cfbfa1');
+  p.label(root, `已完成 ${s.journey.commission} 单 · 下一单是${COMMISSIONS[(s.journey.commission + 1) % COMMISSIONS.length].title}`, w / 2, 322, 13, SOFT, w - 16, 36);
+  button('查看晴野荣誉', w / 2, 378, w - 16, 40, honors, '#ffb150', '#dc8a29', 14);
 }
 
 export function areaStoryPanel(c: FeaturePanelContext, explore: () => void) {
@@ -164,4 +203,66 @@ export function patrolPanel(c: FeaturePanelContext, back: () => void) {
   button('带猫咪找田鼠', w / 4, 226, w / 2 - 12, 43, () => act(() => startPatrol(s, 'cat')));
   button('带小狗找货袋', w * .75, 226, w / 2 - 12, 43, () => act(() => startPatrol(s, 'dog')));
   if (s.activities.patrol) button('回农场找线索', w / 2, 290, w - 18, 43, back, '#58bde4', '#3295bd');
+}
+
+export function racePanel(c: FeaturePanelContext) {
+  const { p, root, w, state: s, button, slot, act, live } = c;
+  const round = s.activities.race;
+  p.label(root, '障碍赛', w / 2, 22, 22, INK, w, 36);
+  p.label(root, '四道障碍，指针进入绿色区时起跳。命中至少3次完赛。失败20秒后可再跑，成功后本季结算一次。', w / 2, 68, 13, SOFT, w - 16, 48);
+  slot(w / 2, 168, w, 120);
+  const status = p.label(root, '', w / 2, 132, 15, INK, w - 16, 32);
+  const meter = p.g(root, 'RaceMeter');
+  const draw = () => {
+    const now = Date.now(), width = w - 48, left = 24, y = 176;
+    meter.clear();
+    p.path(meter, [[left, y - 8], [left + width, y - 8], [left + width, y + 8], [left, y + 8]], '#efe2cf');
+    if (!round) {
+      status.string = s.activities.raceSeason === seasonIndex(s) ? '本季已经完赛' : '选择一位成年伙伴起跑';
+      return;
+    }
+    const time = raceWindow(round, now), at = (ms: number) => left + width * Math.max(0, Math.min(1, ms / RACE_MS));
+    p.path(meter, [[at(time.begin), y - 8], [at(time.end), y - 8], [at(time.end), y + 8], [at(time.begin), y + 8]], '#77c984');
+    p.ellipse(meter, at(time.elapsed), y, 5, 14, '#574977');
+    const pet = s.animals.find(a => a.id === round.animalId);
+    status.string = `${pet ? animalSpec(pet.type).name : '伙伴'} · 第${round.gate + 1}/4道 · 命中${round.hits}`;
+  };
+  draw();
+  live(draw);
+  button('起跳', w / 2, 250, w - 20, 44, () => act(() => jumpRace(s)), '#67ca70', '#3fa84d', 16);
+  if (!round) s.animals.forEach((a, i) => {
+    const y = 320 + i * 52;
+    slot(w / 2, y, w, 46);
+    p.contain(root, animalSpec(a.type).sprite, 28, y, 36);
+    p.label(root, `${animalSpec(a.type).name} #${a.id}`, 150, y, 15, INK, 180, 28, true, 'left');
+    button('带它起跑', w - 78, y, 130, 34, () => act(() => startRace(s, a.id)), '#ab89d3', '#8360ac', 13);
+  });
+}
+
+export function summerFishingPanel(c: FeaturePanelContext) {
+  const { p, root, w, state: s, button, slot, act, live } = c;
+  const round = s.activities.summer;
+  p.label(root, '夏日限时渔赛', w / 2, 22, 22, INK, w, 36);
+  p.label(root, '夏季、主农场或海滩。40秒、最多3次收竿，绿色区才算钓到。钓满3条可领季节奖励。', w / 2, 66, 13, SOFT, w - 14, 46);
+  slot(w / 2, 168, w, 118);
+  const status = p.label(root, '', w / 2, 132, 15, INK, w - 16, 30);
+  const meter = p.g(root, 'SummerMeter');
+  const draw = () => {
+    const now = Date.now(), width = w - 48, left = 24, y = 176;
+    meter.clear();
+    p.path(meter, [[left, y - 8], [left + width, y - 8], [left + width, y + 8], [left, y + 8]], '#d5ebf5');
+    if (!round) {
+      status.string = `鱼饵 ${s.features.fishing.bait} · 本季渔赛 ${s.activities.summerScore} 条`;
+      return;
+    }
+    const time = summerWindow(round, now), at = (ms: number) => left + width * Math.max(0, Math.min(1, ms / 6500));
+    p.path(meter, [[at(time.begin), y - 8], [at(time.end), y - 8], [at(time.end), y + 8], [at(time.begin), y + 8]], '#77c984');
+    p.ellipse(meter, at(Math.min(time.elapsed, 6500)), y, 5, 14, '#574977');
+    status.string = `剩余${Math.ceil(time.roundLeft / 1000)}秒 · 第${round.attempt + 1}/${3}次 · 已钓${round.hits}条`;
+  };
+  draw();
+  live(draw);
+  button('开始 · 1鱼饵', w / 4, 258, w / 2 - 12, 44, () => act(() => startSummerContest(s)), '#58bde4', '#3295bd', 14);
+  button('收竿', w * .75, 258, w / 2 - 12, 44, () => act(() => pullSummerLine(s)), '#67ca70', '#3fa84d', 16);
+  p.label(root, `赛时 ${SUMMER_LIMIT_MS / 1000} 秒 · 鱼会进入仓库，并计入夏日渔赛`, w / 2, 312, 12, SOFT, w - 12, 32);
 }

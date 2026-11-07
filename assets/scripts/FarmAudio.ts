@@ -1,45 +1,14 @@
 import { Node, AudioSource, AudioClip } from 'cc';
-import type { AnimalId } from './FarmCatalog';
+import { ANIMAL_VOICES, AQUATIC_VOICES, SOUND_KEYS, SoundKey, animalVoice, aquaticVoice } from './AnimalVoices';
 
-const voices = {
-  hen: 'chicken',
-  cow: 'cow',
-  duck: 'duck',
-  sheep: 'sheep',
-  pig: 'pig',
-  goat: 'goat',
-  rabbit: 'rabbit',
-  cat: 'cat',
-  dog: 'dog',
-  horse: 'horse',
-  peacock: 'peacock',
-  goldenSheep: 'goldenSheep',
-  rainbowCow: 'rainbowCow',
-  unicorn: 'unicorn',
-  goose: 'goose',
-  turkey: 'turkey',
-  quail: 'quail',
-  pigeon: 'pigeon',
-  buffalo: 'buffalo',
-  hamster: 'hamster',
-  donkey: 'donkey',
-  camel: 'camel',
-  yak: 'yak',
-  ostrich: 'ostrich',
-  alpaca: 'alpaca',
-  deer: 'deer',
-  whitePeacock: 'whitePeacock',
-} as const satisfies Record<AnimalId, string>;
+export type { SoundKey };
+export { SOUND_KEYS, animalVoice, aquaticVoice };
 
-const activitySounds = ['harvest', 'levelup', 'catChase', 'dogFind', 'pondSplash'] as const;
-export type SoundKey = typeof voices[AnimalId] | typeof activitySounds[number];
-export const SOUND_KEYS: readonly SoundKey[] = [...Object.values(voices), ...activitySounds];
-const animalSounds = new Set<SoundKey>([...Object.values(voices), 'catChase', 'dogFind']);
-
-export const animalVoice = (type: AnimalId): SoundKey => voices[type];
+const animalSounds = new Set<SoundKey>([...Object.values(ANIMAL_VOICES), ...Object.values(AQUATIC_VOICES), 'catChase', 'dogFind']);
 
 const volumes: Partial<Record<SoundKey, number>> = {
   cow: .62, chicken: .58, harvest: .45, levelup: .6, pondSplash: .36,
+  carp: .4, crucian: .38, bass: .42, crab: .4, lobster: .42,
 };
 
 export class FarmAudio {

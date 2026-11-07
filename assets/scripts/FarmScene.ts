@@ -1,6 +1,7 @@
-import {routes} from './FarmExplore';
+import {levelTheme,routes} from './FarmExplore';
 import {NEXT_ART} from './NextArt';
 import {Node,Sprite,Graphics,UITransform,Vec3,UIOpacity} from 'cc';
+import {machinePose} from './FarmMachines';
 import {Painter,XY,empty,tint} from './Drawing';
 import {WIDTH,HEIGHT,BASE_Z as Z,project,unproject,BUILDINGS,PATHS,PROPS,PROP_WIDTH,PLOTS,HEDGES,GARDEN,inside,freeGrass,iso} from './SceneLayout';
 import {FarmMotion,MovingAnimal,Walker} from './FarmMotion';
@@ -30,6 +31,7 @@ export class FarmScene {
   private particles:{n:Node;left:number;max:number;vx:number;vy:number}[]=[];private smoke=0;private sortTimer=0;
   placing:DecoId|null=null;
   private weather!:Graphics;
+  private machines:Graphics|null=null;
   constructor(public root:Node,art:Map<string,import('cc').SpriteFrame>,private getState:()=>FarmState){this.p=new Painter(WIDTH,HEIGHT,art);}
   private groundRect(g:Graphics,x:number,y:number,w:number,h:number,fill:string,lift=0,r=.12,stroke?:string,line=1){const pts:XY[]=[];const rr=Math.min(r,w/2,h/2);for(const [cx,cy,start] of [[x+rr,y+rr,Math.PI],[x+w-rr,y+rr,Math.PI*1.5],[x+w-rr,y+h-rr,0],[x+rr,y+h-rr,Math.PI/2]])for(let i=0;i<=5;i++){const a=start+i*Math.PI/10;pts.push(project(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,lift));}this.p.path(g,pts,fill,stroke,line);}
   private groundEllipse(g:Graphics,x:number,y:number,rx:number,ry:number,fill:string,lift=0,alpha=255){const pts:XY[]=Array.from({length:48},(_,i)=>{const a=i/48*Math.PI*2;return project(x+Math.cos(a)*rx,y+Math.sin(a)*ry,lift);});this.p.path(g,pts,fill,undefined,1,alpha);}
@@ -106,7 +108,11 @@ export class FarmScene {
       this.object(spot.icon,x,y,45*Z,spot.x+spot.y);
       this.marker(spot.x,spot.y,spot.name+' · 线索','patrol',i);
     });
-    this.price=p.node(this.root,'ExpansionPrice');this.drawPrice();this.timerRoot=p.node(this.root,'CropTimers');this.drawTimers();this.weather=p.g(this.root,'Weather');this.update(0);
+    this.price=p.node(this.root,'ExpansionPrice');this.drawPrice();this.timerRoot=p.node(this.root,'CropTimers');this.drawTimers();this.weather=p.g(this.root,'Weather');
+    this.machines=p.g(this.root,'Machines');this.depth.push({n:this.machines.node,depth:18});
+    if(state.life.automation.harvestBuilt)this.marker(7.55,9.2,state.life.automation.harvest?'收菜器运转':'收菜器停着','automation',0);
+    if(state.life.automation.feedBuilt)this.marker(4.3,4.55,state.life.automation.feed?'喂养器运转':'喂养器停着','automation',1);
+    this.update(0);
   }
   private marker(x:number,y:number,label:string,type:string,id:number){
     const [u,v]=project(x,y,-43),width=Math.max(80,label.length*13+20),depth=x+y+30;
@@ -120,14 +126,7 @@ export class FarmScene {
     p.path(g,[[-4000,-3000],[5000,-3000],[5000,4000],[-4000,4000]],snow?'#d9e9f7':beach?'#9bdcea':'#c5e4d5');
     const [sx,sy]=project(11,11,65);p.ellipse(g,sx,sy,640,265,'#689591',60);
     for(let lift=60;lift>0;lift-=8)this.groundRect(g,1,2,20,18,lift>30?'#ab7956':'#cb9b6a',lift,.8);
-    const tier=Math.floor(((run?.depth||1)-1)/4),themes={
-      forest:[['#abd780','#b8e18c','林缘小径','tree_round'],['#83c48f','#9cd3a0','苔绿深林','tree_pink'],['#77a875','#8bbc86','松影峡谷','forestCamp']],
-      mine:[['#b6b8a3','#c0c1ad','浅层矿道','ore'],['#a3a5b9','#b9bbc9','蓝晶洞室','gem'],['#a99eb8','#bab0ce','幽光矿脉','coal']],
-      beach:[['#f9df9c','#ffe9b3','浅湾沙滩','beachPier'],['#e8cead','#f7e3c3','潮汐滩涂','wood'],['#efd2b2','#fbe4cb','落日礁岸','gem']],
-      snow:[['#f4fbff','#e6f3fa','薄雪湖畔','ice'],['#dfeefb','#d4e5f8','晶霜坡道','tree_pine'],['#dde1fa','#ecedff','极光山谷','gem']],
-      village:[['#abd780','#b8e18c','工匠小镇','signpost']],
-    };
-    const [ground,tiles,section,landmark]=themes[map.id][tier];
+    const theme=levelTheme(map.id,run?.depth||1),ground=theme.ground,tiles=theme.tiles,section=theme.title,landmark=theme.icon;
     this.groundRect(g,1,2,20,18,ground,0,.8);
     for(let y=3;y<19;y++)for(let x=2;x<20;x++)if((x+y)%2===0)this.groundRect(g,x,y,1,1,tiles,0,0);
     this.groundRect(g,2,10.5,18,1,'#ead2a4',0,.2);this.groundRect(g,9.5,3,1,16,'#f7e9ca',0,.2);
@@ -141,7 +140,7 @@ export class FarmScene {
     NODE_POSITIONS.forEach((pos,i)=>{if(run){if(i>=3)return;const option=routes(s)[i],at={x:6+i*4,y:10+i%2*4},[u,v]=project(at.x,at.y),depth=at.x+at.y,done=run.step>=3||run.event!==null,key=done?'gem':option.icon;this.groundEllipse(g,at.x,at.y,1.5,1.1,'#dfcfa0');this.object(key,u,v,100*Z,depth);this.addHit(key,u,v,100*Z,depth,done?'explore':'deep-route',i);const n=p.pill(this.root,u,v+30,160,28);p.label(n,done?(run.event?'处理当前奇遇':'本层完成 · 继续探索'):option.name,800,450,13,'#6d7843',152,25);this.depth.push({n,depth:depth+.1});this.hits.push({x:u-80,y:v+16,w:160,h:30,depth:depth+.2,type:done?'explore':'deep-route',id:i});return;}const [u,v]=project(pos.x,pos.y),depth=pos.x+pos.y,key=village?'factory_'+FACTORIES[i].id:map.loot[i%3],available=village?s.life.factories.includes(FACTORIES[i].id):(s.life.nodes[`${map.id}:${i}`]||0)<=Date.now(),width=(village?174:72)*Z;this.groundEllipse(g,pos.x,pos.y,1.25,.95,village?'#e7c999':snow?'#cbdde9':beach?'#e6c581':'#8fbc67');const n=this.object(key,u,v+10*Z,width,depth);if(!available)p.opacity(n,110);this.addHit(key,u,v+10*Z,width,depth,village?'factory':'resource',village?FACTORIES[i].id:i);
       const label=p.pill(this.root,u,v+28,village?135:92,24,'#fff7df');p.label(label,village?FACTORIES[i].name:available?'点击采集':'恢复中',800,450,12,available?'#658b3c':'#9b8162',village?130:87,22);this.depth.push({n:label,depth:depth+.1});this.hits.push({x:u-(village?70:46),y:v+16,w:village?140:92,h:28,depth:depth+.2,type:village?'factory':'resource',id:village?FACTORIES[i].id:i});
     });
-    if(beach){this.groundEllipse(g,17.5,6,2.1,1.5,'#6dcbe5');const [u,v]=project(17,5.5);this.object('beachPier',u,v,145*Z,23);this.addHit('beachPier',u,v,145*Z,23,'pond',0);}
+    if(beach){this.groundEllipse(g,17.5,6,2.1,1.5,'#6dcbe5');const [u,v]=project(17,5.5);this.object('beachPier',u,v,145*Z,23);this.addHit('beachPier',u,v,145*Z,23,'pond',0);if(seasonIndex(s)%4===1)this.marker(15.2,8.2,'夏日限时渔赛','summer-fishing',0);}
     const [storyX,storyY]=project(5,7);
     this.object('signpost',storyX,storyY,85*Z,12);
     this.marker(5,7,s.journey.stories.includes(map.id)?'故事已完成':'地区故事','story',0);
@@ -152,6 +151,25 @@ export class FarmScene {
       this.marker(17.5,6,'冰湖垂钓','ice-fishing',0);
     }
     this.depth.sort((a,b)=>a.depth-b.depth).forEach(a=>a.n.setSiblingIndex(this.root.children.length-1));
+  }
+  private drawMachines(t:number){
+    const g=this.machines;if(!g?.isValid)return;g.clear();
+    const state=this.getState(),auto=state.life.automation,p=this.p;
+    const specs=[
+      {x:7.55,y:9.2,built:auto.harvestBuilt,enabled:auto.harvest,working:auto.harvest&&state.plots.some(plot=>readyPlot(plot)),body:'#d08a3a',wheel:'#6d4a2e'},
+      {x:4.3,y:4.55,built:auto.feedBuilt,enabled:auto.feed,working:auto.feed&&state.animals.some(a=>(state.life.care[a.id]?.hunger??100)<50),body:'#e07a4a',wheel:'#5c4030'},
+    ];
+    for(const spec of specs){
+      if(!spec.built)continue;
+      const pose=machinePose(t,spec.enabled,spec.working),[x,y]=project(spec.x,spec.y,pose.bob);
+      p.ellipse(g,x,y+10,34,12,'#2d5528',60);
+      p.ellipse(g,x,y,36,16,spec.enabled?'#f3d7a2':'#d9c7ae');
+      p.ellipse(g,x-8,y-16,22,10,spec.body);
+      p.ellipse(g,x+20,y+6,10,10,spec.wheel);
+      p.line(g,[[x+20,y+6],[x+20+Math.cos(pose.spin)*8,y+6-Math.sin(pose.spin)*8]],'#fff7e8',2);
+      p.line(g,[[x-4,y-18],[x-18+pose.arm*16,y-34]],spec.body,3);
+      if(pose.working)p.ellipse(g,x-18+pose.arm*16,y-34,3.5,3.5,'#fff4c8');
+    }
   }
   private drawWeather(t:number){if(!this.weather)return;const g=this.weather,p=this.p,w=weatherAt(this.getState());g.clear();if(['rain','storm','thunder','snow'].includes(w)){for(let i=0;i<46;i++){const x=(i*143.3+t*31)%1800-100,y=(i*83.7+t*(w==='snow'?35:330))%1100-100;if(w==='snow')p.ellipse(g,x+Math.sin(t+i)*12,y,2.5,2.5,'#ffffff',210);else p.line(g,[[x,y],[x-6,y+18]],'#a6d8f1',1.2,w==='rain'?110:180);}}if(w==='rainbow'||w==='aurora'){for(let i=0;i<6;i++)p.ellipse(g,700+i*36+Math.sin(t*.3)*30,80+i*8,390-i*34,30,['#ffafc2','#ffd37c','#b8e98c','#99dfeb','#c6b8f5','#f9bcdd'][i],35);}g.node.setSiblingIndex(this.root.children.length-1);}
   private drawRegions(g:Graphics){
@@ -323,6 +341,7 @@ export class FarmScene {
     this.price.setPosition(0,Math.sin(t*2.5)*2);this.timerClock+=dt;if(this.timerClock>.2){this.timerClock=0;this.drawTimers();}
     this.smoke+=dt;if(this.smoke>.6){this.smoke=0;const [x,y]=project(3.5,2.5);const puff=this.p.node(this.root,'ChimneySmoke',x+80,y-270);const g=this.p.g(puff);this.p.ellipse(g,800,450,9,7,'#ffffff',70);this.particles.push({n:puff,left:2.6,max:2.6,vx:5,vy:20});}
     this.particles=this.particles.filter(a=>{a.left-=dt;if(a.left<=0){a.n.destroy();return false;}const pos=a.n.position;a.n.setPosition(pos.x+a.vx*dt,pos.y+a.vy*dt);this.p.opacity(a.n,Math.min(1,a.left/a.max)*210);return true;});
+    this.drawMachines(t);
     this.drawWeather(t);this.sortTimer+=dt;if(this.sortTimer>.12||dt===0){this.sortTimer=0;this.depth.sort((a,b)=>a.depth-b.depth).forEach(a=>a.n.setSiblingIndex(this.root.children.length-1));this.ripples.node.setSiblingIndex(this.root.children.length-1);this.ambient.node.setSiblingIndex(this.root.children.length-1);this.price.setSiblingIndex(this.root.children.length-1);this.timerRoot.setSiblingIndex(this.root.children.length-1);for(const a of this.particles)a.n.setSiblingIndex(this.root.children.length-1);}
   }
 }

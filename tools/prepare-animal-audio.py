@@ -6,6 +6,7 @@ import math
 from pathlib import Path
 import random
 import subprocess
+import sys
 import urllib.request
 import wave
 
@@ -147,6 +148,47 @@ def write_wav(name, samples):
         output.writeframes(pcm.tobytes())
 
 
+def prepare_aquatic():
+    """Distinct pond voices derived from the existing CC0 splash.
+
+    Replace any of these WAV files with a dedicated recording of the same name
+    and the animal wiring keeps working.
+    """
+    rate_samples = read_wav(DESTINATION / 'pondSplash.wav')
+    rate, splash = rate_samples
+    if rate != RATE:
+        raise SystemExit(f'pondSplash.wav must be {RATE} Hz')
+    clips = {
+        'carp': repitch(splash, 1.18),
+        'crucian': repitch(splash, 1.46),
+        'bass': repitch(splash, .76) + [0.0] * round(.08 * RATE) + [sample * .35 for sample in repitch(splash, .7)],
+        'crab': click_track((.0, 920), (.09, 740), (.16, 1280)) + [sample * .22 for sample in repitch(splash, 1.55)],
+        'lobster': click_track((.0, 280), (.11, 210), (.24, 160), (.36, 240)) + [sample * .28 for sample in repitch(splash, .62)],
+    }
+    for name, samples in clips.items():
+        write_wav(name, samples)
+    print(f'Prepared {len(clips)} aquatic voices from pondSplash.wav')
+
+
+def read_wav(path):
+    with wave.open(str(path)) as source:
+        if source.getnchannels() != 1 or source.getsampwidth() != 2:
+            raise SystemExit(f'{path.name} must be mono 16-bit')
+        return source.getframerate(), [sample / 32768 for sample in array('h', source.readframes(source.getnframes()))]
+
+
+def click_track(*hits):
+    length = round((hits[-1][0] + .12) * RATE)
+    track = [0.0] * length
+    for start, hz in hits:
+        offset = round(start * RATE)
+        for i in range(round(.045 * RATE)):
+            t = i / RATE
+            envelope = math.exp(-t * 48) * (1 - i / (RATE * .045))
+            track[offset + i] += envelope * math.sin(math.tau * hz * t)
+    return track
+
+
 def main():
     RECORDINGS.mkdir(parents=True, exist_ok=True)
     with ThreadPoolExecutor(max_workers=4) as pool:
@@ -163,4 +205,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == '--aquatic':
+        prepare_aquatic()
+    else:
+        main()

@@ -1,6 +1,8 @@
 import type { FarmState, Plot, ProductId, Result } from './FarmModel';
 import { discover, farmLevel, refreshFeatures, rollDaily } from './FarmFeatures';
-import { isAdult, seasonIndex, weatherAt } from './FarmLife';
+import { isAdult, seasonIndex, weatherAt, careFor } from './FarmLife';
+import { animalSpec } from './FarmCatalog';
+import { growAnimal } from './FarmEcology';
 import { FURNITURE, FurnitureId } from './FarmCatalog';
 
 export type PatrolKind = 'cat' | 'dog';
@@ -15,6 +17,22 @@ interface IceRound {
   attempt: number;
   hits: number;
   startedAt: number;
+}
+
+interface SummerRound {
+  serial: number;
+  attempt: number;
+  hits: number;
+  startedAt: number;
+  castAt: number;
+}
+
+interface RaceRound {
+  animalId: number;
+  serial: number;
+  gate: number;
+  hits: number;
+  gateAt: number;
 }
 
 export interface FarmActivities {
@@ -33,6 +51,13 @@ export interface FarmActivities {
   calendar: string[];
   reserve: number;
   furniture: { type: FurnitureId; readyAt: number } | null;
+  summer: SummerRound | null;
+  summerSerial: number;
+  summerScore: number;
+  race: RaceRound | null;
+  raceSerial: number;
+  raceSeason: number;
+  raceAt: number;
 }
 
 export function newActivities(): FarmActivities {
@@ -40,7 +65,18 @@ export function newActivities(): FarmActivities {
     pumpkin: 0, pumpkinRecord: 0, pumpkinSeason: -1, flowerRecord: 0, flowerSeason: -1,
     ice: null, iceSerial: 0, patrol: null, patrolAt: { cat: 0, dog: 0 }, patrolCount: 0,
     stormSeason: -1, stormPlot: null, calendar: [], reserve: 0, furniture: null,
+    summer: null, summerSerial: 0, summerScore: 0, race: null, raceSerial: 0, raceSeason: -1, raceAt: 0,
   };
+}
+
+export function migrateActivities(a: FarmActivities) {
+  if (a.summer === undefined) a.summer = null;
+  if (!Number.isInteger(a.summerSerial)) a.summerSerial = 0;
+  if (!Number.isInteger(a.summerScore)) a.summerScore = 0;
+  if (a.race === undefined) a.race = null;
+  if (!Number.isInteger(a.raceSerial)) a.raceSerial = 0;
+  if (!Number.isInteger(a.raceSeason)) a.raceSeason = -1;
+  if (typeof a.raceAt !== 'number') a.raceAt = 0;
 }
 
 export function validActivities(a: FarmActivities, plots: Plot[]): boolean {
@@ -59,7 +95,13 @@ export function validActivities(a: FarmActivities, plots: Plot[]): boolean {
     && Array.isArray(a.calendar) && new Set(a.calendar).size === a.calendar.length && a.calendar.length <= 128
     && a.calendar.every(key => typeof key === 'string' && /^\d{4}-(spring|summer|autumn|winter)$/.test(key))
     && [0, 5, 10, 20].includes(a.reserve)
-    && (a.furniture === null || !!a.furniture && FURNITURE.some(f => f.id === a.furniture!.type) && time(a.furniture.readyAt));
+    && (a.furniture === null || !!a.furniture && FURNITURE.some(f => f.id === a.furniture!.type) && time(a.furniture.readyAt))
+    && int(a.summerSerial) && int(a.summerScore) && (a.summer === null || !!a.summer && a.summer.serial === a.summerSerial
+      && int(a.summer.serial, 1) && int(a.summer.attempt, 0, 2) && int(a.summer.hits, 0, a.summer.attempt)
+      && time(a.summer.startedAt) && time(a.summer.castAt) && a.summer.castAt >= a.summer.startedAt)
+    && int(a.raceSerial) && int(a.raceSeason, -1) && time(a.raceAt)
+    && (a.race === null || !!a.race && a.race.serial === a.raceSerial && int(a.race.serial, 1)
+      && int(a.race.animalId, 1) && int(a.race.gate, 0, 3) && int(a.race.hits, 0, a.race.gate) && time(a.race.gateAt));
 }
 
 const fail = (message: string): Result => ({ ok: false, message });
@@ -240,4 +282,95 @@ export function claimCalendar(s: FarmState, now = Date.now()): Result {
   s.coins += event.coins;
   s.stars += 4;
   return ok(`${event.title}完成 · ${event.coins}金币与4农场星`);
+}
+
+export const SUMMER_LIMIT_MS = 40000;
+export const SUMMER_CASTS = 3;
+export function summerWindow(round: SummerRound, now: number) {
+  const elapsed = now - round.castAt;
+  const begin = 800 + ((round.serial * 149 + round.attempt * 263) % 600);
+  const end = begin + 1200 - round.attempt * 90;
+  const roundLeft = Math.max(0, SUMMER_LIMIT_MS - (now - round.startedAt));
+  return { elapsed, begin, end, roundLeft, expired: elapsed > 6500 || roundLeft === 0 };
+}
+
+export function startSummerContest(s: FarmState, now = Date.now()): Result {
+  if (seasonIndex(s, now) % 4 !== 1) return fail('夏季才开放限时渔赛');
+  if (s.life.activeMap !== 'home' && s.life.activeMap !== 'beach') return fail('在主农场池塘或贝壳海滩参加');
+  if (s.activities.summer && !summerWindow(s.activities.summer, now).expired) return fail('这一轮还没结束');
+  refreshFeatures(s, now);
+  if (s.features.fishing.bait < 1) return fail('鱼饵不足，可到钓鱼面板购买');
+  s.features.fishing.bait--;
+  s.activities.summer = { serial: ++s.activities.summerSerial, attempt: 0, hits: 0, startedAt: now, castAt: now };
+  return ok('限时渔赛开始 · 40秒内收竿3次，指针进入绿色区才算钓到');
+}
+
+export function pullSummerLine(s: FarmState, now = Date.now()): Result {
+  const round = s.activities.summer;
+  if (!round) return fail('请先开始限时渔赛');
+  const timing = summerWindow(round, now);
+  const caught = !timing.expired && timing.elapsed >= timing.begin && timing.elapsed <= timing.end;
+  if (caught) {
+    round.hits++;
+    s.activities.summerScore++;
+    rollDaily(s, now);
+    s.inventory.fish++;
+    s.features.stats.catches++;
+    s.xp += 8;
+    discover(s, 'fish');
+  }
+  round.attempt++;
+  if (round.attempt >= SUMMER_CASTS || timing.roundLeft === 0) {
+    const hits = round.hits;
+    s.activities.summer = null;
+    return ok(hits ? `限时渔赛结束 · 钓到${hits}条溪流鱼` : '时间到了，这条鱼游走啦');
+  }
+  round.castAt = now;
+  return ok(caught ? `收竿成功 · 已钓到${round.hits}条` : `没收住 · 还剩${SUMMER_CASTS - round.attempt}次`);
+}
+
+export const RACE_GATES = 4;
+export const RACE_MS = 7000;
+export function raceWindow(round: RaceRound, now: number) {
+  const elapsed = now - round.gateAt;
+  const begin = 700 + ((round.serial * 97 + round.gate * 211) % 700);
+  const end = begin + 1100 - round.gate * 80;
+  return { elapsed, begin, end, expired: elapsed > RACE_MS };
+}
+
+export function startRace(s: FarmState, id: number, now = Date.now()): Result {
+  const a = s.activities, pet = s.animals.find(animal => animal.id === id);
+  if (!pet || !isAdult(s, pet, now)) return fail('请带一位成年伙伴参赛');
+  if (a.race && !raceWindow(a.race, now).expired) return fail('这一轮障碍还没跑完');
+  if (a.raceSeason === seasonIndex(s, now)) return fail('本季障碍赛已经完赛，下季再来');
+  if (now < a.raceAt) return fail(`再等${Math.ceil((a.raceAt - now) / 1000)}秒可以重新起跑`);
+  const care = careFor(s, pet, now);
+  if (care.hunger < 40 || care.mood < 40) return fail('参赛需要饱食40、心情40');
+  a.race = { animalId: id, serial: ++a.raceSerial, gate: 0, hits: 0, gateAt: now };
+  return ok(`${animalSpec(pet.type).name}起跑 · 指针进入绿色区时起跳`);
+}
+
+export function jumpRace(s: FarmState, now = Date.now()): Result {
+  const a = s.activities, round = a.race;
+  if (!round) return fail('请先选择伙伴起跑');
+  const pet = s.animals.find(animal => animal.id === round.animalId);
+  if (!pet) { a.race = null; return fail('参赛伙伴不在农场里'); }
+  const timing = raceWindow(round, now);
+  if (!timing.expired && timing.elapsed >= timing.begin && timing.elapsed <= timing.end) round.hits++;
+  round.gate++;
+  if (round.gate < RACE_GATES) {
+    round.gateAt = now;
+    return ok(`越过第${round.gate}道障碍 · 已命中${round.hits}次`);
+  }
+  a.race = null;
+  if (round.hits < 3) {
+    a.raceAt = now + 20000;
+    return ok(`撞到了障碍，命中${round.hits}/4 · 20秒后可以再跑`);
+  }
+  a.raceSeason = seasonIndex(s, now);
+  const tier = round.hits >= 4 ? 3 : 2;
+  growAnimal(s, pet, 20);
+  s.coins += tier * 150;
+  s.stars += tier;
+  return ok(`障碍赛完赛 · 命中${round.hits}/4 · ${tier === 3 ? '金牌' : '银牌'} · ${tier * 150}金币`);
 }

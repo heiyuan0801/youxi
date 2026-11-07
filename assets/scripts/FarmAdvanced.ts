@@ -4,7 +4,9 @@ import type {RecipeId} from './FarmFeatures';
 export type Trait='production'|'temper'|'vitality';
 export interface Genome {production:[number,number];temper:[number,number];vitality:[number,number];parents:[number,number]|null;generation:number;mutated:boolean;}
 export interface RoomItem {id:number;type:FurnitureId;x:number|null;y:number|null;rotation:number;}
-export interface ExploreRun {map:TravelId;seed:number;depth:number;step:number;stamina:number;bag:Partial<Record<ProductId,number>>;event:null|'bridge'|'nest'|'spring';companion:number|null;}
+export const EXPLORE_EVENTS=['bridge','nest','spring','fox','vein','shell','flare','puzzle'] as const;
+export type ExploreEvent=typeof EXPLORE_EVENTS[number];
+export interface ExploreRun {map:TravelId;seed:number;depth:number;step:number;stamina:number;bag:Partial<Record<ProductId,number>>;event:null|ExploreEvent;companion:number|null;}
 export interface AutoReport {seconds:number;limited:boolean;harvests:number;plants:number;products:number;crafts:number;feeds:number;coinsSpent:number;xp:number;items:Partial<Record<ProductId,number>>;unread:boolean;}
 export interface Advanced {
  schema:1;genes:Record<number,Genome>;offspring:Record<number,Genome>;

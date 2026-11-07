@@ -35,6 +35,10 @@ export const RECIPES:Recipe[]=[
  {id:'chocolate',name:'巧克力',factory:'candy',level:26,seconds:110,xp:40,needs:{cocoa:2,sugar:1,milk:1}},
  {id:'candy',name:'糖果',factory:'candy',level:16,seconds:75,xp:28,needs:{sugar:2,grape:1}},
  {id:'vinegar',name:'果醋',factory:'brewing',level:16,seconds:120,xp:30,needs:{grape:2}},
+ {id:'sunTea',name:'葵花凉茶',factory:'brewing',level:22,seconds:70,xp:24,needs:{sunflowerCrop:2,herb:1}},
+ {id:'coffeeBrew',name:'手冲咖啡',factory:'brewing',level:30,seconds:90,xp:34,needs:{coffee:2}},
+ {id:'floralTea',name:'薰衣草花茶',factory:'brewing',level:35,seconds:80,xp:36,needs:{lavender:2,herb:1}},
+ {id:'berryTea',name:'极光莓茶',factory:'brewing',level:45,seconds:100,xp:42,needs:{auroraBerry:1,herb:1}},
  {id:'planks',name:'木板',factory:'lumber',level:3,seconds:35,xp:10,needs:{wood:2}},
  {id:'fruitCan',name:'水果罐头',factory:'cannery',level:19,seconds:90,xp:35,needs:{orange:2,sugar:2}},
  {id:'vegCan',name:'蔬菜罐头',factory:'cannery',level:19,seconds:80,xp:30,needs:{cabbage:2,carrot:2}}

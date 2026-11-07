@@ -1,4 +1,4 @@
-import type { FarmState, Result } from './FarmModel';
+import type { FarmState, ProductId, Result } from './FarmModel';
 import { discover, farmLevel, rollDaily } from './FarmFeatures';
 import { TRAVEL_MAPS, TravelId } from './FarmCatalog';
 
@@ -24,10 +24,59 @@ export const HONORS = [
   { level: 100, name: '晴野大使', hint: '完成全部5个地区故事，并领取前两项荣誉', coins: 15000, stars: 50 },
 ] as const;
 
+const brewStock = (s: FarmState) => (['vinegar', 'sunTea', 'coffeeBrew', 'floralTea', 'berryTea'] as const).find(id => s.inventory[id] > 0);
+
+export const TOWN_CHAPTERS = [
+  {
+    id: 'second-oven',
+    title: '第二炉：小镇早餐铺',
+    intro: '阿禾把餐桌留在广场，想把早餐铺成每天一炉。',
+    steps: [
+      { title: '再留一袋面粉', hint: '回磨坊，用小麦再磨一份面粉，留在仓库里。', icon: 'flour', blocked: '仓库里还没有面粉', ready: (s: FarmState) => s.inventory.flour >= 1, apply: (_s: FarmState) => {} },
+      { title: '送出两份面包', hint: '面包房烤两份面包，交给早餐铺。', icon: 'bread', blocked: '需要2份面包', ready: (s: FarmState) => s.inventory.bread >= 2, apply: (s: FarmState) => { s.inventory.bread -= 2; s.coins += 90; s.xp += 18; } },
+      { title: '领走铺面招牌', hint: '阿禾备好了招牌木板和一笔铺面金。', icon: 'signpost', blocked: '这一步还不能领取', ready: (_s: FarmState) => true, apply: (s: FarmState) => { s.coins += 160; s.stars += 2; s.inventory.planks += 1; discover(s, 'planks'); } },
+    ],
+  },
+  {
+    id: 'brew-kettle',
+    title: '第三炉：酿造壶开张',
+    intro: '酿造工坊支起了新壶，果醋、咖啡和花茶都能从这里出门。',
+    steps: [
+      { title: '建成酿造工坊', hint: '16级后到工匠小镇，花1000金币建设酿造工坊。', icon: 'grape', blocked: '先在工匠小镇建成酿造工坊', ready: (s: FarmState) => s.life.factories.includes('brewing'), apply: (s: FarmState) => { s.coins += 40; } },
+      { title: '酿出第一壶饮品', hint: '用葡萄酿果醋，或用咖啡、油葵、薰衣草、极光莓做茶饮。', icon: 'vinegar', blocked: '先做出果醋、凉茶、手冲咖啡或花茶', ready: (s: FarmState) => !!brewStock(s), apply: (_s: FarmState) => {} },
+      { title: '把一壶饮品送到茶会', hint: '从仓库交一壶酿造品，茶会会记在你的名下。', icon: 'floralTea', blocked: '仓库里没有可送的酿造品', ready: (s: FarmState) => !!brewStock(s), apply: (s: FarmState) => { const id = brewStock(s)!; s.inventory[id]--; s.coins += 220; s.stars += 2; s.xp += 24; } },
+    ],
+  },
+  {
+    id: 'four-seasons',
+    title: '第四炉：四季供货',
+    intro: '早餐铺站稳了，小镇开始按季节向农场订货。',
+    steps: [
+      { title: '完成一则地区故事', hint: '到森林、矿山、海滩或雪原，完成当地居民的委托。', icon: 'forestCamp', blocked: '先完成任意一个地区故事', ready: (s: FarmState) => s.journey.stories.length >= 1, apply: (_s: FarmState) => {} },
+      { title: '备好香草和葡萄', hint: '带2份香草和2串葡萄，给供货单做样品。', icon: 'herb', blocked: '需要香草×2和葡萄×2', ready: (s: FarmState) => s.inventory.herb >= 2 && s.inventory.grape >= 2, apply: (s: FarmState) => { s.inventory.herb -= 2; s.inventory.grape -= 2; s.xp += 15; } },
+      { title: '接下常驻委托', hint: '供货板开了，交完这一轮还会有下一轮。', icon: 'truck', blocked: '供货板还没打开', ready: (_s: FarmState) => true, apply: (s: FarmState) => { s.coins += 300; s.stars += 3; } },
+    ],
+  },
+] as const;
+
+export const COMMISSIONS: { id: string; title: string; needs: Partial<Record<ProductId, number>>; coins: number; xp: number }[] = [
+  { id: 'loaf', title: '加炉面包', needs: { bread: 2 }, coins: 160, xp: 18 },
+  { id: 'vinegar-cup', title: '果醋小杯', needs: { vinegar: 1 }, coins: 280, xp: 24 },
+  { id: 'sun-tea', title: '葵花凉茶', needs: { sunTea: 1 }, coins: 320, xp: 26 },
+  { id: 'coffee', title: '午后手冲', needs: { coffeeBrew: 1 }, coins: 420, xp: 30 },
+  { id: 'floral', title: '花茶待客', needs: { floralTea: 1, herb: 1 }, coins: 520, xp: 34 },
+  { id: 'berry', title: '极光暖茶', needs: { berryTea: 1 }, coins: 680, xp: 40 },
+  { id: 'breakfast-set', title: '节日早餐组', needs: { bread: 1, coffeeBrew: 1, floralTea: 1 }, coins: 960, xp: 52 },
+  { id: 'cellar', title: '酒窖盘点', needs: { vinegar: 2, grapeJuice: 1 }, coins: 1100, xp: 55 },
+];
+
 export interface Journey {
   breakfast: number;
   stories: TravelId[];
   honors: number[];
+  chapter: number;
+  step: number;
+  commission: number;
 }
 
 export function newJourney(s?: FarmState): Journey {
@@ -39,7 +88,13 @@ export function newJourney(s?: FarmState): Journey {
       if (s.features.album.counts.bread) breakfast = s.stats.deliveries ? 4 : 3;
     }
   }
-  return { breakfast, stories: [], honors: [] };
+  return { breakfast, stories: [], honors: [], chapter: 0, step: 0, commission: 0 };
+}
+
+export function migrateJourney(j: Journey) {
+  if (!Number.isInteger(j.chapter)) j.chapter = 0;
+  if (!Number.isInteger(j.step)) j.step = 0;
+  if (!Number.isInteger(j.commission)) j.commission = 0;
 }
 
 export function validJourney(j: Journey): boolean {
@@ -48,7 +103,10 @@ export function validJourney(j: Journey): boolean {
     && j.stories.every(id => TRAVEL_MAPS.some(m => m.id === id))
     && Array.isArray(j.honors) && new Set(j.honors).size === j.honors.length
     && j.honors.every(level => HONORS.some(h => h.level === level))
-    && (!j.honors.includes(100) || j.honors.includes(80) && j.honors.includes(90));
+    && (!j.honors.includes(100) || j.honors.includes(80) && j.honors.includes(90))
+    && Number.isInteger(j.chapter) && j.chapter >= 0 && j.chapter <= TOWN_CHAPTERS.length
+    && Number.isInteger(j.step) && j.step >= 0 && j.step < (j.chapter >= TOWN_CHAPTERS.length ? 1 : TOWN_CHAPTERS[j.chapter].steps.length)
+    && Number.isInteger(j.commission) && j.commission >= 0 && j.commission <= 100000;
 }
 
 export function breakfastReady(s: FarmState): boolean {
@@ -80,6 +138,41 @@ export function advanceBreakfast(s: FarmState): Result {
   }
   s.journey.breakfast++;
   return { ok: true, message: s.journey.breakfast === 5 ? '第一炉面包完成 · 补给已入库' : '主线推进 · 下一步已开启' };
+}
+
+export function advanceTown(s: FarmState): Result {
+  if (s.journey.breakfast < BREAKFAST_STEPS.length) return { ok: false, message: '先完成第一炉面包' };
+  const chapter = TOWN_CHAPTERS[s.journey.chapter];
+  if (!chapter) return { ok: false, message: '主线章节已完成，去交付小镇委托' };
+  const step = chapter.steps[s.journey.step];
+  if (!step.ready(s)) return { ok: false, message: step.blocked };
+  step.apply(s);
+  s.journey.step++;
+  const finished = s.journey.step >= chapter.steps.length;
+  if (finished) {
+    s.journey.chapter++;
+    s.journey.step = 0;
+  }
+  return { ok: true, message: finished ? `${chapter.title}完成` : '主线推进 · 下一步已开启' };
+}
+
+export const currentCommission = (s: FarmState) => COMMISSIONS[s.journey.commission % COMMISSIONS.length];
+export const commissionLap = (s: FarmState) => Math.floor(s.journey.commission / COMMISSIONS.length);
+
+export function turnInCommission(s: FarmState): Result {
+  if (s.journey.breakfast < BREAKFAST_STEPS.length) return { ok: false, message: '先完成第一炉面包' };
+  if (s.journey.chapter < TOWN_CHAPTERS.length) return { ok: false, message: '先把后续章节做完，委托板才会敞开' };
+  const job = currentCommission(s);
+  const needs = Object.entries(job.needs) as [ProductId, number][];
+  if (needs.some(([id, n]) => s.inventory[id] < n)) return { ok: false, message: '委托材料还没备齐' };
+  for (const [id, n] of needs) s.inventory[id] -= n;
+  const lap = commissionLap(s);
+  const coins = job.coins + Math.min(lap, 5) * 30;
+  s.coins += coins;
+  s.xp += job.xp;
+  s.journey.commission++;
+  if (s.journey.commission % COMMISSIONS.length === 0) s.stars += 2;
+  return { ok: true, message: `${job.title}送达 · ${coins}金币 · 第${lap + 1}轮` };
 }
 
 export function finishStory(s: FarmState, id: TravelId): Result {

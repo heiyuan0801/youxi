@@ -31,3 +31,5 @@
 | 水产 | [Splash, small #1531](https://bigsoundbank.com/splash-small-3-s1531.html) | Joseph SARDIN |
 
 使用 `python3 tools/prepare-animal-audio.py` 可重新生成新增及替换的 WAV。需本机安装 FFmpeg。游戏运行时从内置资源加载。
+
+鲤鱼、鲫鱼、鲈鱼、螃蟹、龙虾使用同一段溅水录音再处理，不另引外部素材。`python3 tools/prepare-animal-audio.py --aquatic` 只重写这五个文件。`bird.wav` 仍未接到任何动物。

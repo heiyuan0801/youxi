@@ -15,9 +15,10 @@ export function pondPanel(c:FeaturePanelContext){
   if(!t)button(`建池 · ${f.cost}`,w/2,y+63,w-24,39,()=>act(()=>buildPond(s,f.id)),'#58bde4','#3295bd',14);else{button('投喂 · 1饲料',w*.25,y+63,w*.44,39,()=>act(()=>feedPond(s,f.id)),'#ffb150','#dc8a29',13);button('收获'+f.name,w*.75,y+63,w*.44,39,()=>act(()=>harvestPond(s,f.id)),t.fed?'#67ca70':'#c6d5ba',t.fed?'#3fa84d':'#9daf92',13);}
  });
 }
-export function growthPanel(c:FeaturePanelContext){
- const {p,root,w,state:s,button,slot,act}=c;p.label(root,'伙伴训练与友谊赛',w/2,22,22,INK,w,36);p.label(root,'成长1—10级，每级效率+2% · 互动、收集产物也增加成长经验',w/2,58,12,SOFT,w,30);p.label(root,'每只成年动物每季参赛一次 · 饱食≥60、健康≥80',w/2,88,12,SOFT,w,30);
- s.animals.forEach((a,i)=>{const y=195+i*177,g=growthFor(s,a),spec=animalSpec(a.type);slot(w/2,y,w,160);p.contain(root,spec.sprite,53,y-16,83,90);p.label(root,`${spec.name} #${a.id} · 成长${growthLevel(s,a)}级`,w/2+60,y-45,19,INK,w-140,34,true,'left');p.label(root,`经验 ${g.xp}/450 · 奖牌积分 ${g.medals}`,w/2+60,y-12,13,SOFT,w-140,29,true,'left');
+export function growthPanel(c:FeaturePanelContext,race:()=>void=()=>{}){
+ const {p,root,w,state:s,button,slot,act}=c;p.label(root,'伙伴训练与友谊赛',w/2,22,22,INK,w,36);p.label(root,'成长1—10级，每级效率+2% · 互动、收集产物也增加成长经验',w/2,58,12,SOFT,w,30);p.label(root,'友谊赛按属性评分。障碍赛要自己看准时机起跳。',w/2,88,12,SOFT,w,30);
+ button('障碍赛 · 带伙伴亲自跑',w/2,128,w-20,38,race,'#ab89d3','#8360ac',14);
+ s.animals.forEach((a,i)=>{const y=250+i*177,g=growthFor(s,a),spec=animalSpec(a.type);slot(w/2,y,w,160);p.contain(root,spec.sprite,53,y-16,83,90);p.label(root,`${spec.name} #${a.id} · 成长${growthLevel(s,a)}级`,w/2+60,y-45,19,INK,w-140,34,true,'left');p.label(root,`经验 ${g.xp}/450 · 奖牌积分 ${g.medals}`,w/2+60,y-12,13,SOFT,w-140,29,true,'left');
   const l=p.label(root,'',w/2+60,y+15,12,SOFT,w-140,27,true,'left'),live=()=>l.string=g.trainAt>Date.now()?`训练休息 ${Math.ceil((g.trainAt-Date.now())/1000)}秒`:'准备好参加训练';live();c.live(live);
   button('训练 · 1饲料',w*.25,y+55,w*.44,36,()=>act(()=>trainAnimal(s,a.id)),'#58bde4','#3295bd',13);button(g.contestSeason===seasonIndex(s)?'本季已参赛':'参加友谊赛',w*.75,y+55,w*.44,36,()=>act(()=>contestAnimal(s,a.id)),'#ffb150','#dc8a29',13);
  });
