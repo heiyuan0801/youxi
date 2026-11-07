@@ -1,0 +1,15 @@
+{
+  "ver": "1.0.22",
+  "importer": "image",
+  "imported": false,
+  "uuid": "2001a2ac-129e-4b46-a7c0-a7149ebb0bb5",
+  "files": [
+    ".png",
+    ".json"
+  ],
+  "subMetas": {},
+  "userData": {
+    "type": "texture",
+    "fixAlphaTransparencyArtifacts": false
+  }
+}

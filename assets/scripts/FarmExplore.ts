@@ -39,7 +39,7 @@ export const EVENT_TEXT:Record<Exclude<ExploreEvent,'puzzle'>,{title:string;deta
 const BANDS:Record<FieldMap,{ground:string;tiles:string;icon:string}[]>= {
  forest:[{ground:'#abd780',tiles:'#b8e18c',icon:'tree_round'},{ground:'#83c48f',tiles:'#9cd3a0',icon:'tree_pink'},{ground:'#77a875',tiles:'#8bbc86',icon:'forestCamp'}],
  mine:[{ground:'#b6b8a3',tiles:'#c0c1ad',icon:'ore'},{ground:'#a3a5b9',tiles:'#b9bbc9',icon:'gem'},{ground:'#a99eb8',tiles:'#bab0ce',icon:'coal'}],
- beach:[{ground:'#f9df9c',tiles:'#ffe9b3',icon:'beachPier'},{ground:'#e8cead',tiles:'#f7e3c3',icon:'wood'},{ground:'#efd2b2',tiles:'#fbe4cb',icon:'gem'}],
+ beach:[{ground:'#f9df9c',tiles:'#ffe9b3',icon:'beachPier'},{ground:'#e8cead',tiles:'#f7e3c3',icon:'fish'},{ground:'#efd2b2',tiles:'#fbe4cb',icon:'gem'}],
  snow:[{ground:'#f4fbff',tiles:'#e6f3fa',icon:'ice'},{ground:'#dfeefb',tiles:'#d4e5f8',icon:'tree_pine'},{ground:'#dde1fa',tiles:'#ecedff',icon:'gem'}],
 };
 const LAYER_TITLES:Record<FieldMap,string[]>={
@@ -62,7 +62,12 @@ function eventRoute(r:ExploreRun){
  const n=(Math.imul(r.seed+r.depth*101+r.step*19,1664525)>>>0)%4,classic=CLASSIC[n];
  return {name:classic.name,kind:classic.kind,icon:classic.icon,cost:1};
 }
-export function routes(s:FarmState){const r=s.advanced.explore.run;if(!r)return[];const event=eventRoute(r);return [{name:r.map==='mine'?'开采矿脉':r.map==='snow'?'冰湖垂钓':'沿途采集',kind:'gather' as const,icon:r.map==='mine'?'ore':r.map==='snow'?'fish':'wood',cost:2},event,{name:'扎营休息',kind:'rest' as const,icon:'forestCamp',cost:0}];}
+const LOOT_NAMES:Record<string,string>={wood:'木材',herb:'香草',truffle:'松露',ore:'铜矿',coal:'煤炭',gem:'蓝宝石',fish:'溪流鱼',ice:'冰晶',auroraBerry:'极光莓'};
+export const lootName=(id:string)=>LOOT_NAMES[id]||id;
+export function exploreLoot(map:TravelId,depth:number,step:number):ProductId{const spec=TRAVEL_MAPS.find(m=>m.id===map)!;return spec.loot[(depth+step)%spec.loot.length] as ProductId;}
+export function nodeLoot(map:TravelId,index:number):ProductId{const spec=TRAVEL_MAPS.find(m=>m.id===map)!;return spec.loot[index%spec.loot.length] as ProductId;}
+function gatherRoute(r:ExploreRun){const item=exploreLoot(r.map,r.depth,r.step),verb=r.map==='mine'?'开采':r.map==='snow'?'采集':'采集';return {name:`${verb}${lootName(item)}`,kind:'gather' as const,icon:item,cost:2};}
+export function routes(s:FarmState){const r=s.advanced.explore.run;if(!r)return[];return [gatherRoute(r),eventRoute(r),{name:'扎营休息',kind:'rest' as const,icon:'forestCamp',cost:0}];}
 const fail=(message:string):Result=>({ok:false,message});
 function markSeen(s:FarmState){const r=s.advanced.explore.run;if(!r?.event||r.map==='village')return;const seen=s.advanced.explore.seen[r.map]||(s.advanced.explore.seen[r.map]=[]);if(!seen.includes(r.event))seen.push(r.event);}
 export function beginExplore(s:FarmState,companion:number|null,now=Date.now()):Result{
@@ -75,7 +80,7 @@ export function takeRoute(s:FarmState,index:number):Result{
  if(route.kind==='rest'){if(r.stamina>=12)return fail('体力充足，可以继续探索');if(s.inventory.feed<1)return fail('扎营需要1份饲料补给');s.inventory.feed--;r.stamina=Math.min(12,r.stamina+5);return {ok:true,message:'扎营休息 · 探索体力 +5'};}
  const pet=s.animals.find(a=>a.id===r.companion),cost=pet&&['horse','unicorn','camel'].includes(pet.type)?1:route.cost;if(r.stamina<cost)return fail('探索体力不足，扎营补给或安全返程');r.stamina-=cost;
  if(route.kind!=='gather'&&route.kind!=='treasure'){r.event=route.kind;return {ok:true,message:route.kind==='puzzle'?'遇见地图谜题，读完提示再选择':'遇见新的事件，选择你的行动'};}
- const map=TRAVEL_MAPS.find(m=>m.id===r.map)!,item:ProductId=route.kind==='treasure'?'gem':r.map==='snow'?'fish':map.loot[(r.depth+r.step)%3] as ProductId,amount=1+Math.floor(r.depth/3)+(pet?.type==='dog'?1:0);r.bag[item]=(r.bag[item]||0)+amount;r.step++;return {ok:true,message:`${route.name}成功 · 物资放入探索背包`};
+ const item:ProductId=route.kind==='treasure'?'gem':exploreLoot(r.map,r.depth,r.step),amount=1+Math.floor(r.depth/3)+(pet?.type==='dog'?1:0);r.bag[item]=(r.bag[item]||0)+amount;r.step++;return {ok:true,item,message:`${lootName(item)} ×${amount} · 放入探索背包`};
 }
 export function resolveExploreEvent(s:FarmState,choice:number):Result{
  const r=s.advanced.explore.run;if(!r?.event)return fail('没有待处理事件');

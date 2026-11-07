@@ -6,7 +6,7 @@ import { collectCraft, enqueueCraft } from '../assets/scripts/FarmFeatures';
 import { startFurniture } from '../assets/scripts/FarmRoom';
 import { ART_HOOKS } from '../assets/scripts/ArtHooks';
 import { advanceTown, currentCommission, finishExploreQuest, nextExploreQuest, turnInCommission } from '../assets/scripts/FarmJourney';
-import { beginExplore, levelTheme, puzzleFor, resolveExploreEvent, routes, takeRoute } from '../assets/scripts/FarmExplore';
+import { beginExplore, exploreLoot, levelTheme, lootName, nodeLoot, puzzleFor, resolveExploreEvent, routes, takeRoute } from '../assets/scripts/FarmExplore';
 import { dominance, inherit, transmitAllele } from '../assets/scripts/FarmGenetics';
 import { baseGenome } from '../assets/scripts/FarmGenetics';
 import { claimCalendar, jumpRace, playFestivalRite, pullPumpkinWeigh, pullSummerLine, raceWindow, startFestivalRite, startPumpkinWeigh, startRace, startSummerContest, summerWindow, weighWindow } from '../assets/scripts/FarmActivities';
@@ -229,13 +229,43 @@ test('pumpkin weigh-in and calendar rhythm add score without replacing the base 
   assert.equal(s.coins, before + 320 + 80);
 });
 
+test('gather icons follow the region loot instead of a wood graphic', () => {
+  for (const map of ['forest', 'mine', 'beach', 'snow'] as const) {
+    const s = newFarm(NOW);
+    s.xp = levelFloor(30);
+    s.coins = 20000;
+    if (map !== 'village') unlockMap(s, map);
+    travel(s, map);
+    assert.ok(beginExplore(s, null, NOW).ok);
+    for (let step = 0; step < 3; step++) {
+      s.advanced.explore.run!.step = step;
+      s.advanced.explore.run!.event = null;
+      const item = exploreLoot(map, 1, step);
+      const route = routes(s)[0];
+      assert.equal(route.icon, item);
+      assert.ok(route.name.includes(lootName(item)));
+      const before = s.inventory[item];
+      assert.ok(takeRoute(s, 0).ok);
+      assert.ok(s.inventory[item] === before);
+      assert.equal(s.advanced.explore.run!.bag[item]! > 0, true);
+    }
+  }
+  assert.equal(nodeLoot('mine', 0), 'ore');
+  assert.equal(nodeLoot('mine', 1), 'coal');
+  assert.equal(nodeLoot('mine', 2), 'gem');
+  assert.notEqual(exploreLoot('mine', 1, 0), 'wood');
+  assert.equal(exploreLoot('beach', 1, 0), 'wood');
+  assert.equal(exploreLoot('beach', 1, 2), 'fish');
+  assert.equal(exploreLoot('snow', 1, 0), 'gem');
+});
+
 test('art hooks name every drop-in file and do not collide', () => {
   assert.equal(new Set(ART_HOOKS).size, ART_HOOKS.length);
   assert.ok(ART_HOOKS.includes('fox'));
   assert.ok(ART_HOOKS.includes('machineHarvester'));
   assert.ok(ART_HOOKS.includes('forest-layer-01'));
   assert.ok(ART_HOOKS.includes('coffeeBrew'));
-  for (const id of ['coffeeBrew', 'floralTea', 'sunTea', 'berryTea', 'fox', 'machineHarvester', 'machineFeeder', 'forest-layer-01', 'forest-layer-03', 'mine-layer-01', 'mine-layer-03', 'beach-layer-01', 'beach-layer-03', 'snow-layer-01', 'snow-layer-03']) {
+  for (const id of ['coffeeBrew', 'floralTea', 'sunTea', 'berryTea', 'estateBox', 'cabinet', 'teaTable', 'fox', 'machineHarvester', 'machineFeeder', 'forest-layer-01', 'forest-layer-02', 'forest-layer-12', 'mine-layer-12', 'beach-layer-12', 'snow-layer-12']) {
     assert.ok(existsSync(`assets/resources/hooks/${id}.png`), id);
     assert.ok(existsSync(`assets/resources/hooks/${id}.png.meta`), id);
   }

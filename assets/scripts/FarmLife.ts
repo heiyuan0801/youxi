@@ -68,7 +68,7 @@ export function gather(s:FarmState,index:number,now=Date.now()):Result {
  const key=`${map}:${index}`;if((s.life.nodes[key]||0)>now)return fail(`资源恢复还需${Math.ceil((s.life.nodes[key]-now)/1000)}秒`);if(!spendEnergy(s,2,now))return fail('体力不足，每2分钟恢复1点');
  const item=m.loot[index%3] as ProductId,amount=index%3===2?1:2;s.life.nodes[key]=now+600000;s.inventory[item]+=amount;s.xp+=10+index*2;s.life.stats.gathered++;discover(s,item,amount);return ok(`${itemName(item)} ×${amount} · 体力 -2`,item);
 }
-function itemName(id:ProductId){return ({wood:'木材',herb:'香草',truffle:'松露',ore:'铜矿',coal:'煤炭',gem:'蓝宝石',fish:'溪流鱼',ice:'冰晶',auroraBerry:'极光莓'} as Record<string,string>)[id]||id;}
+export function itemName(id:ProductId){return ({wood:'木材',herb:'香草',truffle:'松露',ore:'铜矿',coal:'煤炭',gem:'蓝宝石',fish:'溪流鱼',ice:'冰晶',auroraBerry:'极光莓'} as Record<string,string>)[id]||id;}
 export function startExpedition(s:FarmState,now=Date.now()):Result {
  refreshLife(s,now);const m=TRAVEL_MAPS.find(m=>m.id===s.life.activeMap);if(!m||m.id==='village')return fail('到资源地图后再出发');if(s.life.expedition)return fail('先领取上一趟探险奖励');if(!spendEnergy(s,4,now))return fail('远行需要4点体力');
  const adult=(id:AnimalId)=>s.animals.some(a=>a.type===id&&isAdult(s,a,now)),speed=adult('unicorn')?.6:adult('horse')?.75:1,serial=++s.life.serial,item=m.loot[serial%3] as ProductId;

@@ -1,4 +1,4 @@
-import {levelTheme,routes} from './FarmExplore';
+import {levelTheme,lootName,nodeLoot,routes} from './FarmExplore';
 import {NEXT_ART} from './NextArt';
 import {Node,Sprite,Graphics,UITransform,Vec3,UIOpacity} from 'cc';
 import {machinePose} from './FarmMachines';
@@ -139,7 +139,7 @@ export class FarmScene {
     }
     if(!village){const [u,v]=project(5,5);this.object(map.icon,u,v,170*Z,10);}
     NODE_POSITIONS.forEach((pos,i)=>{if(run){if(i>=3)return;const option=routes(s)[i],at={x:6+i*4,y:10+i%2*4},[u,v]=project(at.x,at.y),depth=at.x+at.y,done=run.step>=3||run.event!==null,key=done?'gem':option.kind==='fox'&&this.p.art.has('fox')?'fox':option.icon;this.groundEllipse(g,at.x,at.y,1.5,1.1,'#dfcfa0');this.object(key,u,v,100*Z,depth);this.addHit(key,u,v,100*Z,depth,done?'explore':'deep-route',i);const n=p.pill(this.root,u,v+30,160,28);p.label(n,done?(run.event?'处理当前奇遇':'本层完成 · 继续探索'):option.name,800,450,13,'#6d7843',152,25);this.depth.push({n,depth:depth+.1});this.hits.push({x:u-80,y:v+16,w:160,h:30,depth:depth+.2,type:done?'explore':'deep-route',id:i});return;}const [u,v]=project(pos.x,pos.y),depth=pos.x+pos.y,key=village?'factory_'+FACTORIES[i].id:map.loot[i%3],available=village?s.life.factories.includes(FACTORIES[i].id):(s.life.nodes[`${map.id}:${i}`]||0)<=Date.now(),width=(village?174:72)*Z;this.groundEllipse(g,pos.x,pos.y,1.25,.95,village?'#e7c999':snow?'#cbdde9':beach?'#e6c581':'#8fbc67');const n=this.object(key,u,v+10*Z,width,depth);if(!available)p.opacity(n,110);this.addHit(key,u,v+10*Z,width,depth,village?'factory':'resource',village?FACTORIES[i].id:i);
-      const label=p.pill(this.root,u,v+28,village?135:92,24,'#fff7df');p.label(label,village?FACTORIES[i].name:available?'点击采集':'恢复中',800,450,12,available?'#658b3c':'#9b8162',village?130:87,22);this.depth.push({n:label,depth:depth+.1});this.hits.push({x:u-(village?70:46),y:v+16,w:village?140:92,h:28,depth:depth+.2,type:village?'factory':'resource',id:village?FACTORIES[i].id:i});
+      const label=p.pill(this.root,u,v+28,village?135:108,24,'#fff7df');p.label(label,village?FACTORIES[i].name:available?lootName(nodeLoot(map.id,i)):'恢复中',800,450,12,available?'#658b3c':'#9b8162',village?130:100,22);this.depth.push({n:label,depth:depth+.1});this.hits.push({x:u-(village?70:54),y:v+16,w:village?140:108,h:28,depth:depth+.2,type:village?'factory':'resource',id:village?FACTORIES[i].id:i});
     });
     if(beach){this.groundEllipse(g,17.5,6,2.1,1.5,'#6dcbe5');const [u,v]=project(17,5.5);this.object('beachPier',u,v,145*Z,23);this.addHit('beachPier',u,v,145*Z,23,'pond',0);if(seasonIndex(s)%4===1)this.marker(15.2,8.2,'夏日限时渔赛','summer-fishing',0);}
     const [storyX,storyY]=project(5,7);

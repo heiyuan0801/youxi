@@ -2,7 +2,7 @@ import {toggleRoaming,growthLevel} from './FarmEcology';
 import {FeaturePanelContext} from './FeaturePanels';
 import {FarmState,NAMES,levelFor} from './FarmModel';
 import {ANIMALS,animalSpec,TRAVEL_MAPS,MapId,FURNITURE,FurnitureId,SEASONS,WEATHER_NAMES} from './FarmCatalog';
-import {careFor,isAdult,efficiency,careAnimal,breedAnimals,collectBaby,unlockMap,startExpedition,collectExpedition,festival,seasonIndex,weatherAt,claimFestival,claimWeather,buyFurniture,placeFurniture,toggleAutomation} from './FarmLife';
+import {careFor,isAdult,efficiency,careAnimal,breedAnimals,collectBaby,unlockMap,startExpedition,collectExpedition,festival,seasonIndex,weatherAt,claimFestival,claimWeather,buyFurniture,placeFurniture,toggleAutomation,itemName} from './FarmLife';
 const INK='#5a3e2b',SOFT='#997455';
 const time=(at:number)=>Math.max(0,Math.ceil((at-Date.now())/1000));
 export function animalsPanel(c:FeaturePanelContext,shop:()=>void,open:(id:'ponds'|'growth'|'genetics')=>void){
@@ -23,7 +23,7 @@ export function travelPanel(c:FeaturePanelContext,go:(id:MapId)=>void,explore:()
  p.label(root,`旅行手册 · 体力 ${s.life.energy}/24`,w/2,21,22,INK,w-20,35);p.label(root,'每2分钟恢复1点 · 采集消耗2点 · 资源点10分钟恢复',w/2,55,12,SOFT,w-10,29);
  button('返回主农场',w*.25,103,w*.44,40,()=>go('home'),'#58bde4','#3295bd',14);const j=s.life.expedition;
  button(j?'领取探险奖励':'远行探险 · 4体力',w*.75,103,w*.44,40,()=>act(()=>j?collectExpedition(s):startExpedition(s)),'#ffb150','#dc8a29',13);
- const l=p.label(root,'',w/2,146,12,SOFT,w-10,30),update=()=>l.string=j?`${TRAVEL_MAPS.find(m=>m.id===j.map)!.name}探险队 · ${time(j.readyAt)?`返回还需${time(j.readyAt)}秒`:'已返回，快领取奖励'}`:'抵达资源地图后可出发 · 马和独角兽加速，小狗增加奖励';update();c.live(update);
+ const l=p.label(root,'',w/2,146,12,SOFT,w-10,30),update=()=>l.string=j?`${TRAVEL_MAPS.find(m=>m.id===j.map)!.name} · ${itemName(j.item)} ×${j.amount} · ${time(j.readyAt)?`返回还需${time(j.readyAt)}秒`:'已返回，快领取奖励'}`:'抵达资源地图后可出发 · 马和独角兽加速，小狗增加奖励';update();c.live(update);
  button('分层探索 · 路线与奇遇',w/2,195,w-16,40,explore,'#ab89d3','#8360ac',14);
  TRAVEL_MAPS.forEach((m,i)=>{const y=311+i*170,owned=s.life.maps.includes(m.id);slot(w/2,y,w,155);p.contain(root,m.icon,62,y-17,104,102);p.label(root,m.name,w/2+65,y-49,21,INK,w-150,34,true,'left');p.label(root,m.description,w/2+65,y-13,12,SOFT,w-150,38,true,'left');p.label(root,owned?'通行证已获得':`${m.level}级 · ${m.cost}金币`,w/2-90,y+47,12,SOFT,w-210,30);button(owned?'前往'+m.name:'解锁'+m.name,w-95,y+47,170,40,()=>owned?go(m.id):act(()=>unlockMap(s,m.id)),owned?'#58bde4':'#67ca70',owned?'#3295bd':'#3fa84d',13);});
 }
