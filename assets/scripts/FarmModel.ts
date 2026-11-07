@@ -10,6 +10,7 @@ import {EXTRA_CROPS,ExtraCropId,ANIMALS,animalSpec,AnimalId,TRAVEL_MAPS,AQUATIC}
 import {FarmLife,newLife,newCare,careFor,isAdult,efficiency,validateLife,refreshLife} from './FarmLife';
 import {Retention,newRetention,legacyRetention,validRetention,touchRetention,notePlant,noteHarvest,noteWater,noteDeliver,noteDecor,syncCodex,shrineGrowFactor,shrineWaterExtraMs,shrineHarvestBonus} from './FarmRetention';
 import {soilTier,cropGrowSeconds,waterCutMs,SOIL_WATER_LABEL} from './FarmSoil';
+import {Fishery,newFishery,validFishery} from './FarmAngling';
 export type {AnimalId} from './FarmCatalog';
 export type CropId = 'wheat' | 'carrot' | 'tomato' | 'strawberry' | 'corn' | 'pumpkin' | ExtraCropId;
 export type ProductId = CropId | 'egg' | 'milk' | FeatureProductId;
@@ -39,7 +40,7 @@ export interface FarmState {
   features:FarmFeatures;
   progression:FarmProgression;
   life:FarmLife;ecology:Ecology;advanced:Advanced;
-  journey:Journey;activities:FarmActivities;retention:Retention;
+  journey:Journey;activities:FarmActivities;retention:Retention;fishery:Fishery;
 }
 export interface Result { ok:boolean; message:string; item?:ProductId; }
 const fail=(message:string):Result=>({ok:false,message});
@@ -59,7 +60,7 @@ export function newFarm(now=Date.now()):FarmState {
     {id:1,type:'hen',readyAt:now+6000},{id:2,type:'hen',readyAt:now+18000},
     {id:3,type:'hen',readyAt:now-1000},{id:4,type:'cow',readyAt:now+30000}],
     orders:[makeOrder(0),makeOrder(1),makeOrder(2)],orderSequence:3,
-    stats:{harvests:0,deliveries:0,expansions:0,products:0},claimed:[],decorations:[],savedAt:now,sound:true,retention:newRetention(now)};
+    stats:{harvests:0,deliveries:0,expansions:0,products:0},claimed:[],decorations:[],savedAt:now,sound:true,retention:newRetention(now),fishery:newFishery()};
 }
 const templates = [
   {person:'林奶奶',message:'早上的面包，就差新鲜的麦香啦。',needs:{wheat:3,carrot:1},coins:76,xp:12},
@@ -226,6 +227,8 @@ export function parseSave(raw:string|null,now=Date.now(),refresh=true):FarmState
     if(s.activities.furniture&&s.advanced.room.items.length>=40)return null;
     if(s.plots.some(p=>p.composted!==undefined&&(p.composted!==true||p.crop!=='pumpkin'&&p.crop!=='goldenPumpkin')))return null;
     if(!validateLife(s.life,s.animals,PRODUCTS))return null;
+    if(s.fishery===undefined)s.fishery=newFishery();
+    if(!validFishery(s.fishery))return null;
     if(s.retention===undefined)s.retention=legacyRetention(now);
     if(s.retention.hud===undefined)s.retention.hud={left:true,right:true};
     if(!validRetention(s.retention))return null;

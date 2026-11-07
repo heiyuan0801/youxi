@@ -7,8 +7,10 @@ import {pondPanel,growthPanel,eventsPanel} from './EcologyPanels';
 import {Node,UITransform,Mask,ScrollView,Vec2,Vec3,view,SpriteFrame,Sprite,Texture2D,ImageAsset,UIOpacity,BlockInputEvents,Graphics,LabelOutline} from 'cc';
 import {Painter,empty,tint,XY} from './Drawing';
 import {FarmState,CropId,ProductId,DecoId,CROPS,DECOS,PRODUCTS,NAMES,PRICES,TASKS,Result,levelFor,levelFloor,levelCeil,canDeliver,expansionCost,skipOrder,deliver,sell,expand,buyAnimal,claimTask,unlockWithStars,expandWithStars,expandPen} from './FarmModel';
-import {workshopPanel,fishingPanel,journalPanel,diaryHeight,DiaryTab,FeaturePanelContext} from './FeaturePanels';
+import {workshopPanel,journalPanel,diaryHeight,DiaryTab,FeaturePanelContext} from './FeaturePanels';
 import {DAILY_GOALS,dailyProgress,fishingPhase,RECIPES,recipeFactory} from './FarmFeatures';
+import {anglingPhase, type BaitId, type SpotId} from './FarmAngling';
+import {anglingPanel} from './AnglingPanels';
 import {ANIMALS,TRAVEL_MAPS,FactoryId,FurnitureId,MapId,SEASONS,WEATHER_NAMES} from './FarmCatalog';
 import {seasonIndex,weatherAt} from './FarmLife';
 import {animalsPanel,travelPanel,homePanel,seasonPanel} from './LifePanels';
@@ -34,7 +36,7 @@ export class FarmUI {
   diaryTab:DiaryTab='成长';private liveUpdates:(()=>void)[]=[];
   private scrollId='';
   levelUp:number|null=null;private levelQueue:number[]=[];
-  landIndex:number|null=null;agendaTab:AgendaTab='morning';
+  landIndex:number|null=null;agendaTab:AgendaTab='morning';fishTab:'cast'|'pond'='cast';fishSpot:SpotId='home';fishBait:BaitId='worm';
   p!:Painter;private buttons:{label:string;n:Node}[]=[];private modalRoot!:Node;private toastRoot!:Node;
   private backdrop:SpriteFrame|null=null;private backdropTexture:Texture2D|null=null;private backdropCanvas:HTMLCanvasElement|null=null;
   constructor(public root:Node,private art:Map<string,SpriteFrame>,private state:()=>FarmState,private cb:UICallbacks){}
@@ -57,7 +59,7 @@ export class FarmUI {
     const ratio=lv>=100?1:Math.min(1,left/next);p.pill(this.root,165,43,200,40);p.label(this.root,`${lv}级`,149,33,11,SOFT,120,18,true,'left');p.rect(this.root,153,51,130,11,'#f1e2c8',5);if(ratio>0)p.rect(this.root,88+130*ratio/2,51,Math.max(4,130*ratio),11,'#69c957',5);p.label(this.root,lv>=100?'满级':`${left}/${next}`,235,43,12,SOFT,52,24);
     const levelStar=p.contain(this.root,'star',51,43,62);p.label(this.root,String(lv),51,45,22,INK,45,45,true,'center','#ffffff');p.hit(levelStar,()=>this.open('levels'));this.buttons.push({label:'等级奖励',n:levelStar});
     if(leftOpen){const ready=state.features.jobs.filter(j=>j.readyAt<=Date.now()).length;
-    for(const [x,label,key,panel]of [[80,ready?`工坊 · ${ready}`:'工坊','windmill','workshop'],[209,fishingPhase(state)==='bite'?'咬钩啦！':'钓鱼','fish','fishing']] as const){const n=p.pill(this.root,x,108,118,40);p.contain(n,key,p.w/2-36,p.h/2,33,36);p.label(n,label,p.w/2+16,p.h/2,14,INK,76,32);p.hit(n,()=>this.open(panel));this.buttons.push({label:panel==='workshop'?'工坊':'钓鱼',n});}
+    for(const [x,label,key,panel]of [[80,ready?`工坊 · ${ready}`:'工坊','windmill','workshop'],[209,anglingPhase(state)==='bite'||anglingPhase(state)==='reel'?'收线！':fishingPhase(state)==='bite'?'咬钩啦！':'钓鱼','fish','fishing']] as const){const n=p.pill(this.root,x,108,118,40);p.contain(n,key,p.w/2-36,p.h/2,33,36);p.label(n,label,p.w/2+16,p.h/2,14,INK,76,32);p.hit(n,()=>this.open(panel));this.buttons.push({label:panel==='workshop'?'工坊':'钓鱼',n});}
     for(const [x,label,key,panel]of [[80,'开拓地图','tree_round','world'],[209,unclaimedLevels(state).length?`奖励 · ${unclaimedLevels(state).length}`:'等级册','star','levels']] as const){const n=p.pill(this.root,x,158,118,40);p.contain(n,key,p.w/2-37,p.h/2,32,34);p.label(n,label,p.w/2+15,p.h/2,13,INK,79,32);p.hit(n,()=>this.open(panel));this.buttons.push({label:panel==='world'?'开拓地图':'等级册',n});}
     for(const [x,label,key,panel]of [[80,'动物伙伴','duck','animals'],[209,'旅行手册','forestCamp','travel']] as const){const n=p.pill(this.root,x,208,118,40);p.contain(n,key,p.w/2-37,p.h/2,32,34);p.label(n,label,p.w/2+15,p.h/2,13,INK,79,32);p.hit(n,()=>this.open(panel));this.buttons.push({label,n});}}
     this.chromeToggle(p,t(leftOpen?'hud.leftHide':'hud.leftShow',{},locale),leftOpen?'⌃':'⌄',296,43,()=>this.cb.toggleHud('left'));
@@ -173,7 +175,7 @@ export class FarmUI {
       const height=panel==='world'?760:210+116*Math.max(9,Math.min(100,Math.max(10,levelFor(state.xp)+2))-1),m=this.modal(panel==='world'?'开拓地图':'等级奖励',panel==='world'?'tree_round':'star',640,height+70,height),context=this.featureContext(m);if(panel==='world')worldPanel(context,id=>{this.panel=null;this.cb.focus(id);this.render();});else levelsPanel(context,level=>this.previewLevel(level));return;
     }
     if(panel==='workshop'||panel==='fishing'){
-      const contentH=panel==='workshop'?400+RECIPES.filter(r=>recipeFactory(r)===this.factory).length*150+Math.max(0,state.features.jobs.filter(j=>recipeFactory(RECIPES.find(r=>r.id===j.recipe)!)===this.factory).length-1)*66:Math.min(500,this.p.h*.86-70),m=this.modal(panel==='workshop'?'风车工坊':'池塘钓鱼',panel==='workshop'?'windmill':'fish',panel==='workshop'?700:640,contentH+70,contentH),context=this.featureContext(m);if(panel==='workshop')workshopPanel(context,this.factory,id=>{this.factory=id;this.render();},()=>this.open('carpenter'));else fishingPanel(context);return;
+      const contentH=panel==='workshop'?400+RECIPES.filter(r=>recipeFactory(r)===this.factory).length*150+Math.max(0,state.features.jobs.filter(j=>recipeFactory(RECIPES.find(r=>r.id===j.recipe)!)===this.factory).length-1)*66:this.fishTab==='pond'?860:520,m=this.modal(panel==='workshop'?'风车工坊':'抛竿收线',panel==='workshop'?'windmill':'fish',panel==='workshop'?700:660,contentH+70,contentH),context=this.featureContext(m);if(panel==='workshop')workshopPanel(context,this.factory,id=>{this.factory=id;this.render();},()=>this.open('carpenter'));else anglingPanel(context,this.fishTab,tab=>{this.fishTab=tab;this.render();},this.fishSpot,this.fishBait,spot=>{this.fishSpot=spot;this.render();},bait=>{this.fishBait=bait;this.render();});return;
     }
     if(panel==='warehouse'){
       const items=PRODUCTS.filter(id=>state.inventory[id]>0),rows=Math.ceil(items.length/3),height=Math.max(250,rows*194+80),m=this.modal('仓库','barn',560,height+70,height),{p,root,w}=m;
