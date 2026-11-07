@@ -43,8 +43,10 @@ cc_ios_after_target(\${EXECUTABLE_NAME})
 include(\${CC_PROJECT_DIR}/Qingye.cmake)
 `;
 writeFileSync(cmakePath,project);
-let plist=readFileSync(join(source,'ios/Info.plist'),'utf8').replace('<string>0.7.2</string>',`<string>${version}</string>`);
-plist=plist.replace('<string>702</string>',`<string>${version.split('.').reduce((n,x)=>n*100+Number(x),0)}</string>`);
+const build=String(version.split('.').reduce((n,x)=>n*100+Number(x),0));
+let plist=readFileSync(join(source,'ios/Info.plist'),'utf8');
+plist=plist.replace(/(<key>CFBundleShortVersionString<\/key>\s*<string>)[^<]*/,'$1'+version);
+plist=plist.replace(/(<key>CFBundleVersion<\/key>\s*<string>)[^<]*/,'$1'+build);
 writeFileSync(join(source,'ios/Info.plist'),plist);
 cpSync('assets/resources/branding/cover.png',join(source,'ios/LaunchScreenBackground.png'));
 for(const file of ['LaunchScreenBackgroundLandscape.png','LaunchScreenBackgroundPortrait.png'])rmSync(join(source,'ios',file),{force:true});

@@ -1,4 +1,4 @@
-import {hudLayout} from './HudLayout';
+import {hudLayout,MIN_TOUCH} from './HudLayout';
 import {nativeInsets} from './NativePlatform';
 import {geneticsPanel,explorePanel,automationPanel,offlinePanel} from './AdvancedPanels';
 import {roomPanel} from './RoomPanel';
@@ -71,10 +71,10 @@ export class FarmUI {
     }
     this.button(p,this.root,'自动农场',w-115,sys.isNative?224:212,178,35,()=>this.open('automation'),'#ab89d3','#8360ac',13);
     if(state.advanced.auto.report)this.button(p,this.root,state.advanced.auto.report.unread?'离线收获 · 查看':'离线报告',w-115,sys.isNative?266:254,178,33,()=>this.open('offline'),'#ffb150','#dc8a29',13);
-    const right=w-20,topY=sys.isNative?44:32,secondY=sys.isNative?90:78;p.pill(this.root,right-186,topY,114,40);p.contain(this.root,'coin',right-217,topY,44);p.label(this.root,String(state.coins),right-174,topY,20,INK,65,35);
-    this.iconButton(p,this.root,'放大','ui_plus',right-104,topY,32,topY,()=>this.cb.zoom(1.2));
-    this.iconButton(p,this.root,'缩小','ui_minus',right-64,topY,32,topY,()=>this.cb.zoom(1/1.2));
-    const set=this.button(p,this.root,'',right-20,topY,40,40,()=>this.open('settings'),'#a98bd9','#7f63b3');set.name='Button-设置';this.buttons.push({label:'设置',n:set});p.contain(set,'ui_gear',p.w/2,p.h/2,19);
+    const right=w-20,topY=Math.max(MIN_TOUCH,sys.isNative?44:32),secondY=sys.isNative?90:78;p.pill(this.root,right-230,topY,114,40);p.contain(this.root,'coin',right-261,topY,44);p.label(this.root,String(state.coins),right-218,topY,20,INK,65,35);
+    this.iconButton(p,this.root,'放大','ui_plus',right-132,topY,MIN_TOUCH,MIN_TOUCH,()=>this.cb.zoom(1.2));
+    this.iconButton(p,this.root,'缩小','ui_minus',right-80,topY,MIN_TOUCH,MIN_TOUCH,()=>this.cb.zoom(1/1.2));
+    const set=this.button(p,this.root,'',right-22,topY,MIN_TOUCH,MIN_TOUCH,()=>this.open('settings'),'#a98bd9','#7f63b3');set.name='Button-设置';this.buttons.push({label:'设置',n:set});p.contain(set,'ui_gear',p.w/2,p.h/2,19);
     p.pill(this.root,right-124,secondY,60,36);p.contain(this.root,'ui_flame',right-138,secondY,20);p.label(this.root,String(state.days),right-115,secondY,17,SOFT,22,28);
     p.pill(this.root,right-44,secondY,88,36);p.contain(this.root,'study_star',right-63,secondY,36);p.label(this.root,String(state.stars),right-30,secondY,18,'#c88a00',33,30);
     const count=Object.values(state.inventory).reduce((a,b)=>a+b,0),fulfillable=state.orders.filter(o=>canDeliver(state,o)).length,claimable=TASKS.filter(t=>!state.claimed.includes(t.id)&&state.stats[t.stat]>=t.target).length+DAILY_GOALS.filter(g=>!state.features.daily.claimed.includes(g.id)&&dailyProgress(state,g.id)>=g.target).length;
@@ -83,7 +83,7 @@ export class FarmUI {
     if(state.life.activeMap==='home'){
       const now=Date.now(),seed=this.selected?cropById(this.selected):null,plantable=seed&&(levelFor(state.xp)>=seed.level||state.cropUnlocks.includes(seed.id))?Math.min(state.plots.filter((plot,i)=>plot.unlocked&&!plot.crop&&state.activities.stormPlot!==i).length,Math.floor(state.coins/seed.cost)):0,thirsty=state.plots.filter(plot=>plot.crop&&!plot.watered&&!readyPlot(plot,now)).length,ripe=state.plots.filter(plot=>readyPlot(plot,now)).length;
       const batch=[{label:'一键种植',n:plantable,run:()=>this.cb.act(()=>plantAll(state,this.selected!)),color:'#67ca70',dark:'#3fa94d'},{label:'一键浇水',n:thirsty,run:()=>this.cb.act(()=>waterAll(state)),color:'#58bde4',dark:'#3295bd'},{label:'一键收获',n:ripe,run:()=>this.cb.act(()=>harvestAll(state)),color:'#ffb150',dark:'#dc8a29'}].filter(b=>b.n>0);
-      if(batch.length){const y=this.seedOpen?h-270:h-132,bw=Math.min(148,(w-24)/batch.length-8);batch.forEach((b,i)=>{const x=w/2+(i-(batch.length-1)/2)*(bw+8);this.button(p,this.root,`${b.label} · ${b.n}`,x,y,bw,36,b.run,b.color,b.dark,13);});}
+      if(batch.length){const y=this.seedOpen?h-278:h-140,bw=Math.min(160,(w-24)/batch.length-8);batch.forEach((b,i)=>{const x=w/2+(i-(batch.length-1)/2)*(bw+8);this.button(p,this.root,`${b.label} · ${b.n}`,x,y,bw,MIN_TOUCH,b.run,b.color,b.dark,14);});}
     }
     if(this.seedOpen)this.renderSeeds();
     this.modalRoot=p.node(this.root,'Modal');this.toastRoot=p.node(this.root,'ToastLayer');
