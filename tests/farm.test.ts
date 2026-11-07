@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {newFarm,plant,harvest,water,sell,deliver,expand,collectAnimal,buyAnimal,claimTask,buyDecoration,readyPlot,secondsLeft,serialize,parseSave,levelFor,expansionCost} from '../assets/scripts/FarmModel';
+import {newFarm,plant,harvest,water,sell,deliver,expand,collectAnimal,buyAnimal,claimTask,buyDecoration,readyPlot,secondsLeft,serialize,parseSave,levelFor,expansionCost,plantAll,waterAll,harvestAll} from '../assets/scripts/FarmModel';
 const NOW=1800000000000;
 test('a planted crop costs money once and cannot be harvested early',()=>{
  const s=newFarm(NOW),before=s.coins;assert.equal(plant(s,4,'wheat',NOW).ok,true);assert.equal(s.coins,before-5);
@@ -58,3 +58,11 @@ test('decorations debit money and remain in the restored farm',()=>{
  assert.deepEqual(parseSave(serialize(s,NOW))?.decorations,[{type:'cherry',x:10,y:17}]);
 });
 test('level boundaries unlock progressively',()=>{assert.equal(levelFor(0),1);assert.equal(levelFor(19),1);assert.equal(levelFor(20),2);assert.equal(levelFor(80),3);});
+test('batch plant, water and harvest follow the single-plot rules',()=>{
+ const locked=newFarm(NOW),raw=serialize(locked,NOW);assert.equal(plantAll(locked,'pumpkin',NOW).ok,false);assert.equal(serialize(locked,NOW),raw);
+ const poor=newFarm(NOW);poor.coins=4;assert.equal(plantAll(poor,'wheat',NOW).ok,false);assert.equal(poor.plots.filter(p=>p.crop==='wheat').length,3);assert.equal(poor.coins,4);
+ const s=newFarm(NOW);s.coins=12;s.activities.stormPlot=4;assert.ok(plantAll(s,'wheat',NOW).ok);assert.equal(s.coins,2);assert.equal(s.plots[4].crop,null);assert.equal(s.plots[5].crop,'wheat');assert.equal(s.plots[6].crop,'wheat');assert.equal(s.plots[7].crop,null);
+ const wet=newFarm(NOW),wheat=wet.inventory.wheat;assert.equal(waterAll(wet,NOW).ok,true);assert.equal(wet.plots[2].watered,true);assert.equal(wet.plots[3].watered,true);assert.equal(wet.plots[0].watered,false);assert.equal(waterAll(wet,NOW).ok,false);
+ assert.ok(harvestAll(wet,NOW).ok);assert.equal(wet.inventory.wheat,wheat+2);assert.equal(wet.plots[0].crop,null);assert.equal(wet.plots[2].crop,'carrot');assert.equal(harvestAll(wet,NOW).ok,false);
+ assert.ok(parseSave(serialize(wet,NOW),NOW));
+});

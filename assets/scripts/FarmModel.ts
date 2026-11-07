@@ -135,6 +135,26 @@ export function water(s:FarmState,index:number,now=Date.now()):Result {
   if(p.watered)return fail('已经浇过水了，耐心等它长大吧');
   p.plantedAt-=growSeconds(p)*200;p.watered=true;return success('浇水成功 · 生长时间缩短20%');
 }
+const openPlot=(s:FarmState,index:number)=>!!s.plots[index]?.unlocked&&!s.plots[index].crop&&s.activities.stormPlot!==index;
+export function plantAll(s:FarmState,id:CropId,now=Date.now()):Result {
+  const c=cropById(id);if(!c)return fail('没有这种种子');
+  if(levelFor(s.xp)<c.level&&!s.cropUnlocks.includes(id))return fail(`${c.level}级解锁${c.name}`);
+  const slots=s.plots.reduce((n,_,i)=>n+(openPlot(s,i)?1:0),0);
+  if(!slots)return fail('没有可以播种的空地');
+  if(s.coins<c.cost)return fail('金币不足，试试出售库存或完成订单');
+  let count=0,spent=0;
+  for(let i=0;i<s.plots.length;i++){if(!openPlot(s,i)||s.coins<c.cost)continue;const before=s.coins;if(!plant(s,i,id,now).ok)continue;count++;spent+=before-s.coins;}
+  if(!count)return fail('没有可以播种的空地');
+  return success(`一键种下${c.name} ×${count} · 金币 -${spent}${count<slots?' · 其余空地金币不足':''}`,id);
+}
+export function waterAll(s:FarmState,now=Date.now()):Result {
+  let count=0;for(let i=0;i<s.plots.length;i++)if(water(s,i,now).ok)count++;
+  return count?success(`一键浇水 · ${count}块田生长加快`):fail('没有需要浇水的作物');
+}
+export function harvestAll(s:FarmState,now=Date.now()):Result {
+  const xp=s.xp;let count=0,item:ProductId|undefined;for(let i=0;i<s.plots.length;i++){const result=harvest(s,i,now);if(result.ok){count++;item=result.item;}}
+  return count?success(`一键收获 · ${count}份已入库 · 经验 +${s.xp-xp}`,item):fail('还没有成熟的作物');
+}
 export function sell(s:FarmState,id:ProductId,amount:number):Result {
   if(!Number.isInteger(amount)||amount<1||s.inventory[id]<amount)return fail('库存不足');
   const total=PRICES[id]*amount;s.inventory[id]-=amount;s.coins+=total;return success(`卖出${NAMES[id]} ×${amount} · 金币 +${total}`,id);

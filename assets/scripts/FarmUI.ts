@@ -6,7 +6,7 @@ import {Trait} from './FarmAdvanced';
 import {pondPanel,growthPanel,eventsPanel} from './EcologyPanels';
 import {Node,UITransform,Mask,ScrollView,Vec2,Vec3,view,SpriteFrame,Sprite,Texture2D,ImageAsset,UIOpacity,BlockInputEvents,Graphics,LabelOutline} from 'cc';
 import {Painter,empty,tint,XY} from './Drawing';
-import {FarmState,CropId,ProductId,DecoId,CROPS,DECOS,PRODUCTS,NAMES,PRICES,TASKS,Result,levelFor,levelFloor,levelCeil,canDeliver,expansionCost,skipOrder,deliver,sell,expand,buyAnimal,claimTask,unlockWithStars,expandWithStars,expandPen} from './FarmModel';
+import {FarmState,CropId,ProductId,DecoId,CROPS,DECOS,PRODUCTS,NAMES,PRICES,TASKS,Result,levelFor,levelFloor,levelCeil,canDeliver,expansionCost,skipOrder,deliver,sell,expand,buyAnimal,claimTask,unlockWithStars,expandWithStars,expandPen,readyPlot,plantAll,waterAll,harvestAll,cropById} from './FarmModel';
 import {workshopPanel,fishingPanel,journalPanel,diaryHeight,DiaryTab,FeaturePanelContext} from './FeaturePanels';
 import {DAILY_GOALS,dailyProgress,fishingPhase,RECIPES,recipeFactory} from './FarmFeatures';
 import {ANIMALS,TRAVEL_MAPS,FactoryId,FurnitureId,MapId,SEASONS,WEATHER_NAMES} from './FarmCatalog';
@@ -80,6 +80,11 @@ export class FarmUI {
     const count=Object.values(state.inventory).reduce((a,b)=>a+b,0),fulfillable=state.orders.filter(o=>canDeliver(state,o)).length,claimable=TASKS.filter(t=>!state.claimed.includes(t.id)&&state.stats[t.stat]>=t.target).length+DAILY_GOALS.filter(g=>!state.features.daily.claimed.includes(g.id)&&dailyProgress(state,g.id)>=g.target).length;
     const nav=[{label:'农场',key:'school',color:'#4f8ff7',panel:'tasks' as Panel,badge:claimable||'!'},{label:`仓库 · ${count}`,key:'barn',color:'#ff9f43',panel:'warehouse' as Panel,badge:0},{label:'订单',key:'truck',color:'#3cc9a6',panel:'orders' as Panel,badge:fulfillable},{label:'商店',key:'market',color:'#ff7aa2',panel:'shop' as Panel,badge:0}];
     if(!this.seedOpen)nav.forEach((b,i)=>{const x=w/2+(i-1.5)*102,y=h-62.5;const n=p.node(this.root,'Button-'+b.label,x,y,78,92);p.surface(n,p.w/2,p.h/2-4,78,78,'nav',b.color,b.color);p.contain(n,b.key,p.w/2,p.h/2-4,72,72);p.rect(n,p.w/2,p.h/2+34,Math.max(54,b.label.length*12+20),23,b.color,12,'#ffffff',2);p.label(n,b.label,p.w/2,p.h/2+34,13,'#ffffff',100,22,true);p.hit(n,()=>this.open(b.panel));this.buttons.push({label:b.label,n});if(b.badge){p.rect(n,p.w/2+31,p.h/2-42,28,28,'#ff7aa2',14,'#ffffff',2);p.label(n,String(b.badge),p.w/2+31,p.h/2-42,14,'#ffffff',25,25);}});
+    if(state.life.activeMap==='home'){
+      const now=Date.now(),seed=this.selected?cropById(this.selected):null,plantable=seed&&(levelFor(state.xp)>=seed.level||state.cropUnlocks.includes(seed.id))?Math.min(state.plots.filter((plot,i)=>plot.unlocked&&!plot.crop&&state.activities.stormPlot!==i).length,Math.floor(state.coins/seed.cost)):0,thirsty=state.plots.filter(plot=>plot.crop&&!plot.watered&&!readyPlot(plot,now)).length,ripe=state.plots.filter(plot=>readyPlot(plot,now)).length;
+      const batch=[{label:'一键种植',n:plantable,run:()=>this.cb.act(()=>plantAll(state,this.selected!)),color:'#67ca70',dark:'#3fa94d'},{label:'一键浇水',n:thirsty,run:()=>this.cb.act(()=>waterAll(state)),color:'#58bde4',dark:'#3295bd'},{label:'一键收获',n:ripe,run:()=>this.cb.act(()=>harvestAll(state)),color:'#ffb150',dark:'#dc8a29'}].filter(b=>b.n>0);
+      if(batch.length){const y=this.seedOpen?h-270:h-132,bw=Math.min(148,(w-24)/batch.length-8);batch.forEach((b,i)=>{const x=w/2+(i-(batch.length-1)/2)*(bw+8);this.button(p,this.root,`${b.label} · ${b.n}`,x,y,bw,36,b.run,b.color,b.dark,13);});}
+    }
     if(this.seedOpen)this.renderSeeds();
     this.modalRoot=p.node(this.root,'Modal');this.toastRoot=p.node(this.root,'ToastLayer');
     if(this.panel)this.renderPanel(this.panel);
