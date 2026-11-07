@@ -1,4 +1,5 @@
 import {hudLayout,MIN_TOUCH} from './HudLayout';
+import {LOCALE_LABEL,LOCALES,setActiveLocale,t,tx,type LocaleId} from './Locale';
 import {nativeInsets} from './NativePlatform';
 import {geneticsPanel,explorePanel,automationPanel,offlinePanel} from './AdvancedPanels';
 import {roomPanel} from './RoomPanel';
@@ -18,7 +19,7 @@ import {RegionId} from './WorldData';
 import { FLOWER_PALETTE, FlowerChoice, repairStormCrop, repairStormDeco, repairStormPlot, resolveScene } from './FarmActivities';
 import { areaStoryPanel, breakfastPanel, carpenterPanel, decorPanel, festivalGamesPanel, honorsPanel, iceFishingPanel, patrolPanel, racePanel, summerFishingPanel, townPanel } from './JourneyPanels';
 export type Panel='warehouse'|'orders'|'shop'|'tasks'|'workshop'|'fishing'|'world'|'levels'|'animals'|'travel'|'home'|'seasons'|'genetics'|'explore'|'automation'|'offline'|'ponds'|'growth'|'events'|'settings'|'privacy'|'confirm-reset'|'breakfast'|'story'|'honors'|'carpenter'|'festival-games'|'ice-fishing'|'patrol'|'town'|'race'|'summer-fishing'|'decor'|'restore-save'|null;
-export interface UICallbacks {act:(f:()=>Result)=>void;pick:(id:CropId)=>void;place:(id:DecoId)=>void;zoom:(factor:number)=>void;focus:(id:RegionId|'home')=>void;travel:(id:MapId)=>void;settings:(key:'sound'|'music'|'haptics')=>void;exportSave:()=>void;chooseSave:()=>void;restoreBackup:()=>void;confirmSave:()=>void;reset:()=>void;start:()=>void;}
+export interface UICallbacks {act:(f:()=>Result)=>void;pick:(id:CropId)=>void;place:(id:DecoId)=>void;zoom:(factor:number)=>void;focus:(id:RegionId|'home')=>void;travel:(id:MapId)=>void;settings:(key:'sound'|'music'|'haptics')=>void;setLocale:(id:LocaleId)=>void;exportSave:()=>void;chooseSave:()=>void;restoreBackup:()=>void;confirmSave:()=>void;reset:()=>void;start:()=>void;}
 const PALE='#fffcf4',LINE='#f2d8ac',INK='#5a3e2b',SOFT='#997455';
 export class FarmUI {
   panel:Panel=null;shopTab='土地';seedOpen=false;selected:CropId|null=null;started=true;
@@ -45,44 +46,44 @@ export class FarmUI {
   private slot(p:Painter,parent:Node,x:number,y:number,w:number,h:number){return p.surface(parent,x,y,w,h,'slot','#ffffff','#f2d8ac');}
   render(){
     const id=[this.panel,this.panel==='tasks'?this.diaryTab:this.panel==='shop'?this.shopTab:this.panel==='workshop'?this.factory:''].join(':'),previous=this.modalRoot?.isValid?this.modalRoot.getComponentInChildren(ScrollView):null,offset=id===this.scrollId?previous?.getScrollOffset():null;this.scrollId=id;
-    empty(this.root);this.buttons=[];this.liveUpdates=[];const frame=view.getFrameSize(),layout=hudLayout(frame.width,frame.height,sys.isNative,nativeInsets());this.root.setScale(layout.scale,layout.scale,1);this.root.setPosition(layout.x,layout.y,0);this.p=new Painter(layout.width,layout.height,this.art);const p=this.p,w=p.w,h=p.h,state=this.state(),lv=levelFor(state.xp),left=state.xp-levelFloor(lv),next=levelCeil(lv)-levelFloor(lv);
+    empty(this.root);this.buttons=[];this.liveUpdates=[];const frame=view.getFrameSize(),layout=hudLayout(frame.width,frame.height,sys.isNative,nativeInsets());this.root.setScale(layout.scale,layout.scale,1);this.root.setPosition(layout.x,layout.y,0);this.p=new Painter(layout.width,layout.height,this.art);const p=this.p,w=p.w,h=p.h,state=this.state();setActiveLocale(state.locale||'zh-CN');const lv=levelFor(state.xp),left=state.xp-levelFloor(lv),next=levelCeil(lv)-levelFloor(lv);
     // The reference HUD has no large title/task boxes and no full-width bottom toolbar.
-    const ratio=lv>=100?1:Math.min(1,left/next);p.pill(this.root,165,43,200,40);p.label(this.root,`${lv}级`,149,33,11,SOFT,120,18,true,'left');p.rect(this.root,153,51,130,11,'#f1e2c8',5);if(ratio>0)p.rect(this.root,88+130*ratio/2,51,Math.max(4,130*ratio),11,'#69c957',5);p.label(this.root,lv>=100?'满级':`${left}/${next}`,235,43,12,SOFT,52,24);
-    const levelStar=p.contain(this.root,'star',51,43,62);p.label(this.root,String(lv),51,45,22,INK,45,45,true,'center','#ffffff');p.hit(levelStar,()=>this.open('levels'));this.buttons.push({label:'等级奖励',n:levelStar});
+    const ratio=lv>=100?1:Math.min(1,left/next);p.pill(this.root,165,43,200,40);p.label(this.root,t('hud.level',{n:lv}),149,33,11,SOFT,120,18,true,'left');p.rect(this.root,153,51,130,11,'#f1e2c8',5);if(ratio>0)p.rect(this.root,88+130*ratio/2,51,Math.max(4,130*ratio),11,'#69c957',5);p.label(this.root,lv>=100?t('hud.max'):`${left}/${next}`,235,43,12,SOFT,52,24);
+    const levelStar=p.contain(this.root,'star',51,43,62);p.label(this.root,String(lv),51,45,22,INK,45,45,true,'center','#ffffff');p.hit(levelStar,()=>this.open('levels'));this.buttons.push({label:t('hud.levels'),n:levelStar});
     const ready=state.features.jobs.filter(j=>j.readyAt<=Date.now()).length;
-    for(const [x,label,key,panel]of [[80,ready?`工坊 · ${ready}`:'工坊','windmill','workshop'],[209,fishingPhase(state)==='bite'?'咬钩啦！':'钓鱼','fish','fishing']] as const){const n=p.pill(this.root,x,108,118,40);p.contain(n,key,p.w/2-36,p.h/2,33,36);p.label(n,label,p.w/2+16,p.h/2,14,INK,76,32);p.hit(n,()=>this.open(panel));this.buttons.push({label:panel==='workshop'?'工坊':'钓鱼',n});}
-    for(const [x,label,key,panel]of [[80,'开拓地图','tree_round','world'],[209,unclaimedLevels(state).length?`奖励 · ${unclaimedLevels(state).length}`:'等级册','star','levels']] as const){const n=p.pill(this.root,x,158,118,40);p.contain(n,key,p.w/2-37,p.h/2,32,34);p.label(n,label,p.w/2+15,p.h/2,13,INK,79,32);p.hit(n,()=>this.open(panel));this.buttons.push({label:panel==='world'?'开拓地图':'等级册',n});}
-    for(const [x,label,key,panel]of [[80,'动物伙伴','duck','animals'],[209,'旅行手册','forestCamp','travel']] as const){const n=p.pill(this.root,x,208,118,40);p.contain(n,key,p.w/2-37,p.h/2,32,34);p.label(n,label,p.w/2+15,p.h/2,13,INK,79,32);p.hit(n,()=>this.open(panel));this.buttons.push({label,n});}
-    const dayLabel=SEASONS[seasonIndex(state)%4]+' · '+WEATHER_NAMES[weatherAt(state)];const season=p.pill(this.root,w-115,sys.isNative?136:124,178,35);p.label(season,dayLabel+' · 节庆',p.w/2,p.h/2,13,SOFT,168,31);p.hit(season,()=>this.open('seasons'));this.buttons.push({label:'季节与自动化',n:season});const home=p.pill(this.root,w-115,sys.isNative?180:168,178,35);p.label(home,'我的小屋 · 装修',p.w/2,p.h/2,13,SOFT,168,31);p.hit(home,()=>this.open('home'));this.buttons.push({label:'我的小屋',n:home});
+    for(const [x,label,key,panel]of [[80,ready?t('hud.workshopReady',{n:ready}):t('hud.workshop'),'windmill','workshop'],[209,fishingPhase(state)==='bite'?t('hud.bite'):t('hud.fishing'),'fish','fishing']] as const){const n=p.pill(this.root,x,108,118,40);p.contain(n,key,p.w/2-36,p.h/2,33,36);p.label(n,label,p.w/2+16,p.h/2,14,INK,76,32);p.hit(n,()=>this.open(panel));this.buttons.push({label:panel==='workshop'?t('hud.workshop'):t('hud.fishing'),n});}
+    for(const [x,label,key,panel]of [[80,t('hud.world'),'tree_round','world'],[209,unclaimedLevels(state).length?t('hud.levelsReady',{n:unclaimedLevels(state).length}):t('hud.levels'),'star','levels']] as const){const n=p.pill(this.root,x,158,118,40);p.contain(n,key,p.w/2-37,p.h/2,32,34);p.label(n,label,p.w/2+15,p.h/2,13,INK,79,32);p.hit(n,()=>this.open(panel));this.buttons.push({label:panel==='world'?t('hud.world'):t('hud.levels'),n});}
+    for(const [x,label,key,panel]of [[80,t('hud.animals'),'duck','animals'],[209,t('hud.travel'),'forestCamp','travel']] as const){const n=p.pill(this.root,x,208,118,40);p.contain(n,key,p.w/2-37,p.h/2,32,34);p.label(n,label,p.w/2+15,p.h/2,13,INK,79,32);p.hit(n,()=>this.open(panel));this.buttons.push({label,n});}
+    const dayLabel=t('season.'+(seasonIndex(state)%4))+' · '+t('weather.'+weatherAt(state));const season=p.pill(this.root,w-115,sys.isNative?136:124,178,35);p.label(season,dayLabel+' · '+t('hud.festival'),p.w/2,p.h/2,13,SOFT,168,31);p.hit(season,()=>this.open('seasons'));this.buttons.push({label:t('hud.festival'),n:season});const home=p.pill(this.root,w-115,sys.isNative?180:168,178,35);p.label(home,t('hud.home'),p.w/2,p.h/2,13,SOFT,168,31);p.hit(home,()=>this.open('home'));this.buttons.push({label:t('hud.home'),n:home});
     if(state.life.activeMap!=='home'){
       const name=TRAVEL_MAPS.find(m=>m.id===state.life.activeMap)!.name,y=w<1000?h-137:38;
-      p.pill(this.root,w/2,y,310,48);p.label(this.root,'当前位置 · '+name,w/2-66,y,12,INK,160,35);
-      this.button(p,this.root,'返回主农场',w/2+80,y,138,38,()=>this.cb.travel('home'),'#67ca70','#3fa94d',14);
-      this.button(p,this.root,state.journey.stories.includes(state.life.activeMap)?'地区故事 ✓':'地区故事',80,256,118,35,()=>this.open('story'),'#ffb150','#dc8a29',13);
-      if(state.life.activeMap==='snow')this.button(p,this.root,'冰湖垂钓',209,256,118,35,()=>this.open('ice-fishing'),'#58bde4','#3295bd',13);
+      p.pill(this.root,w/2,y,310,48);p.label(this.root,t('hud.here',{name:tx('map.'+state.life.activeMap,name)}),w/2-66,y,12,INK,160,35);
+      this.button(p,this.root,t('hud.back'),w/2+80,y,138,38,()=>this.cb.travel('home'),'#67ca70','#3fa94d',14);
+      this.button(p,this.root,state.journey.stories.includes(state.life.activeMap)?t('hud.storyDone'):t('hud.story'),80,256,118,35,()=>this.open('story'),'#ffb150','#dc8a29',13);
+      if(state.life.activeMap==='snow')this.button(p,this.root,t('hud.iceLake'),209,256,118,35,()=>this.open('ice-fishing'),'#58bde4','#3295bd',13);
     }else{
-      this.button(p,this.root,state.journey.breakfast<5?'农场主线':'主线续章',w/2-14,w<650?92:sys.isNative?44:32,104,34,()=>this.open(state.journey.breakfast<5?'breakfast':'town'),'#ffb150','#dc8a29',13);
-      if(state.animals.some(a=>a.type==='cat'||a.type==='dog'))this.button(p,this.root,state.activities.patrol?'巡院线索':'宠物巡院',80,256,118,35,()=>this.open('patrol'),'#ab89d3','#8360ac',13);
-      if(state.activities.stormPlot!==null)this.button(p,this.root,'疏通积水',209,256,118,35,()=>this.cb.act(()=>repairStormPlot(state)),'#58bde4','#3295bd',13);
-      if(state.activities.stormCrop!==null)this.button(p,this.root,'扶起作物',80,300,118,35,()=>this.cb.act(()=>repairStormCrop(state)),'#67ca70','#3fa84d',13);
-      if(state.activities.stormDeco!==null)this.button(p,this.root,'扶正装饰',209,300,118,35,()=>this.cb.act(()=>repairStormDeco(state)),'#ffb150','#dc8a29',13);
-      if(state.activities.scene){this.button(p,this.root,state.activities.scene.kind==='mouse'?'猫抓田鼠':'狗看货袋',80,344,118,35,()=>this.cb.act(()=>resolveScene(state,true)),'#ab89d3','#8360ac',12);this.button(p,this.root,'先不管',209,344,118,35,()=>this.cb.act(()=>resolveScene(state,false)),'#cfbfa1','#ad9875',13);}
-      if(seasonIndex(state)%4===3)this.button(p,this.root,'冰窟控线',w-115,sys.isNative?310:298,178,33,()=>this.open('ice-fishing'),'#58bde4','#3295bd',13);
+      this.button(p,this.root,state.journey.breakfast<5?t('hud.town'):t('hud.townNext'),w/2-14,w<650?92:sys.isNative?44:32,104,34,()=>this.open(state.journey.breakfast<5?'breakfast':'town'),'#ffb150','#dc8a29',13);
+      if(state.animals.some(a=>a.type==='cat'||a.type==='dog'))this.button(p,this.root,state.activities.patrol?t('hud.patrolClue'):t('hud.patrol'),80,256,118,35,()=>this.open('patrol'),'#ab89d3','#8360ac',13);
+      if(state.activities.stormPlot!==null)this.button(p,this.root,t('hud.storm'),209,256,118,35,()=>this.cb.act(()=>repairStormPlot(state)),'#58bde4','#3295bd',13);
+      if(state.activities.stormCrop!==null)this.button(p,this.root,t('hud.stormCrop'),80,300,118,35,()=>this.cb.act(()=>repairStormCrop(state)),'#67ca70','#3fa84d',13);
+      if(state.activities.stormDeco!==null)this.button(p,this.root,t('hud.stormDeco'),209,300,118,35,()=>this.cb.act(()=>repairStormDeco(state)),'#ffb150','#dc8a29',13);
+      if(state.activities.scene){this.button(p,this.root,state.activities.scene.kind==='mouse'?t('hud.mouse'):t('hud.dog'),80,344,118,35,()=>this.cb.act(()=>resolveScene(state,true)),'#ab89d3','#8360ac',12);this.button(p,this.root,t('hud.ignore'),209,344,118,35,()=>this.cb.act(()=>resolveScene(state,false)),'#cfbfa1','#ad9875',13);}
+      if(seasonIndex(state)%4===3)this.button(p,this.root,t('hud.ice'),w-115,sys.isNative?310:298,178,33,()=>this.open('ice-fishing'),'#58bde4','#3295bd',13);
     }
-    this.button(p,this.root,'自动农场',w-115,sys.isNative?224:212,178,35,()=>this.open('automation'),'#ab89d3','#8360ac',13);
-    if(state.advanced.auto.report)this.button(p,this.root,state.advanced.auto.report.unread?'离线收获 · 查看':'离线报告',w-115,sys.isNative?266:254,178,33,()=>this.open('offline'),'#ffb150','#dc8a29',13);
+    this.button(p,this.root,t('hud.auto'),w-115,sys.isNative?224:212,178,35,()=>this.open('automation'),'#ab89d3','#8360ac',13);
+    if(state.advanced.auto.report)this.button(p,this.root,state.advanced.auto.report.unread?t('hud.offlineNew'):t('hud.offline'),w-115,sys.isNative?266:254,178,33,()=>this.open('offline'),'#ffb150','#dc8a29',13);
     const right=w-20,topY=Math.max(MIN_TOUCH,sys.isNative?44:32),secondY=sys.isNative?90:78;p.pill(this.root,right-230,topY,114,40);p.contain(this.root,'coin',right-261,topY,44);p.label(this.root,String(state.coins),right-218,topY,20,INK,65,35);
-    this.iconButton(p,this.root,'放大','ui_plus',right-132,topY,MIN_TOUCH,MIN_TOUCH,()=>this.cb.zoom(1.2));
-    this.iconButton(p,this.root,'缩小','ui_minus',right-80,topY,MIN_TOUCH,MIN_TOUCH,()=>this.cb.zoom(1/1.2));
-    const set=this.button(p,this.root,'',right-22,topY,MIN_TOUCH,MIN_TOUCH,()=>this.open('settings'),'#a98bd9','#7f63b3');set.name='Button-设置';this.buttons.push({label:'设置',n:set});p.contain(set,'ui_gear',p.w/2,p.h/2,19);
+    this.iconButton(p,this.root,t('hud.zoomIn'),'ui_plus',right-132,topY,MIN_TOUCH,MIN_TOUCH,()=>this.cb.zoom(1.2));
+    this.iconButton(p,this.root,t('hud.zoomOut'),'ui_minus',right-80,topY,MIN_TOUCH,MIN_TOUCH,()=>this.cb.zoom(1/1.2));
+    const set=this.button(p,this.root,'',right-22,topY,MIN_TOUCH,MIN_TOUCH,()=>this.open('settings'),'#a98bd9','#7f63b3');set.name='Button-设置';this.buttons.push({label:t('hud.settings'),n:set});p.contain(set,'ui_gear',p.w/2,p.h/2,19);
     p.pill(this.root,right-124,secondY,60,36);p.contain(this.root,'ui_flame',right-138,secondY,20);p.label(this.root,String(state.days),right-115,secondY,17,SOFT,22,28);
     p.pill(this.root,right-44,secondY,88,36);p.contain(this.root,'study_star',right-63,secondY,36);p.label(this.root,String(state.stars),right-30,secondY,18,'#c88a00',33,30);
     const count=Object.values(state.inventory).reduce((a,b)=>a+b,0),fulfillable=state.orders.filter(o=>canDeliver(state,o)).length,claimable=TASKS.filter(t=>!state.claimed.includes(t.id)&&state.stats[t.stat]>=t.target).length+DAILY_GOALS.filter(g=>!state.features.daily.claimed.includes(g.id)&&dailyProgress(state,g.id)>=g.target).length;
-    const nav=[{label:'农场',key:'school',color:'#4f8ff7',panel:'tasks' as Panel,badge:claimable||'!'},{label:`仓库 · ${count}`,key:'barn',color:'#ff9f43',panel:'warehouse' as Panel,badge:0},{label:'订单',key:'truck',color:'#3cc9a6',panel:'orders' as Panel,badge:fulfillable},{label:'商店',key:'market',color:'#ff7aa2',panel:'shop' as Panel,badge:0}];
+    const nav=[{label:t('hud.tasks'),key:'school',color:'#4f8ff7',panel:'tasks' as Panel,badge:claimable||'!'},{label:t('hud.warehouse',{n:count}),key:'barn',color:'#ff9f43',panel:'warehouse' as Panel,badge:0},{label:t('hud.orders'),key:'truck',color:'#3cc9a6',panel:'orders' as Panel,badge:fulfillable},{label:t('hud.shop'),key:'market',color:'#ff7aa2',panel:'shop' as Panel,badge:0}];
     if(!this.seedOpen)nav.forEach((b,i)=>{const x=w/2+(i-1.5)*102,y=h-62.5;const n=p.node(this.root,'Button-'+b.label,x,y,78,92);p.surface(n,p.w/2,p.h/2-4,78,78,'nav',b.color,b.color);p.contain(n,b.key,p.w/2,p.h/2-4,72,72);p.rect(n,p.w/2,p.h/2+34,Math.max(54,b.label.length*12+20),23,b.color,12,'#ffffff',2);p.label(n,b.label,p.w/2,p.h/2+34,13,'#ffffff',100,22,true);p.hit(n,()=>this.open(b.panel));this.buttons.push({label:b.label,n});if(b.badge){p.rect(n,p.w/2+31,p.h/2-42,28,28,'#ff7aa2',14,'#ffffff',2);p.label(n,String(b.badge),p.w/2+31,p.h/2-42,14,'#ffffff',25,25);}});
     if(state.life.activeMap==='home'){
       const now=Date.now(),seed=this.selected?cropById(this.selected):null,plantable=seed&&(levelFor(state.xp)>=seed.level||state.cropUnlocks.includes(seed.id))?Math.min(state.plots.filter((plot,i)=>plot.unlocked&&!plot.crop&&state.activities.stormPlot!==i).length,Math.floor(state.coins/seed.cost)):0,thirsty=state.plots.filter(plot=>plot.crop&&!plot.watered&&!readyPlot(plot,now)).length,ripe=state.plots.filter(plot=>readyPlot(plot,now)).length;
-      const batch=[{label:'一键种植',n:plantable,run:()=>this.cb.act(()=>plantAll(state,this.selected!)),color:'#67ca70',dark:'#3fa94d'},{label:'一键浇水',n:thirsty,run:()=>this.cb.act(()=>waterAll(state)),color:'#58bde4',dark:'#3295bd'},{label:'一键收获',n:ripe,run:()=>this.cb.act(()=>harvestAll(state)),color:'#ffb150',dark:'#dc8a29'}].filter(b=>b.n>0);
+      const batch=[{label:t('hud.plant'),n:plantable,run:()=>this.cb.act(()=>plantAll(state,this.selected!)),color:'#67ca70',dark:'#3fa94d'},{label:t('hud.water'),n:thirsty,run:()=>this.cb.act(()=>waterAll(state)),color:'#58bde4',dark:'#3295bd'},{label:t('hud.harvest'),n:ripe,run:()=>this.cb.act(()=>harvestAll(state)),color:'#ffb150',dark:'#dc8a29'}].filter(b=>b.n>0);
       if(batch.length){const y=this.seedOpen?h-278:h-140,bw=Math.min(160,(w-24)/batch.length-8);batch.forEach((b,i)=>{const x=w/2+(i-(batch.length-1)/2)*(bw+8);this.button(p,this.root,`${b.label} · ${b.n}`,x,y,bw,MIN_TOUCH,b.run,b.color,b.dark,14);});}
     }
     if(this.seedOpen)this.renderSeeds();
@@ -105,13 +106,13 @@ export class FarmUI {
   tick(){for(const update of this.liveUpdates)update();}
   private renderSeeds(){
     const p=this.p,w=Math.min(760,p.w-16),height=238,x=p.w/2,y=p.h-height/2-10,root=p.node(this.root,'SeedPicker');const panel=p.rect(root,x,y+6,w,height,'#efd9b3',28);p.rect(root,x,y,w,height,PALE,28,'#ffffff',3);panel.addComponent(BlockInputEvents);
-    p.label(root,'选择种子',x-w/2+126,y-height/2+25,20,INK,215,30,true,'left');p.label(root,this.selected?'点按或滑过空地，连续播种':'选一种作物种到地里',x-w/2+169,y-height/2+49,12.5,SOFT,300,24,true,'left');this.closeButton(p,root,x+w/2-35,y-height/2+35,()=>{this.seedOpen=false;this.selected=null;this.render();});
+    p.label(root,t('seed.title'),x-w/2+126,y-height/2+25,20,INK,215,30,true,'left');p.label(root,this.selected?t('seed.paint'):t('seed.hint'),x-w/2+169,y-height/2+49,12.5,SOFT,300,24,true,'left');this.closeButton(p,root,x+w/2-35,y-height/2+35,()=>{this.seedOpen=false;this.selected=null;this.render();});
     this.button(p,root,'上一页',x+110,y-height/2+25,65,28,()=>{this.seedPage=(this.seedPage+Math.ceil(CROPS.length/6)-1)%Math.ceil(CROPS.length/6);this.render();},'#d6c4a4','#bba17b',11);p.label(root,`${this.seedPage+1}/${Math.ceil(CROPS.length/6)}`,x+166,y-height/2+25,12,SOFT,40,25);this.button(p,root,'下一页',x+222,y-height/2+25,65,28,()=>{this.seedPage=(this.seedPage+1)%Math.ceil(CROPS.length/6);this.render();},'#ffb150','#dc8a29',11);
     const cardW=Math.min(104,(w-34-50)/6),gap=10,start=x-w/2+16+cardW/2;
     CROPS.slice(this.seedPage*6,this.seedPage*6+6).forEach((c,i)=>{const xx=start+i*(cardW+gap),cy=y+29,locked=levelFor(this.state().xp)<c.level&&!this.state().cropUnlocks.includes(c.id),selected=this.selected===c.id;
       const n=this.slot(p,root,xx,cy,cardW,151);if(selected)p.rect(n,p.w/2,p.h/2,cardW,151,'#f3ffe9',18,'#64c85b',3);
       const im=p.contain(root,c.id,xx,cy-36,64,70);if(locked){p.opacity(im,90);im.getComponent(Sprite)!.grayscale=true;}
-      p.label(root,c.name,xx,cy+12,14.5,INK,cardW-6,24);p.label(root,shortTime(c.seconds),xx,cy+32,11,SOFT,cardW-6,20);
+      p.label(root,tx('crop.'+c.id,c.name),xx,cy+12,14.5,INK,cardW-6,24);p.label(root,shortTime(c.seconds),xx,cy+32,11,SOFT,cardW-6,20);
       p.rect(root,xx,cy+55,cardW-10,19,'#fff3d1',10);p.contain(root,'coin',xx-cardW/2+20,cy+55,16);p.label(root,`${c.cost} → ${c.sell}`,xx+6,cy+55,12,'#b97a00',cardW-22,18);
       if(locked){p.pill(root,xx,cy-33,57,24,'#82796d','#ffffff');p.label(root,`${c.level}级`,xx,cy-33,11,'#ffffff',54,22);}if(selected){p.rect(root,xx+cardW/2-4,cy-71,24,24,'#61c45b',12,'#ffffff',2);p.label(root,'✓',xx+cardW/2-4,cy-71,16,'#ffffff',22,22);}
       p.hit(n,()=>{if(locked){this.toast(`${c.level}级解锁${c.name}`);return;}this.selected=c.id;this.cb.pick(c.id);this.render();});this.buttons.push({label:'种子-'+c.name,n});
@@ -213,33 +214,34 @@ export class FarmUI {
       p.rect(root,w/2,23,w,40,'#f5e6c8',20);(['成长','今日','建设','图鉴'] as const).forEach((tab,i)=>{const x=w/8+i*w/4,n=p.rect(root,x,23,w/4-4,34,this.diaryTab===tab?'#ffffff':'#f5e6c8',18);p.label(root,tab,x,23,14,this.diaryTab===tab?INK:SOFT,w/4-8,28);p.hit(n,()=>{this.diaryTab=tab;this.render();});this.buttons.push({label:'手记-'+tab,n});});journalPanel(this.featureContext(m),this.diaryTab);return;
     }
     if(panel==='settings'){
-      const m=this.modal('设置','',500,650,574),{p,root,w}=m;p.label(root,'声音与触感',w/2,18,18,'#7755a6',w-20,33);(['music','sound','haptics'] as const).forEach((key,i)=>{const y=80+i*63;this.slot(p,root,w/2,y,w,53);p.label(root,{music:'背景音乐',sound:'音效',haptics:'振动'}[key],100,y,16,INK,175,35,true,'left');const on=state[key];this.button(p,root,on?'开启':'关闭',w-52,y,80,34,()=>this.cb.settings(key),on?'#67ca70':'#c9bca5',on?'#3fa84d':'#ad9b7e',14);});
-      this.button(p,root,'导出存档',w/2,292,w-20,43,this.cb.exportSave,'#5ebde8','#3397c2',16);this.button(p,root,'隐私与存档说明',w/2,351,w-20,43,()=>this.open('privacy'),'#ab89d3','#8360ac',16);this.button(p,root,'重新开始',w/2,410,w-20,43,()=>this.open('confirm-reset'),'#ff7aa2','#d64f7d',16);
-      this.button(p,root,'导入存档',w/2,469,w-20,43,this.cb.chooseSave,'#67ca70','#3fa84d',16);
-      this.button(p,root,'恢复本机备份',w/2,528,w-20,43,this.cb.restoreBackup,'#ffb150','#dc8a29',16);return;
+      const m=this.modal(t('set.title'),'',520,780,700),{p,root,w}=m;p.label(root,t('set.audio'),w/2,18,18,'#7755a6',w-20,33);(['music','sound','haptics'] as const).forEach((key,i)=>{const y=72+i*58;this.slot(p,root,w/2,y,w,50);p.label(root,t(key==='music'?'set.music':key==='sound'?'set.sound':'set.haptics'),100,y,16,INK,175,35,true,'left');const on=state[key];this.button(p,root,on?t('set.on'):t('set.off'),w-52,y,80,34,()=>this.cb.settings(key),on?'#67ca70':'#c9bca5',on?'#3fa84d':'#ad9b7e',14);});
+      p.label(root,t('set.lang'),w/2,250,18,'#7755a6',w-20,30);LOCALES.forEach((id,i)=>{const ww=(w-16)/5,x=ww/2+4+i*ww;this.button(p,root,LOCALE_LABEL[id],x,292,ww-6,40,()=>this.cb.setLocale(id),state.locale===id?'#67ca70':'#cfbfa1',state.locale===id?'#3fa84d':'#ad9875',11);});
+      this.button(p,root,t('set.export'),w/2,360,w-20,42,this.cb.exportSave,'#5ebde8','#3397c2',16);this.button(p,root,t('set.privacy'),w/2,412,w-20,42,()=>this.open('privacy'),'#ab89d3','#8360ac',16);this.button(p,root,t('set.reset'),w/2,464,w-20,42,()=>this.open('confirm-reset'),'#ff7aa2','#d64f7d',16);
+      this.button(p,root,t('set.import'),w/2,516,w-20,42,this.cb.chooseSave,'#67ca70','#3fa84d',16);
+      this.button(p,root,t('set.restore'),w/2,568,w-20,42,this.cb.restoreBackup,'#ffb150','#dc8a29',16);return;
     }
     if(panel==='restore-save'){
-      const m=this.modal('确认恢复存档','',590,360,285),{p,root,w}=m,preview=this.restorePreview;
+      const m=this.modal(t('restore.title'),'',590,360,285),{p,root,w}=m,preview=this.restorePreview;
       if(!preview)return;
-      p.label(root,`${preview.level}级 · ${preview.coins}金币 · ${preview.animals}只动物 · ${preview.plots}块已开垦田地`,w/2,57,18,INK,w-16,68);
-      p.label(root,'确认后会载入选中的农场。当前进度会先存为本机备份。',w/2,130,15,SOFT,w-20,65);
-      this.button(p,root,'取消恢复',w/4,218,w/2-12,43,()=>this.open('settings'),'#cfbfa1','#ac9676');
-      this.button(p,root,'确认恢复',w*3/4,218,w/2-12,43,this.cb.confirmSave);return;
+      p.label(root,t('restore.line',preview),w/2,57,18,INK,w-16,68);
+      p.label(root,t('restore.note'),w/2,130,15,SOFT,w-20,65);
+      this.button(p,root,t('restore.cancel'),w/4,218,w/2-12,43,()=>this.open('settings'),'#cfbfa1','#ac9676');
+      this.button(p,root,t('restore.ok'),w*3/4,218,w/2-12,43,this.cb.confirmSave);return;
     }
     if(panel==='privacy'){
-      const m=this.modal('隐私与存档说明','',650,650,560),{p,root,w}=m;
-      p.label(root,'晴野物语 · 单机离线版',w/2,28,23,INK,w,38);
-      p.label(root,'农场进度、库存和声音设置保存在本机。\n本游戏不设账号，不集成广告、跟踪或分析SDK，\n不主动收集或上传个人信息。',w/2,112,16,SOFT,w-20,116);
-      p.label(root,'你主动导出时，存档由系统文件选择器保存到你选择的位置；云盘等目标位置按对应服务规则处理文件。\n卸载或清除应用数据可能删除本机进度，请先导出备份。',w/2,255,16,SOFT,w-20,145);
-      p.label(root,'通过TestFlight测试时，Apple可能按其隐私政策处理测试诊断与反馈。\n在设置中可导入备份文件或恢复本机备份。',w/2,399,16,SOFT,w-20,117);
-      this.button(p,root,'返回设置',w/2,510,w-20,44,()=>this.open('settings'));return;
+      const m=this.modal(t('privacy.title'),'',650,650,560),{p,root,w}=m;
+      p.label(root,t('privacy.lead'),w/2,28,23,INK,w,38);
+      p.label(root,t('privacy.body'),w/2,112,16,SOFT,w-20,116);
+      p.label(root,t('privacy.export'),w/2,255,16,SOFT,w-20,145);
+      p.label(root,t('privacy.test'),w/2,399,16,SOFT,w-20,117);
+      this.button(p,root,t('privacy.back'),w/2,510,w-20,44,()=>this.open('settings'));return;
     }
-    const m=this.modal('重新开始','',450,264,190),{p,root,w}=m;p.label(root,'确定重新开始这座农场吗？\n当前进度会先保存为本地备份。',w/2,50,17,INK,w-20,70);this.button(p,root,'继续经营',w*.27,132,w*.43,44,()=>this.open('settings'),'#67ca70','#3fa84d',16);this.button(p,root,'重新开始',w*.75,132,w*.43,44,this.cb.reset,'#ff7aa2','#d64f7d',16);
+    const m=this.modal(t('reset.title'),'',450,264,190),{p,root,w}=m;p.label(root,t('reset.body'),w/2,50,17,INK,w-20,70);this.button(p,root,t('reset.stay'),w*.27,132,w*.43,44,()=>this.open('settings'),'#67ca70','#3fa84d',16);this.button(p,root,t('reset.go'),w*.75,132,w*.43,44,this.cb.reset,'#ff7aa2','#d64f7d',16);
   }
   private renderLevelUp(){const level=this.levelUp!,p=this.p,root=p.node(this.root,'LevelUpOverlay');if(this.backdrop){const n=p.node(root,'BlurredFarm',p.w/2,p.h/2,p.w,p.h),s=n.addComponent(Sprite);s.sizeMode=Sprite.SizeMode.CUSTOM;s.spriteFrame=this.backdrop;n.getComponent(UITransform)!.setContentSize(p.w,p.h);}const shade=p.rect(root,p.w/2,p.h/2,p.w+4,p.h+4,'#423d31',0,undefined,2,105);shade.addComponent(BlockInputEvents);levelUpCard(p,root,this.state(),level,(label,x,y,w,h,run,color,dark,font)=>this.button(p,root,label,x,y,w,h,run,color,dark,font),()=>{this.levelUp=this.levelQueue.shift()??null;if(level>levelFor(this.state().xp)||this.state().progression.claimedLevels.includes(level))this.render();else this.cb.act(()=>claimLevelReward(this.state(),level));});}
   private featureContext(m:{p:Painter;root:Node;w:number;h:number}):FeaturePanelContext{return{...m,state:this.state(),act:this.cb.act,button:(label,x,y,w,h,run,color,dark,font)=>this.button(m.p,m.root,label,x,y,w,h,run,color,dark,font),slot:(x,y,w,h)=>this.slot(m.p,m.root,x,y,w,h),live:f=>this.liveUpdates.push(f)};}
   toast(message:string){if(!this.toastRoot)return;empty(this.toastRoot);const p=this.p,w=Math.min(p.w-24,message.length*15+60),n=p.pill(this.toastRoot,p.w/2,135,w,42);p.label(this.toastRoot,message,p.w/2,135,14.5,INK,w-20,35);setTimeout(()=>{if(n.isValid&&this.toastRoot.isValid)empty(this.toastRoot);},2300);}
-  private title(){const p=this.p,n=p.node(this.root,'Title');p.rect(n,p.w/2,p.h/2,p.w,p.h,'#bfe1d2',0).addComponent(BlockInputEvents);const f=this.art.get('cover')!,ratio=f.rect.width/f.rect.height,ww=Math.max(p.w,p.h*ratio);p.image(n,'cover',p.w/2,ww/ratio/2,ww,ww/ratio);this.button(p,n,'开始游戏',p.w/2,p.h*.87,Math.min(300,p.w*.45),p.h<500?44:57,()=>{this.started=true;this.cb.start();this.panel=this.state().advanced.auto.report?.unread?'offline':null;this.render();},'#67ca70','#3fa84d',p.h<500?20:25);p.label(n,'种田 · 育种 · 装修 · 探索',p.w/2,p.h*.96,13,'#ffffff',300,25,true,'center','#5a3e2b');} 
+  private title(){const p=this.p,n=p.node(this.root,'Title');p.rect(n,p.w/2,p.h/2,p.w,p.h,'#bfe1d2',0).addComponent(BlockInputEvents);const f=this.art.get('cover')!,ratio=f.rect.width/f.rect.height,ww=Math.max(p.w,p.h*ratio);p.image(n,'cover',p.w/2,ww/ratio/2,ww,ww/ratio);this.button(p,n,t('title.start'),p.w/2,p.h*.87,Math.min(300,p.w*.45),p.h<500?44:57,()=>{this.started=true;this.cb.start();this.panel=this.state().advanced.auto.report?.unread?'offline':null;this.render();},'#67ca70','#3fa84d',p.h<500?20:25);p.label(n,t('title.tag'),p.w/2,p.h*.96,13,'#ffffff',300,25,true,'center','#5a3e2b');} 
 }
 import {Label,sys} from 'cc';
 function importLabel(){return Label;}

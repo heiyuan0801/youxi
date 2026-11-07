@@ -8,6 +8,7 @@ import {FEATURE_ITEMS,FEATURE_NAMES,FEATURE_PRICES,FeatureProductId,FarmFeatures
 import {FarmProgression,newProgression,validateProgression,animalCapacity} from './FarmProgression';
 import {EXTRA_CROPS,ExtraCropId,ANIMALS,animalSpec,AnimalId,TRAVEL_MAPS,AQUATIC} from './FarmCatalog';
 import {FarmLife,newLife,newCare,careFor,isAdult,efficiency,validateLife,refreshLife} from './FarmLife';
+import {isLocale,t,type LocaleId} from './Locale';
 export type {AnimalId} from './FarmCatalog';
 export type CropId = 'wheat' | 'carrot' | 'tomato' | 'strawberry' | 'corn' | 'pumpkin' | ExtraCropId;
 export type ProductId = CropId | 'egg' | 'milk' | FeatureProductId;
@@ -37,7 +38,7 @@ export interface FarmState {
   features:FarmFeatures;
   progression:FarmProgression;
   life:FarmLife;ecology:Ecology;advanced:Advanced;
-  journey:Journey;activities:FarmActivities;
+  journey:Journey;activities:FarmActivities;locale:LocaleId;
 }
 export interface Result { ok:boolean; message:string; item?:ProductId; }
 const fail=(message:string):Result=>({ok:false,message});
@@ -57,7 +58,7 @@ export function newFarm(now=Date.now()):FarmState {
     {id:1,type:'hen',readyAt:now+6000},{id:2,type:'hen',readyAt:now+18000},
     {id:3,type:'hen',readyAt:now-1000},{id:4,type:'cow',readyAt:now+30000}],
     orders:[makeOrder(0),makeOrder(1),makeOrder(2)],orderSequence:3,
-    stats:{harvests:0,deliveries:0,expansions:0,products:0},claimed:[],decorations:[],savedAt:now,sound:true};
+    stats:{harvests:0,deliveries:0,expansions:0,products:0},claimed:[],decorations:[],savedAt:now,sound:true,locale:'zh-CN'};
 }
 const templates = [
   {person:'林奶奶',message:'早上的面包，就差新鲜的麦香啦。',needs:{wheat:3,carrot:1},coins:76,xp:12},
@@ -138,22 +139,23 @@ export function water(s:FarmState,index:number,now=Date.now()):Result {
 const openPlot=(s:FarmState,index:number)=>!!s.plots[index]?.unlocked&&!s.plots[index].crop&&s.activities.stormPlot!==index;
 export function plantAll(s:FarmState,id:CropId,now=Date.now()):Result {
   const c=cropById(id);if(!c)return fail('没有这种种子');
-  if(levelFor(s.xp)<c.level&&!s.cropUnlocks.includes(id))return fail(`${c.level}级解锁${c.name}`);
+  if(levelFor(s.xp)<c.level&&!s.cropUnlocks.includes(id))return fail(t('batch.plantLock',{level:c.level,name:t('crop.'+id)==='crop.'+id?c.name:t('crop.'+id)}));
   const slots=s.plots.reduce((n,_,i)=>n+(openPlot(s,i)?1:0),0);
-  if(!slots)return fail('没有可以播种的空地');
-  if(s.coins<c.cost)return fail('金币不足，试试出售库存或完成订单');
+  if(!slots)return fail(t('batch.plantNone'));
+  if(s.coins<c.cost)return fail(t('batch.plantCoins'));
   let count=0,spent=0;
   for(let i=0;i<s.plots.length;i++){if(!openPlot(s,i)||s.coins<c.cost)continue;const before=s.coins;if(!plant(s,i,id,now).ok)continue;count++;spent+=before-s.coins;}
-  if(!count)return fail('没有可以播种的空地');
-  return success(`一键种下${c.name} ×${count} · 金币 -${spent}${count<slots?' · 其余空地金币不足':''}`,id);
+  if(!count)return fail(t('batch.plantNone'));
+  const name=t('crop.'+id)==='crop.'+id?c.name:t('crop.'+id);
+  return success(t('batch.plant',{name,count,spent})+(count<slots?t('batch.plantMore'):''),id);
 }
 export function waterAll(s:FarmState,now=Date.now()):Result {
   let count=0;for(let i=0;i<s.plots.length;i++)if(water(s,i,now).ok)count++;
-  return count?success(`一键浇水 · ${count}块田生长加快`):fail('没有需要浇水的作物');
+  return count?success(t('batch.water',{count})):fail(t('batch.waterNone'));
 }
 export function harvestAll(s:FarmState,now=Date.now()):Result {
   const xp=s.xp;let count=0,item:ProductId|undefined;for(let i=0;i<s.plots.length;i++){const result=harvest(s,i,now);if(result.ok){count++;item=result.item;}}
-  return count?success(`一键收获 · ${count}份已入库 · 经验 +${s.xp-xp}`,item):fail('还没有成熟的作物');
+  return count?success(t('batch.harvest',{count,xp:s.xp-xp}),item):fail(t('batch.harvestNone'));
 }
 export function sell(s:FarmState,id:ProductId,amount:number):Result {
   if(!Number.isInteger(amount)||amount<1||s.inventory[id]<amount)return fail('库存不足');
@@ -239,6 +241,7 @@ export function parseSave(raw:string|null,now=Date.now(),refresh=true):FarmState
     if(!int(s.stars)||!int(s.days)||typeof s.activeDate!=='string'||!Array.isArray(s.cropUnlocks)||!s.cropUnlocks.every(id=>CROPS.some(c=>c.id===id)))return null;
     if(s.layoutVersion!==2){s.plots=[...s.plots.filter(p=>p.unlocked),...s.plots.filter(p=>!p.unlocked)];s.layoutVersion=2;}
     if(typeof s.sound!=='boolean')s.sound=true;
+    if(!isLocale(s.locale))s.locale='zh-CN';
     if(legacy){s.features=newFeatures(s.stats,now);for(const id of PRODUCTS)if(s.inventory[id]>0)s.features.album.counts[id]=s.inventory[id];}
     if(!validateFeatures(s.features,PRODUCTS))return null;
     if(s.advanced===undefined)s.advanced=migrateAdvanced(s,now);

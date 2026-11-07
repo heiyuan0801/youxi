@@ -5,6 +5,7 @@ import { seasonIndex } from './FarmLife';
 import { AREA_STORIES, BREAKFAST_STEPS, COMMISSIONS, HONORS, TOWN_CHAPTERS, advanceBreakfast, advanceTown, breakfastReady, claimHonor, commissionLap, currentCommission, finishExploreQuest, finishStory, honorReady, nextExploreQuest, turnInCommission } from './FarmJourney';
 import { FLOWER_PALETTE, FlowerChoice, ICE_CONTROL_MS, ICE_ROUND_MS, RACE_MS, SUMMER_LIMIT_MS, calendarEvent, claimCalendar, claimCalendarPlay, claimDailyFestival, claimWeeklyFestival, flowerScore, iceControlWindow, iceWindow, judgePumpkin, jumpRace, playFestivalRite, practiceFlowers, pullIceLine, pullPumpkinWeigh, pullSummerLine, raceWindow, scoreDecor, startDailyWeigh, startFestivalRite, startIceControl, startIceFishing, startPatrol, startPumpkinWeigh, startRace, startSummerContest, submitDecor, submitFlowers, summerWindow } from './FarmActivities';
 import { collectFurniture, startFurniture } from './FarmRoom';
+import { t } from './Locale';
 import { buyBait } from './FarmFeatures';
 
 const INK = '#5a3e2b';
@@ -154,13 +155,13 @@ export function festivalGamesPanel(c: FeaturePanelContext, flowers: FlowerChoice
   const a = s.activities, season = seasonIndex(s), event = calendarEvent();
   slot(w / 2, 105, w, 191);
   p.contain(root, 'pumpkin', 56, 74, 76, 76);
-  p.label(root, '秋日南瓜评选', w / 2 + 36, 40, 20, INK, w - 130, 38);
+  p.label(root, t('fest.pumpkin'), w / 2 + 36, 40, 20, INK, w - 130, 38);
   p.label(root, '浇水、堆肥、秋季收获都能提高育成分。\n点两次生长中的南瓜浇水后，可追加堆肥。', w / 2 + 31, 82, 12, SOFT, w - 130, 58);
   p.label(root, `育成分 ${a.pumpkin || '—'} · 称重 ${a.pumpkinWeighBonus ? '+' + a.pumpkinWeighBonus : '—'} · 最高 ${a.pumpkinRecord || '—'}`, w / 2, 132, 13, INK, w - 12, 28);
-  button(a.pumpkinWeigh ? '落秤' : '称重试手', w * .27, 173, w * .44, 36, () => act(() => a.pumpkinWeigh ? pullPumpkinWeigh(s) : startPumpkinWeigh(s)), '#ab89d3', '#8360ac', 13);
-  button(a.pumpkinSeason === season ? '本季已参赛' : '送南瓜参赛', w * .73, 173, w * .44, 36, () => act(() => judgePumpkin(s)));
+  button(a.pumpkinWeigh ? t('fest.drop') : t('fest.weigh'), w * .27, 173, w * .44, 36, () => act(() => a.pumpkinWeigh ? pullPumpkinWeigh(s) : startPumpkinWeigh(s)), '#ab89d3', '#8360ac', 13);
+  button(a.pumpkinSeason === season ? t('fest.entered') : t('fest.enter'), w * .73, 173, w * .44, 36, () => act(() => judgePumpkin(s)));
   slot(w / 2, 368, w, 306);
-  p.label(root, '春日花艺赛', w / 2, 241, 20, INK, w, 36);
+  p.label(root, t('fest.flower'), w / 2, 241, 20, INK, w, 36);
   const focal = FLOWER_PALETTE[Math.floor(season / 4) % FLOWER_PALETTE.length];
   p.label(root, `主花用${focal.name}加30分 · 两边对称加20分\n点花位切换花材。花材来自仓库，提交时扣除。`, w / 2, 286, 13, SOFT, w - 25, 51);
   flowers.forEach((id, i) => {
@@ -170,24 +171,24 @@ export function festivalGamesPanel(c: FeaturePanelContext, flowers: FlowerChoice
     p.label(root, `库存 ${s.inventory[id]}`, x, 423, 12, SOFT, w / 3, 24);
   });
   p.label(root, `预计 ${flowerScore(flowers, Math.floor(season / 4))}分 · 历史最高 ${a.flowerRecord || '—'}`, w / 2, 457, 14, INK, w, 27);
-  button(a.flowerSeason === season ? '本季已提交' : '提交花艺作品', w / 2, 493, w - 20, 38, () => act(() => submitFlowers(s, flowers)));
+  button(a.flowerSeason === season ? t('fest.submitted') : t('fest.submit'), w / 2, 493, w - 20, 38, () => act(() => submitFlowers(s, flowers)));
   slot(w / 2, 633, w, 194);
-  p.label(root, event?.title || '现实日历活动', w / 2, 567, 20, INK, w, 38);
+  p.label(root, event?.title || t('fest.calendar'), w / 2, 567, 20, INK, w, 38);
   p.label(root, event ? `本月准备${event.amount}份${NAMES[event.item]} · 可得${event.coins + a.festivalRiteBonus}金币与4星` : '每年4月、7月、10月、12月各有一场活动。暴雨积水可在农场疏通。', w / 2, 610, 13, SOFT, w - 15, 42);
   if (event) {
-    button(a.festivalRite ? '敲下鼓点' : '节日节奏', w * .27, 679, w * .44, 36, () => act(() => a.festivalRite ? playFestivalRite(s) : startFestivalRite(s)), '#58bde4', '#3295bd', 13);
-    button(a.calendar.includes(event.key) ? '本月已完成' : '交付物资', w * .73, 679, w * .44, 36, () => act(() => claimCalendar(s)));
-    button('节日小游戏奖', w / 2, 724, w - 20, 34, () => act(() => claimCalendarPlay(s)), '#ab89d3', '#8360ac', 13);
+    button(a.festivalRite ? t('fest.beat') : t('fest.rhythm'), w * .27, 679, w * .44, 36, () => act(() => a.festivalRite ? playFestivalRite(s) : startFestivalRite(s)), '#58bde4', '#3295bd', 13);
+    button(a.calendar.includes(event.key) ? t('fest.delivered') : t('fest.deliver'), w * .73, 679, w * .44, 36, () => act(() => claimCalendar(s)));
+    button(t('fest.play'), w / 2, 724, w - 20, 34, () => act(() => claimCalendarPlay(s)), '#ab89d3', '#8360ac', 13);
   }
   slot(w / 2, 900, w, 250);
-  p.label(root, '今日 · 本周 · 个人最好', w / 2, 800, 18, INK, w, 32);
+  p.label(root, t('fest.board'), w / 2, 800, 18, INK, w, 32);
   p.label(root, `南瓜 ${a.dayScore.pumpkin}/${a.weekScore.pumpkin}/${a.lifeScore.pumpkin}  花艺 ${a.dayScore.flower}/${a.weekScore.flower}/${a.lifeScore.flower}  冰钓 ${a.dayScore.ice}/${a.weekScore.ice}/${a.lifeScore.ice}`, w / 2, 836, 12, INK, w - 16, 36);
-  p.label(root, '今日练习不消耗南瓜和花材。分数只保留更高的一次，存在本地存档。', w / 2, 868, 12, SOFT, w - 16, 32);
-  button(a.pumpkinWeigh?.daily ? '落今日的秤' : '今日称重', w * .27, 912, w * .44, 34, () => act(() => a.pumpkinWeigh?.daily ? pullPumpkinWeigh(s) : startDailyWeigh(s)), '#ab89d3', '#8360ac', 13);
-  button('今日插花', w * .73, 912, w * .44, 34, () => act(() => practiceFlowers(s, flowers)));
-  button(a.dayClaim === a.festivalDay && a.festivalDay ? '今日已领' : '领取今日', w * .27, 960, w * .44, 34, () => act(() => claimDailyFestival(s)), '#67ca70', '#3fa84d', 13);
-  button(a.weekClaim === a.festivalWeek && a.festivalWeek ? '本周已领' : '领取本周', w * .73, 960, w * .44, 34, () => act(() => claimWeeklyFestival(s)), '#ffb150', '#dc8a29', 13);
-  button('本地装饰赛', w / 2, 1004, w - 20, 36, decor, '#58bde4', '#3295bd', 14);
+  p.label(root, t('fest.note'), w / 2, 868, 12, SOFT, w - 16, 32);
+  button(a.pumpkinWeigh?.daily ? t('fest.dailyDrop') : t('fest.dailyWeigh'), w * .27, 912, w * .44, 34, () => act(() => a.pumpkinWeigh?.daily ? pullPumpkinWeigh(s) : startDailyWeigh(s)), '#ab89d3', '#8360ac', 13);
+  button(t('fest.dailyFlower'), w * .73, 912, w * .44, 34, () => act(() => practiceFlowers(s, flowers)));
+  button(a.dayClaim === a.festivalDay && a.festivalDay ? t('fest.claimedDay') : t('fest.claimDay'), w * .27, 960, w * .44, 34, () => act(() => claimDailyFestival(s)), '#67ca70', '#3fa84d', 13);
+  button(a.weekClaim === a.festivalWeek && a.festivalWeek ? t('fest.claimedWeek') : t('fest.claimWeek'), w * .73, 960, w * .44, 34, () => act(() => claimWeeklyFestival(s)), '#ffb150', '#dc8a29', 13);
+  button(t('fest.decor'), w / 2, 1004, w - 20, 36, decor, '#58bde4', '#3295bd', 14);
 }
 
 export function iceFishingPanel(c: FeaturePanelContext) {
