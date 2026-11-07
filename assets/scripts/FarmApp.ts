@@ -11,6 +11,7 @@ import {EXPANSION_ART} from './ExpansionArt';
 import {WORLD_ART} from './WorldArt';
 import {LIFE_ART} from './LifeArt';
 import {ART_PLACEHOLDERS,AquaticId,MapId,FactoryId,animalSpec} from './FarmCatalog';
+import {ART_HOOKS} from './ArtHooks';
 import {NEXT_ART} from './NextArt';
 import {refreshLife,travel,gather,autoFeed,careFor,isAdult} from './FarmLife';
 import {FarmAudio,SOUND_KEYS,SoundKey,animalVoice,aquaticVoice} from './FarmAudio';
@@ -37,13 +38,15 @@ export class FarmApp extends Component {
     const loaded=parseSave(raw,Date.now(),false);this.state=loaded||newFarm();settleAutomation(this.state);refreshFeatures(this.state);refreshLife(this.state);
     if(raw){try{const old=JSON.parse(raw);if(!loaded)sys.localStorage.setItem(SAVE_KEY+'-unreadable-backup',raw);else{if(!old.features)sys.localStorage.setItem(SAVE_KEY+'-before-v03',raw);if(!old.progression)sys.localStorage.setItem(SAVE_KEY+'-before-v04',raw);if(!old.life)sys.localStorage.setItem(SAVE_KEY+'-before-v05',raw);if(!old.ecology)sys.localStorage.setItem(SAVE_KEY+'-before-v06',raw);if(!old.advanced)sys.localStorage.setItem(SAVE_KEY+'-before-v07',raw);if(!old.journey)sys.localStorage.setItem(SAVE_KEY+'-before-v08',raw);}if(old.layoutVersion!==2)sys.localStorage.setItem(SAVE_KEY+'-before-v02',raw);}catch{try{sys.localStorage.setItem(SAVE_KEY+'-unreadable-backup',raw);}catch{}}}
     const p=new Painter(WIDTH,HEIGHT,this.art),loading=p.label(this.node,'晴野物语 · 正在准备农场…',800,450,24,'#5a3e2b',600,80);
+    const adopt=(key:string,texture:Texture2D)=>{texture.setFilters(Texture2D.Filter.LINEAR,Texture2D.Filter.LINEAR);const frame=new SpriteFrame();frame.texture=texture;this.art.set(key,frame);};
     const images=[{key:'cover',path:'branding/'},...Object.keys(REF_ART).map(key=>({key,path:'refart/'})),...EXPANSION_ART.map(key=>({key,path:'expansion/'})),...WORLD_ART.map(key=>({key,path:'worldart/'})),...Object.keys(NEXT_ART).map(key=>({key,path:'nextart/'})),...Object.keys(LIFE_ART).map(key=>({key,path:'lifeart/'}))].map(({key,path})=>new Promise<void>((resolve,reject)=>resources.load(path+key+'/texture',Texture2D,(err,texture)=>{
-      if(err){reject(err);return;}texture.setFilters(Texture2D.Filter.LINEAR,Texture2D.Filter.LINEAR);const frame=new SpriteFrame();frame.texture=texture;this.art.set(key,frame);resolve();
+      if(err){reject(err);return;}adopt(key,texture);resolve();
     })));
+    const hooks=ART_HOOKS.map(key=>new Promise<void>(resolve=>resources.load('hooks/'+key+'/texture',Texture2D,(err,texture)=>{if(!err&&texture)adopt(key,texture);resolve();})));
     const fonts=(sys.isNative?['QingyeSC']:['Baloo2','Nunito']).map((name,i)=>new Promise<void>((resolve,reject)=>resources.load('fonts/'+name,Font,(err,font)=>{if(err){reject(err);return;}if(sys.isNative){Painter.displayFont=font;Painter.bodyFont=font;}else if(i===0)Painter.displayFont=font;else Painter.bodyFont=font;resolve();})));
     const sounds=SOUND_KEYS.map(key=>new Promise<void>((resolve,reject)=>resources.load('audio/'+key,AudioClip,(err,clip)=>{if(err){reject(err);return;}this.soundClips.set(key,clip);resolve();})));
     const nativeSounds=sys.isNative?['theme','ui'].map(key=>new Promise<void>((resolve,reject)=>resources.load('audio/'+key,AudioClip,(err,clip)=>{if(err){reject(err);return;}this.nativeClips.set(key,clip);resolve();}))):[];
-    Promise.all([...images,...fonts,...sounds,...nativeSounds]).then(()=>{loading.node.destroy();this.initialize(p);}).catch(err=>{loading.string='农场资源没有加载完整，请刷新重试';console.error(err);});
+    Promise.all([...images,...hooks,...fonts,...sounds,...nativeSounds]).then(()=>{loading.node.destroy();this.initialize(p);}).catch(err=>{loading.string='农场资源没有加载完整，请刷新重试';console.error(err);});
   }
   private initialize(p:Painter){
     for(const [alias,source] of Object.entries(ART_PLACEHOLDERS)){const frame=this.art.get(source);if(frame&&!this.art.has(alias))this.art.set(alias,frame);}

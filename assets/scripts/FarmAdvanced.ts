@@ -11,8 +11,8 @@ export interface AutoReport {seconds:number;limited:boolean;harvests:number;plan
 export interface Advanced {
  schema:1;genes:Record<number,Genome>;offspring:Record<number,Genome>;
  room:{size:number;wall:number;floor:number;serial:number;items:RoomItem[]};
- explore:{serial:number;run:ExploreRun|null;best:Partial<Record<TravelId,number>>;claimed:Partial<Record<TravelId,number>>};
+ explore:{serial:number;run:ExploreRun|null;best:Partial<Record<TravelId,number>>;claimed:Partial<Record<TravelId,number>>;seen:Partial<Record<TravelId,ExploreEvent[]>>};
  auto:{built:boolean;enabled:boolean;cursor:number;replant:boolean;animals:boolean;ponds:boolean;craft:boolean;seed:CropId;recipes:RecipeId[];report:AutoReport|null};
 }
-export const newAdvanced=(now=Date.now()):Advanced=>({schema:1,genes:{},offspring:{},room:{size:6,wall:0,floor:0,serial:0,items:[]},explore:{serial:0,run:null,best:{},claimed:{}},auto:{built:false,enabled:false,cursor:now,replant:false,animals:true,ponds:false,craft:false,seed:'wheat',recipes:[],report:null}});
+export const newAdvanced=(now=Date.now()):Advanced=>({schema:1,genes:{},offspring:{},room:{size:6,wall:0,floor:0,serial:0,items:[]},explore:{serial:0,run:null,best:{},claimed:{},seen:{}},auto:{built:false,enabled:false,cursor:now,replant:false,animals:true,ponds:false,craft:false,seed:'wheat',recipes:[],report:null}});
 export function migrateAdvanced(s:FarmState,now:number){const a=newAdvanced(now),positions=[[.23,.23],[.53,.2],[.78,.23],[.25,.65],[.55,.55],[.78,.76]];for(const type of s.life.home.owned){const index=s.life.home.slots.indexOf(type),pos=positions[index];a.room.items.push({id:++a.room.serial,type,x:pos?pos[0]:null,y:pos?pos[1]:null,rotation:0});}return a;}

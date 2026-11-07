@@ -18,7 +18,7 @@ export const EXTRA_CROPS=[
  {id:'goldenPumpkin',name:'黄金南瓜',seconds:900,cost:240,sell:630,xp:80,level:60}
 ] as const;
 export type ExtraCropId=typeof EXTRA_CROPS[number]['id'];
-export const LIFE_ITEMS={carp:{name:'鲤鱼',sell:65},crucian:{name:'鲫鱼',sell:80},bass:{name:'鲈鱼',sell:140},lobster:{name:'龙虾',sell:260},crab:{name:'螃蟹',sell:210},flour:{name:'面粉',sell:28},feed:{name:'饲料',sell:18},wool:{name:'羊毛',sell:86},truffle:{name:'松露',sell:160},goatMilk:{name:'羊奶',sell:98},duckEgg:{name:'鸭蛋',sell:45},fur:{name:'兔绒',sell:94},feather:{name:'孔雀羽',sell:200},butter:{name:'黄油',sell:156},yogurt:{name:'酸奶',sell:210},appleJuice:{name:'苹果汁',sell:118},orangeJuice:{name:'橙汁',sell:440},grapeJuice:{name:'葡萄汁',sell:390},cloth:{name:'棉布',sell:225},clothes:{name:'衣服',sell:700},sugar:{name:'蔗糖',sell:240},chocolate:{name:'巧克力',sell:860},candy:{name:'糖果',sell:720},vinegar:{name:'果醋',sell:420},coffeeBrew:{name:'手冲咖啡',sell:520},floralTea:{name:'薰衣草花茶',sell:640},sunTea:{name:'葵花凉茶',sell:380},berryTea:{name:'极光莓茶',sell:860},planks:{name:'木板',sell:55},fruitCan:{name:'水果罐头',sell:920},vegCan:{name:'蔬菜罐头',sell:190},cake:{name:'浆果蛋糕',sell:700},cookies:{name:'曲奇',sell:520},wood:{name:'木材',sell:20},ore:{name:'铜矿',sell:35},coal:{name:'煤炭',sell:28},gem:{name:'蓝宝石',sell:180},herb:{name:'香草',sell:40},ice:{name:'冰晶',sell:85},rainbowMilk:{name:'彩虹奶',sell:420},goldenWool:{name:'黄金羊毛',sell:360}} as const;
+export const LIFE_ITEMS={carp:{name:'鲤鱼',sell:65},crucian:{name:'鲫鱼',sell:80},bass:{name:'鲈鱼',sell:140},lobster:{name:'龙虾',sell:260},crab:{name:'螃蟹',sell:210},flour:{name:'面粉',sell:28},feed:{name:'饲料',sell:18},wool:{name:'羊毛',sell:86},truffle:{name:'松露',sell:160},goatMilk:{name:'羊奶',sell:98},duckEgg:{name:'鸭蛋',sell:45},fur:{name:'兔绒',sell:94},feather:{name:'孔雀羽',sell:200},butter:{name:'黄油',sell:156},yogurt:{name:'酸奶',sell:210},appleJuice:{name:'苹果汁',sell:118},orangeJuice:{name:'橙汁',sell:440},grapeJuice:{name:'葡萄汁',sell:390},cloth:{name:'棉布',sell:225},clothes:{name:'衣服',sell:700},sugar:{name:'蔗糖',sell:240},chocolate:{name:'巧克力',sell:860},candy:{name:'糖果',sell:720},vinegar:{name:'果醋',sell:420},coffeeBrew:{name:'手冲咖啡',sell:520},floralTea:{name:'薰衣草花茶',sell:640},sunTea:{name:'葵花凉茶',sell:380},berryTea:{name:'极光莓茶',sell:860},estateBox:{name:'庄园礼盒',sell:2400},planks:{name:'木板',sell:55},fruitCan:{name:'水果罐头',sell:920},vegCan:{name:'蔬菜罐头',sell:190},cake:{name:'浆果蛋糕',sell:700},cookies:{name:'曲奇',sell:520},wood:{name:'木材',sell:20},ore:{name:'铜矿',sell:35},coal:{name:'煤炭',sell:28},gem:{name:'蓝宝石',sell:180},herb:{name:'香草',sell:40},ice:{name:'冰晶',sell:85},rainbowMilk:{name:'彩虹奶',sell:420},goldenWool:{name:'黄金羊毛',sell:360}} as const;
 export type LifeProductId=keyof typeof LIFE_ITEMS;
 export const ANIMALS=[
  {id:'hen',name:'母鸡',sprite:'chicken',product:'egg',seconds:40,xp:5,level:2,cost:120,rarity:0,size:58,role:'下蛋的小院好伙伴',group:'养殖'},
@@ -59,7 +59,7 @@ export const FACTORIES=[
  {id:'textile',name:'纺织厂',level:9,cost:650,description:'棉花→棉布→衣服'},
  {id:'candy',name:'糖果工厂',level:11,cost:800,description:'甘蔗→糖，可可→巧克力'},
  {id:'brewing',name:'酿造工坊',level:16,cost:1000,description:'葡萄→果醋，咖啡与花草→茶饮'},
- {id:'lumber',name:'木材工厂',level:3,cost:250,description:'森林木材→木板→家具'},
+ {id:'lumber',name:'木材工厂',level:3,cost:250,description:'木材→木板→家具，50级可做庄园礼盒'},
  {id:'cannery',name:'罐头工厂',level:19,cost:1400,description:'果蔬→罐头'}
 ] as const;
 export type FactoryId=typeof FACTORIES[number]['id'];
@@ -72,13 +72,15 @@ export const TRAVEL_MAPS=[
 ] as const;
 export type TravelId=typeof TRAVEL_MAPS[number]['id'];
 export type MapId='home'|TravelId;
-export const FURNITURE=[{id:'bed',name:'绿叶小床',cost:180,planks:2,cloth:1},{id:'sofa',name:'暖橙沙发',cost:260,planks:2,cloth:2},{id:'desk',name:'木质书桌',cost:160,planks:3,cloth:0},{id:'rug',name:'蓝色地毯',cost:120,planks:0,cloth:2},{id:'housePlant',name:'绿叶盆栽',cost:80,planks:1,cloth:0},{id:'lamp',name:'暖光落地灯',cost:140,planks:1,cloth:0},{id:'bookshelf',name:'小书柜',cost:220,planks:4,cloth:0}] as const;
+export const FURNITURE=[{id:'bed',name:'绿叶小床',cost:180,planks:2,cloth:1},{id:'sofa',name:'暖橙沙发',cost:260,planks:2,cloth:2},{id:'desk',name:'木质书桌',cost:160,planks:3,cloth:0},{id:'rug',name:'蓝色地毯',cost:120,planks:0,cloth:2},{id:'housePlant',name:'绿叶盆栽',cost:80,planks:1,cloth:0},{id:'lamp',name:'暖光落地灯',cost:140,planks:1,cloth:0},{id:'bookshelf',name:'小书柜',cost:220,planks:4,cloth:0},{id:'cabinet',name:'宝石陈列柜',cost:640,planks:4,cloth:1,gems:1,level:40},{id:'teaTable',name:'花茶几',cost:560,planks:3,cloth:2,gems:1,level:36}] as const;
 export type FurnitureId=typeof FURNITURE[number]['id'];
 export const SEASONS=['春','夏','秋','冬'] as const;
 export const WEATHER_NAMES={sunny:'晴天',rain:'细雨',storm:'暴雨',thunder:'雷电',snow:'大雪',rainbow:'彩虹',aurora:'极光'} as const;
 export type WeatherId=keyof typeof WEATHER_NAMES;
 // Dedicated sprites can replace these aliases. Keys are product ids; values are existing crop art.
-export const ART_PLACEHOLDERS:Record<string,string>={coffeeBrew:'coffee',floralTea:'lavender',sunTea:'sunflowerCrop',berryTea:'auroraBerry'};
+export const ART_PLACEHOLDERS:Record<string,string>={coffeeBrew:'coffee',floralTea:'lavender',sunTea:'sunflowerCrop',berryTea:'auroraBerry',estateBox:'cake',cabinet:'bookshelf',teaTable:'desk'};
+export const furnitureGems=(f:{gems?:number})=>f.gems??0;
+export const furnitureLevel=(f:{level?:number})=>f.level??3;
 
 export const AQUATIC=[
  {id:'carp',name:'鲤鱼',level:4,cost:180,seconds:90,output:2},

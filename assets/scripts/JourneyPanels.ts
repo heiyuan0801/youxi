@@ -1,9 +1,9 @@
 import type { FeaturePanelContext } from './FeaturePanels';
-import { FURNITURE, TRAVEL_MAPS, animalSpec } from './FarmCatalog';
+import { FURNITURE, TRAVEL_MAPS, animalSpec, furnitureGems, furnitureLevel } from './FarmCatalog';
 import { NAMES, ProductId } from './FarmModel';
 import { seasonIndex } from './FarmLife';
-import { AREA_STORIES, BREAKFAST_STEPS, COMMISSIONS, HONORS, TOWN_CHAPTERS, advanceBreakfast, advanceTown, breakfastReady, claimHonor, commissionLap, currentCommission, finishStory, honorReady, turnInCommission } from './FarmJourney';
-import { FLOWER_PALETTE, FlowerChoice, ICE_ROUND_MS, RACE_MS, SUMMER_LIMIT_MS, calendarEvent, claimCalendar, flowerScore, iceWindow, judgePumpkin, jumpRace, pullIceLine, pullSummerLine, raceWindow, startIceFishing, startPatrol, startRace, startSummerContest, submitFlowers, summerWindow } from './FarmActivities';
+import { AREA_STORIES, BREAKFAST_STEPS, COMMISSIONS, HONORS, TOWN_CHAPTERS, advanceBreakfast, advanceTown, breakfastReady, claimHonor, commissionLap, currentCommission, finishExploreQuest, finishStory, honorReady, nextExploreQuest, turnInCommission } from './FarmJourney';
+import { FLOWER_PALETTE, FlowerChoice, ICE_ROUND_MS, RACE_MS, SUMMER_LIMIT_MS, calendarEvent, claimCalendar, flowerScore, iceWindow, judgePumpkin, jumpRace, playFestivalRite, pullIceLine, pullPumpkinWeigh, pullSummerLine, raceWindow, startFestivalRite, startIceFishing, startPatrol, startPumpkinWeigh, startRace, startSummerContest, submitFlowers, summerWindow } from './FarmActivities';
 import { collectFurniture, startFurniture } from './FarmRoom';
 import { buyBait } from './FarmFeatures';
 
@@ -95,6 +95,16 @@ export function areaStoryPanel(c: FeaturePanelContext, explore: () => void) {
   }
   button(done ? '故事已完成' : `完成委托 · ${story.coins}金币`, w / 2, 308, w - 18, 42,
     () => act(() => finishStory(s, map.id)), done ? '#b6c8a0' : '#67ca70');
+  const quest = nextExploreQuest(s, map.id);
+  if (!quest) {
+    if (map.id !== 'village') p.label(root, '这个地区的探索故事都讲完了。', w / 2, 430, 14, SOFT, w - 16, 36);
+    return;
+  }
+  slot(w / 2, 470, w, 150);
+  p.label(root, '探索故事 · ' + quest.title, w / 2, 418, 16, INK, w - 16, 30);
+  p.label(root, quest.story, w / 2, 462, 13, SOFT, w - 20, 48);
+  p.label(root, `${NAMES[quest.item]} ${Math.min(quest.amount, s.inventory[quest.item])}/${quest.amount} · 第${quest.depth}层 · ${quest.coins}金币`, w / 2, 508, 13, INK, w - 16, 28);
+  button('完成探索故事', w / 2, 548, w - 18, 40, () => act(() => finishExploreQuest(s, quest.id)));
 }
 
 export function honorsPanel(c: FeaturePanelContext) {
@@ -116,7 +126,7 @@ export function carpenterPanel(c: FeaturePanelContext, lumber: () => void) {
   const { p, root, w, state: s, button, slot, act, live } = c;
   const job = s.activities.furniture;
   p.label(root, '木材厂 · 家具制作台', w / 2, 24, 22, INK, w, 38);
-  p.label(root, '耗木板和棉布，45秒后领取。做好后直接收入家具箱。', w / 2, 61, 13, SOFT, w - 14, 40);
+  p.label(root, '耗木板和棉布，45秒后领取。宝石陈列柜和花茶几还要1颗宝石。', w / 2, 61, 13, SOFT, w - 14, 40);
   if (job) {
     const label = p.label(root, '', w / 2, 102, 16, INK, w, 36);
     const update = () => {
@@ -134,7 +144,7 @@ export function carpenterPanel(c: FeaturePanelContext, lumber: () => void) {
     slot(w / 2, y, w, 60);
     p.contain(root, f.id, 36, y, 49, 48);
     p.label(root, f.name, 145, y - 12, 15, INK, 160, 30, true, 'left');
-    p.label(root, `${f.planks}木板 · ${f.cloth}棉布`, 145, y + 13, 13, SOFT, 160, 27, true, 'left');
+    p.label(root, `${f.planks}木板 · ${f.cloth}棉布${furnitureGems(f) ? ` · ${furnitureGems(f)}宝石` : ''}${furnitureLevel(f) > 3 ? ` · ${furnitureLevel(f)}级` : ''}`, 145, y + 13, 12, SOFT, 180, 27, true, 'left');
     button('制作' + f.name, w - 86, y, 150, 36, () => act(() => startFurniture(s, f.id)), '#67ca70', '#3fa94d', 13);
   });
 }
@@ -146,8 +156,9 @@ export function festivalGamesPanel(c: FeaturePanelContext, flowers: FlowerChoice
   p.contain(root, 'pumpkin', 56, 74, 76, 76);
   p.label(root, '秋日南瓜评选', w / 2 + 36, 40, 20, INK, w - 130, 38);
   p.label(root, '浇水、堆肥、秋季收获都能提高育成分。\n点两次生长中的南瓜浇水后，可追加堆肥。', w / 2 + 31, 82, 12, SOFT, w - 130, 58);
-  p.label(root, `候选育成分 ${a.pumpkin || '—'} · 历史最高 ${a.pumpkinRecord || '—'}`, w / 2, 132, 14, INK, w, 30);
-  button(a.pumpkinSeason === season ? '本季已参赛' : '送南瓜参赛', w / 2, 173, w - 20, 38, () => act(() => judgePumpkin(s)));
+  p.label(root, `育成分 ${a.pumpkin || '—'} · 称重 ${a.pumpkinWeighBonus ? '+' + a.pumpkinWeighBonus : '—'} · 最高 ${a.pumpkinRecord || '—'}`, w / 2, 132, 13, INK, w - 12, 28);
+  button(a.pumpkinWeigh ? '落秤' : '称重试手', w * .27, 173, w * .44, 36, () => act(() => a.pumpkinWeigh ? pullPumpkinWeigh(s) : startPumpkinWeigh(s)), '#ab89d3', '#8360ac', 13);
+  button(a.pumpkinSeason === season ? '本季已参赛' : '送南瓜参赛', w * .73, 173, w * .44, 36, () => act(() => judgePumpkin(s)));
   slot(w / 2, 368, w, 306);
   p.label(root, '春日花艺赛', w / 2, 241, 20, INK, w, 36);
   const focal = FLOWER_PALETTE[Math.floor(season / 4) % FLOWER_PALETTE.length];
@@ -162,8 +173,11 @@ export function festivalGamesPanel(c: FeaturePanelContext, flowers: FlowerChoice
   button(a.flowerSeason === season ? '本季已提交' : '提交花艺作品', w / 2, 493, w - 20, 38, () => act(() => submitFlowers(s, flowers)));
   slot(w / 2, 633, w, 194);
   p.label(root, event?.title || '现实日历活动', w / 2, 567, 20, INK, w, 38);
-  p.label(root, event ? `本月准备${event.amount}份${NAMES[event.item]} · 可得${event.coins}金币与4星` : '每年4月、7月、10月、12月各有一场活动。', w / 2, 617, 14, SOFT, w - 15, 49);
-  if (event) button(a.calendar.includes(event.key) ? '已完成本月活动' : '交付日历活动物资', w / 2, 679, w - 20, 38, () => act(() => claimCalendar(s)));
+  p.label(root, event ? `本月准备${event.amount}份${NAMES[event.item]} · 可得${event.coins + a.festivalRiteBonus}金币与4星` : '每年4月、7月、10月、12月各有一场活动。暴雨积水可在农场疏通。', w / 2, 610, 13, SOFT, w - 15, 42);
+  if (event) {
+    button(a.festivalRite ? '敲下鼓点' : '节日节奏', w * .27, 679, w * .44, 36, () => act(() => a.festivalRite ? playFestivalRite(s) : startFestivalRite(s)), '#58bde4', '#3295bd', 13);
+    button(a.calendar.includes(event.key) ? '本月已完成' : '交付物资', w * .73, 679, w * .44, 36, () => act(() => claimCalendar(s)));
+  }
 }
 
 export function iceFishingPanel(c: FeaturePanelContext) {

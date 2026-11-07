@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {FarmMotion} from '../assets/scripts/FarmMotion';
+import {animalClip,facingOf,gaitPose} from '../assets/scripts/AnimalAnimation';
 import {newFarm} from '../assets/scripts/FarmModel';
 import {pathTo,walkable,project,unproject,PLOTS} from '../assets/scripts/SceneLayout';
 function seeded(){let n=9137;return()=>{n=(n*1664525+1013904223)>>>0;return n/4294967296;};}
@@ -21,6 +22,15 @@ test('cars travel, loop with a delay, and a delivery dispatches the truck',()=>{
  const m=new FarmMotion(seeded());m.update(1,new Set());assert.ok(m.vehicles[0].x>13);assert.ok(m.vehicles[1].x>8);
  m.vehicles[1].x=24.49;m.update(.1,new Set());assert.equal(m.vehicles[1].x,-3);assert.ok(m.vehicles[1].delay>=1);
  m.sendTruck();assert.equal(m.vehicles[0].x,5);assert.equal(m.vehicles[0].delay,0);assert.equal(m.vehicles[0].deliveryUntil,m.time+7);
+});
+test('clipped animals step through four gait frames and four isometric facings',()=>{
+ const clip=animalClip('duck');assert.ok(clip);
+ const lifts=new Set([0,1,2,3].map(step=>gaitPose(clip,step+.2,false,0).lift.toFixed(3)));
+ assert.equal(lifts.size,4);
+ assert.equal(facingOf(2,-.2),0);assert.equal(facingOf(.2,2),1);assert.equal(facingOf(-2,.2),2);assert.equal(facingOf(-.2,-2),3);
+ const south=gaitPose(clip,1.2,false,1),north=gaitPose(clip,1.2,false,3);
+ assert.ok(south.width>north.width);assert.ok(north.height>south.height);
+ assert.equal(animalClip('hen'),null);assert.equal(animalClip('cow'),null);
 });
 test('villagers follow connected path cells, and projection roundtrips every farm plot',()=>{
  const path=pathTo({x:8.5,y:4.5},{x:14.5,y:18.5});assert.ok(path.length>10);let previous={x:8.5,y:4.5};

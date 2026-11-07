@@ -64,6 +64,7 @@ function eventRoute(r:ExploreRun){
 }
 export function routes(s:FarmState){const r=s.advanced.explore.run;if(!r)return[];const event=eventRoute(r);return [{name:r.map==='mine'?'开采矿脉':r.map==='snow'?'冰湖垂钓':'沿途采集',kind:'gather' as const,icon:r.map==='mine'?'ore':r.map==='snow'?'fish':'wood',cost:2},event,{name:'扎营休息',kind:'rest' as const,icon:'forestCamp',cost:0}];}
 const fail=(message:string):Result=>({ok:false,message});
+function markSeen(s:FarmState){const r=s.advanced.explore.run;if(!r?.event||r.map==='village')return;const seen=s.advanced.explore.seen[r.map]||(s.advanced.explore.seen[r.map]=[]);if(!seen.includes(r.event))seen.push(r.event);}
 export function beginExplore(s:FarmState,companion:number|null,now=Date.now()):Result{
  const m=TRAVEL_MAPS.find(m=>m.id===s.life.activeMap);if(!m||m.id==='village')return fail('先前往森林、矿山、海滩或雪原');if(s.advanced.explore.run)return fail('先完成当前探索或带物资回家');const pet=s.animals.find(a=>a.id===companion);if(companion!==null&&(!pet||!isAdult(s,pet,now)))return fail('请带成年伙伴出发');
  refreshLife(s,now);if(s.life.energy<4)return fail('出发需要4点农场体力');if(s.life.energy===24)s.life.energyAt=now+120000;s.life.energy-=4;const serial=++s.advanced.explore.serial;
@@ -78,8 +79,8 @@ export function takeRoute(s:FarmState,index:number):Result{
 }
 export function resolveExploreEvent(s:FarmState,choice:number):Result{
  const r=s.advanced.explore.run;if(!r?.event)return fail('没有待处理事件');
- if(r.event==='puzzle'){const puzzle=puzzleFor(r);if(choice===puzzle.choices.length){if(r.stamina<1)return fail('绕开谜题需要1探索体力，也可以直接返程');r.stamina--;r.bag.wood=(r.bag.wood||0)+1;r.event=null;r.step++;return {ok:true,message:'绕开谜题 · 收集1木材'};}if(!puzzle.choices[choice])return fail('没有这个选项');if(choice!==puzzle.answer){if(r.stamina<1)return fail('答错了，再试需要1探索体力');r.stamina--;return {ok:true,message:'不是这一处，再看看提示'};}r.bag.gem=(r.bag.gem||0)+1;r.stamina=Math.min(12,r.stamina+2);r.event=null;r.step++;return {ok:true,message:'谜题解开 · 获得宝石与2探索体力'};}
- if(![0,1].includes(choice))return fail('没有待处理事件');const help=HELP[r.event];if(choice===0){if(s.inventory[help.item]<1)return fail(`需要1份${help.name}`);s.inventory[help.item]--;r.bag.gem=(r.bag.gem||0)+1;r.stamina=Math.min(12,r.stamina+2);}else{if(r.stamina<1)return fail('绕行需要1探索体力，也可以直接返程');r.stamina--;r.bag.wood=(r.bag.wood||0)+1;}r.event=null;r.step++;return {ok:true,message:choice===0?'帮助成功 · 获得宝石与2探索体力':'沿安全小径绕行 · 收集1木材'};
+ if(r.event==='puzzle'){const puzzle=puzzleFor(r);if(choice===puzzle.choices.length){if(r.stamina<1)return fail('绕开谜题需要1探索体力，也可以直接返程');r.stamina--;r.bag.wood=(r.bag.wood||0)+1;markSeen(s);r.event=null;r.step++;return {ok:true,message:'绕开谜题 · 收集1木材'};}if(!puzzle.choices[choice])return fail('没有这个选项');if(choice!==puzzle.answer){if(r.stamina<1)return fail('答错了，再试需要1探索体力');r.stamina--;return {ok:true,message:'不是这一处，再看看提示'};}r.bag.gem=(r.bag.gem||0)+1;r.stamina=Math.min(12,r.stamina+2);markSeen(s);r.event=null;r.step++;return {ok:true,message:'谜题解开 · 获得宝石与2探索体力'};}
+ if(![0,1].includes(choice))return fail('没有待处理事件');const help=HELP[r.event];if(choice===0){if(s.inventory[help.item]<1)return fail(`需要1份${help.name}`);s.inventory[help.item]--;r.bag.gem=(r.bag.gem||0)+1;r.stamina=Math.min(12,r.stamina+2);}else{if(r.stamina<1)return fail('绕行需要1探索体力，也可以直接返程');r.stamina--;r.bag.wood=(r.bag.wood||0)+1;}markSeen(s);r.event=null;r.step++;return {ok:true,message:choice===0?'帮助成功 · 获得宝石与2探索体力':'沿安全小径绕行 · 收集1木材'};
 }
 export function descendExplore(s:FarmState):Result{
  const r=s.advanced.explore.run;if(!r||r.event||r.step<3)return fail('先完成本层3处路线');s.advanced.explore.best[r.map]=Math.max(s.advanced.explore.best[r.map]||0,r.depth);if(r.depth>=DEPTH_LIMIT)return fail('已到最深第12层，带着收获返程吧');

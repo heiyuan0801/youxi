@@ -167,16 +167,27 @@ const GAITS: Record<Gait, { step: number; lift: number; sway: number; stretch: n
   stride: { step: .76, lift: .115, sway: 11, stretch: .065 },
 };
 
-export function gaitPose(clip: AnimalClip, frame: number, running: boolean): AnimalPose {
-  const gait = GAITS[clip.gait], swing = frame * gait.step;
-  const cycle = swing * Math.PI / 2, lift = (1 - Math.cos(swing * Math.PI)) / 2;
-  const stride = running ? 1.35 : 1;
+export type Facing = 0 | 1 | 2 | 3;
+
+// Isometric facings: 0 east, 1 south, 2 west, 3 north.
+export function facingOf(dx: number, dy: number): Facing {
+  if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? 0 : 2;
+  return dy >= 0 ? 1 : 3;
+}
+
+export function gaitPose(clip: AnimalClip, frame: number, running: boolean, facing: Facing = 0): AnimalPose {
+  const gait = GAITS[clip.gait], stride = running ? 1.35 : 1;
+  const step = Math.floor(frame * gait.step) % 4;
+  const plant = step === 0 || step === 2;
+  const lift = gait.lift * stride * [0.15, 1, 0.42, 1.18][step];
+  const lead = facing === 0 || facing === 3 ? 1 : -1;
+  const toward = facing === 1, away = facing === 3;
   return {
-    x: Math.sin(cycle) * .028,
-    lift: lift * gait.lift * stride,
-    width: 1 + gait.stretch * (.65 - lift),
-    height: 1 + gait.stretch * (lift - .55),
-    tilt: Math.sin(cycle) * gait.sway * stride,
+    x: lead * (.02 + (step % 2) * .018),
+    lift,
+    width: (1 + gait.stretch * (plant ? .7 : -.15)) * (toward ? 1.08 : away ? .9 : 1),
+    height: (1 + gait.stretch * (plant ? -.35 : .85)) * (toward ? .92 : away ? 1.1 : 1),
+    tilt: lead * gait.sway * stride * (plant ? .45 : 1),
   };
 }
 

@@ -40,6 +40,7 @@ export const RECIPES:Recipe[]=[
  {id:'floralTea',name:'薰衣草花茶',factory:'brewing',level:35,seconds:80,xp:36,needs:{lavender:2,herb:1}},
  {id:'berryTea',name:'极光莓茶',factory:'brewing',level:45,seconds:100,xp:42,needs:{auroraBerry:1,herb:1}},
  {id:'planks',name:'木板',factory:'lumber',level:3,seconds:35,xp:10,needs:{wood:2}},
+ {id:'estateBox',name:'庄园礼盒',factory:'lumber',level:50,seconds:150,xp:70,needs:{planks:2,coffeeBrew:1,floralTea:1,cake:1}},
  {id:'fruitCan',name:'水果罐头',factory:'cannery',level:19,seconds:90,xp:35,needs:{orange:2,sugar:2}},
  {id:'vegCan',name:'蔬菜罐头',factory:'cannery',level:19,seconds:80,xp:30,needs:{cabbage:2,carrot:2}}
 ];

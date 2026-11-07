@@ -1,5 +1,5 @@
 import type {FarmState,Result} from './FarmModel';
-import {FURNITURE,FurnitureId} from './FarmCatalog';
+import {FURNITURE,FurnitureId,furnitureGems,furnitureLevel} from './FarmCatalog';
 import {farmLevel} from './FarmFeatures';
 export const WALLS=['#fff0db','#e5f1df','#e0edfa','#f8e1e8'];
 export const FLOORS=['#d7b28d','#b9cbad','#a8bfce','#dab8c6'];
@@ -7,8 +7,8 @@ export function buyRoomFurniture(s:FarmState,type:FurnitureId):Result{
  const f=FURNITURE.find(f=>f.id===type);
  if(!f)return{ok:false,message:'没有这件家具'};
  if(s.advanced.room.items.length+(s.activities.furniture?1:0)>=40)return{ok:false,message:'家具箱最多40件，正在制作的也会占一个位置'};
- if(s.coins<f.cost||s.inventory.planks<f.planks||s.inventory.cloth<f.cloth)return{ok:false,message:`需要${f.cost}金币、${f.planks}木板、${f.cloth}棉布`};
- s.coins-=f.cost;s.inventory.planks-=f.planks;s.inventory.cloth-=f.cloth;
+ const gems=furnitureGems(f);if(farmLevel(s.xp)<furnitureLevel(f))return{ok:false,message:`${furnitureLevel(f)}级可以制作${f.name}`};if(s.coins<f.cost||s.inventory.planks<f.planks||s.inventory.cloth<f.cloth||s.inventory.gem<gems)return{ok:false,message:`需要${f.cost}金币、${f.planks}木板、${f.cloth}棉布${gems?`和${gems}宝石`:''}`};
+ s.coins-=f.cost;s.inventory.planks-=f.planks;s.inventory.cloth-=f.cloth;s.inventory.gem-=gems;
  return putInFurnitureBox(s,type);
 }
 function putInFurnitureBox(s:FarmState,type:FurnitureId):Result{
@@ -20,11 +20,11 @@ function putInFurnitureBox(s:FarmState,type:FurnitureId):Result{
 export function startFurniture(s:FarmState,type:FurnitureId,now=Date.now()):Result{
  const f=FURNITURE.find(f=>f.id===type);
  if(!f)return{ok:false,message:'没有这件家具'};
- if(farmLevel(s.xp)<3||!s.life.factories.includes('lumber'))return{ok:false,message:'3级后先在工坊建造木材厂'};
+ if(farmLevel(s.xp)<furnitureLevel(f)||!s.life.factories.includes('lumber'))return{ok:false,message:`${furnitureLevel(f)}级后先在工坊建造木材厂`};
  if(s.activities.furniture)return{ok:false,message:'先领取上一件家具'};
  if(s.advanced.room.items.length>=40)return{ok:false,message:'家具箱最多40件'};
- if(s.inventory.planks<f.planks||s.inventory.cloth<f.cloth)return{ok:false,message:'请备齐木板和棉布'};
- s.inventory.planks-=f.planks;s.inventory.cloth-=f.cloth;
+ const gems=furnitureGems(f);if(s.inventory.planks<f.planks||s.inventory.cloth<f.cloth||s.inventory.gem<gems)return{ok:false,message:gems?'请备齐木板、棉布和宝石':'请备齐木板和棉布'};
+ s.inventory.planks-=f.planks;s.inventory.cloth-=f.cloth;s.inventory.gem-=gems;
  s.activities.furniture={type,readyAt:now+45000};
  return{ok:true,message:`${f.name}开始制作 · 45秒后可领取`};
 }

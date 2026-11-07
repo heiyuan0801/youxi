@@ -32,13 +32,14 @@ export class FarmScene {
   placing:DecoId|null=null;
   private weather!:Graphics;
   private machines:Graphics|null=null;
+  private rigs:{n:Node;x:number;y:number;kind:'harvest'|'feed'}[]=[];
   constructor(public root:Node,art:Map<string,import('cc').SpriteFrame>,private getState:()=>FarmState){this.p=new Painter(WIDTH,HEIGHT,art);}
   private groundRect(g:Graphics,x:number,y:number,w:number,h:number,fill:string,lift=0,r=.12,stroke?:string,line=1){const pts:XY[]=[];const rr=Math.min(r,w/2,h/2);for(const [cx,cy,start] of [[x+rr,y+rr,Math.PI],[x+w-rr,y+rr,Math.PI*1.5],[x+w-rr,y+h-rr,0],[x+rr,y+h-rr,Math.PI/2]])for(let i=0;i<=5;i++){const a=start+i*Math.PI/10;pts.push(project(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,lift));}this.p.path(g,pts,fill,stroke,line);}
   private groundEllipse(g:Graphics,x:number,y:number,rx:number,ry:number,fill:string,lift=0,alpha=255){const pts:XY[]=Array.from({length:48},(_,i)=>{const a=i/48*Math.PI*2;return project(x+Math.cos(a)*rx,y+Math.sin(a)*ry,lift);});this.p.path(g,pts,fill,undefined,1,alpha);}
   private object(key:string,x:number,y:number,width:number,depth:number,bottom=true,parent=this.root){const meta=REF_ART[key]||(LIFE_ART[key]||NEXT_ART[key]),frame=this.p.art.get(key);const h=width*(meta?.h||frame?.rect.height||1)/(meta?.w||frame?.rect.width||1);const n=this.p.image(parent,key,x,y,width,h,bottom);if(parent===this.root)this.depth.push({n,depth});return n;}
   private addHit(key:string,x:number,y:number,w:number,depth:number,type:string,id:string|number){const m=REF_ART[key]||(LIFE_ART[key]||NEXT_ART[key]),f=this.p.art.get(key),ratio=(m?.h||f?.rect.height||1)/(m?.w||f?.rect.width||1);this.hits.push({key,x:x-w/2,y:y-w*ratio,w,h:w*ratio,depth,type,id});}
   redraw(){
-    const state=this.getState(),size=worldWidth(state),drawPaths=[...PATHS,...(size>22?[{x:22,y:4,w:size-22,h:1},{x:22,y:18,w:size-22,h:1},{x:22,y:21,w:size-22,h:1},...REGIONS.slice(0,state.progression.regions.length).map(r=>({x:r.x+7,y:5,w:1,h:13}))]:[])];this.motion.sync(state.animals,hasRegion(state,'pasture'),size,state.ecology.roaming);empty(this.root);this.depth=[];this.hits=[];this.trees=[];this.cropNodes=[];this.cloudNodes=[];this.animalNodes.clear();this.aquaticNodes=[];this.walkers=[];this.cars=[];this.flowers=[];this.particles=[];
+    this.rigs=[];const state=this.getState(),size=worldWidth(state),drawPaths=[...PATHS,...(size>22?[{x:22,y:4,w:size-22,h:1},{x:22,y:18,w:size-22,h:1},{x:22,y:21,w:size-22,h:1},...REGIONS.slice(0,state.progression.regions.length).map(r=>({x:r.x+7,y:5,w:1,h:13}))]:[])];this.motion.sync(state.animals,hasRegion(state,'pasture'),size,state.ecology.roaming);empty(this.root);this.depth=[];this.hits=[];this.trees=[];this.cropNodes=[];this.cloudNodes=[];this.animalNodes.clear();this.aquaticNodes=[];this.walkers=[];this.cars=[];this.flowers=[];this.particles=[];
     const p=this.p,sky=p.g(this.root,'Sky');p.path(sky,[[-6000,-4000],[6000,-4000],[6000,4000],[-6000,4000]],'#fff3dc');
     if(state.life.activeMap!=='home'){
       this.motion.cancelPatrol();
@@ -109,9 +110,9 @@ export class FarmScene {
       this.marker(spot.x,spot.y,spot.name+' · 线索','patrol',i);
     });
     this.price=p.node(this.root,'ExpansionPrice');this.drawPrice();this.timerRoot=p.node(this.root,'CropTimers');this.drawTimers();this.weather=p.g(this.root,'Weather');
-    this.machines=p.g(this.root,'Machines');this.depth.push({n:this.machines.node,depth:18});
-    if(state.life.automation.harvestBuilt)this.marker(7.55,9.2,state.life.automation.harvest?'收菜器运转':'收菜器停着','automation',0);
-    if(state.life.automation.feedBuilt)this.marker(4.3,4.55,state.life.automation.feed?'喂养器运转':'喂养器停着','automation',1);
+    this.machines=p.g(this.root,'Machines');this.depth.push({n:this.machines.node,depth:18});this.rigs=[];
+    if(state.life.automation.harvestBuilt){this.marker(7.55,9.2,state.life.automation.harvest?'收菜器运转':'收菜器停着','automation',0);if(this.p.art.has('machineHarvester')){const [u,v]=project(7.55,9.2);const n=this.object('machineHarvester',u,v,78*Z,16.8);this.rigs.push({n,x:7.55,y:9.2,kind:'harvest'});}}
+    if(state.life.automation.feedBuilt){this.marker(4.3,4.55,state.life.automation.feed?'喂养器运转':'喂养器停着','automation',1);if(this.p.art.has('machineFeeder')){const [u,v]=project(4.3,4.55);const n=this.object('machineFeeder',u,v,70*Z,8.9);this.rigs.push({n,x:4.3,y:4.55,kind:'feed'});}}
     this.update(0);
   }
   private marker(x:number,y:number,label:string,type:string,id:number){
@@ -126,7 +127,7 @@ export class FarmScene {
     p.path(g,[[-4000,-3000],[5000,-3000],[5000,4000],[-4000,4000]],snow?'#d9e9f7':beach?'#9bdcea':'#c5e4d5');
     const [sx,sy]=project(11,11,65);p.ellipse(g,sx,sy,640,265,'#689591',60);
     for(let lift=60;lift>0;lift-=8)this.groundRect(g,1,2,20,18,lift>30?'#ab7956':'#cb9b6a',lift,.8);
-    const theme=levelTheme(map.id,run?.depth||1),ground=theme.ground,tiles=theme.tiles,section=theme.title,landmark=theme.icon;
+    const theme=levelTheme(map.id,run?.depth||1),ground=theme.ground,tiles=theme.tiles,section=theme.title,landmark=this.p.art.has(theme.art)?theme.art:theme.icon;
     this.groundRect(g,1,2,20,18,ground,0,.8);
     for(let y=3;y<19;y++)for(let x=2;x<20;x++)if((x+y)%2===0)this.groundRect(g,x,y,1,1,tiles,0,0);
     this.groundRect(g,2,10.5,18,1,'#ead2a4',0,.2);this.groundRect(g,9.5,3,1,16,'#f7e9ca',0,.2);
@@ -137,7 +138,7 @@ export class FarmScene {
       this.object(landmark,u,v,(55+i*11)*Z,x+y);
     }
     if(!village){const [u,v]=project(5,5);this.object(map.icon,u,v,170*Z,10);}
-    NODE_POSITIONS.forEach((pos,i)=>{if(run){if(i>=3)return;const option=routes(s)[i],at={x:6+i*4,y:10+i%2*4},[u,v]=project(at.x,at.y),depth=at.x+at.y,done=run.step>=3||run.event!==null,key=done?'gem':option.icon;this.groundEllipse(g,at.x,at.y,1.5,1.1,'#dfcfa0');this.object(key,u,v,100*Z,depth);this.addHit(key,u,v,100*Z,depth,done?'explore':'deep-route',i);const n=p.pill(this.root,u,v+30,160,28);p.label(n,done?(run.event?'处理当前奇遇':'本层完成 · 继续探索'):option.name,800,450,13,'#6d7843',152,25);this.depth.push({n,depth:depth+.1});this.hits.push({x:u-80,y:v+16,w:160,h:30,depth:depth+.2,type:done?'explore':'deep-route',id:i});return;}const [u,v]=project(pos.x,pos.y),depth=pos.x+pos.y,key=village?'factory_'+FACTORIES[i].id:map.loot[i%3],available=village?s.life.factories.includes(FACTORIES[i].id):(s.life.nodes[`${map.id}:${i}`]||0)<=Date.now(),width=(village?174:72)*Z;this.groundEllipse(g,pos.x,pos.y,1.25,.95,village?'#e7c999':snow?'#cbdde9':beach?'#e6c581':'#8fbc67');const n=this.object(key,u,v+10*Z,width,depth);if(!available)p.opacity(n,110);this.addHit(key,u,v+10*Z,width,depth,village?'factory':'resource',village?FACTORIES[i].id:i);
+    NODE_POSITIONS.forEach((pos,i)=>{if(run){if(i>=3)return;const option=routes(s)[i],at={x:6+i*4,y:10+i%2*4},[u,v]=project(at.x,at.y),depth=at.x+at.y,done=run.step>=3||run.event!==null,key=done?'gem':option.kind==='fox'&&this.p.art.has('fox')?'fox':option.icon;this.groundEllipse(g,at.x,at.y,1.5,1.1,'#dfcfa0');this.object(key,u,v,100*Z,depth);this.addHit(key,u,v,100*Z,depth,done?'explore':'deep-route',i);const n=p.pill(this.root,u,v+30,160,28);p.label(n,done?(run.event?'处理当前奇遇':'本层完成 · 继续探索'):option.name,800,450,13,'#6d7843',152,25);this.depth.push({n,depth:depth+.1});this.hits.push({x:u-80,y:v+16,w:160,h:30,depth:depth+.2,type:done?'explore':'deep-route',id:i});return;}const [u,v]=project(pos.x,pos.y),depth=pos.x+pos.y,key=village?'factory_'+FACTORIES[i].id:map.loot[i%3],available=village?s.life.factories.includes(FACTORIES[i].id):(s.life.nodes[`${map.id}:${i}`]||0)<=Date.now(),width=(village?174:72)*Z;this.groundEllipse(g,pos.x,pos.y,1.25,.95,village?'#e7c999':snow?'#cbdde9':beach?'#e6c581':'#8fbc67');const n=this.object(key,u,v+10*Z,width,depth);if(!available)p.opacity(n,110);this.addHit(key,u,v+10*Z,width,depth,village?'factory':'resource',village?FACTORIES[i].id:i);
       const label=p.pill(this.root,u,v+28,village?135:92,24,'#fff7df');p.label(label,village?FACTORIES[i].name:available?'点击采集':'恢复中',800,450,12,available?'#658b3c':'#9b8162',village?130:87,22);this.depth.push({n:label,depth:depth+.1});this.hits.push({x:u-(village?70:46),y:v+16,w:village?140:92,h:28,depth:depth+.2,type:village?'factory':'resource',id:village?FACTORIES[i].id:i});
     });
     if(beach){this.groundEllipse(g,17.5,6,2.1,1.5,'#6dcbe5');const [u,v]=project(17,5.5);this.object('beachPier',u,v,145*Z,23);this.addHit('beachPier',u,v,145*Z,23,'pond',0);if(seasonIndex(s)%4===1)this.marker(15.2,8.2,'夏日限时渔赛','summer-fishing',0);}
@@ -156,11 +157,17 @@ export class FarmScene {
     const g=this.machines;if(!g?.isValid)return;g.clear();
     const state=this.getState(),auto=state.life.automation,p=this.p;
     const specs=[
-      {x:7.55,y:9.2,built:auto.harvestBuilt,enabled:auto.harvest,working:auto.harvest&&state.plots.some(plot=>readyPlot(plot)),body:'#d08a3a',wheel:'#6d4a2e'},
-      {x:4.3,y:4.55,built:auto.feedBuilt,enabled:auto.feed,working:auto.feed&&state.animals.some(a=>(state.life.care[a.id]?.hunger??100)<50),body:'#e07a4a',wheel:'#5c4030'},
+      {hook:'machineHarvester',x:7.55,y:9.2,built:auto.harvestBuilt,enabled:auto.harvest,working:auto.harvest&&state.plots.some(plot=>readyPlot(plot)),body:'#d08a3a',wheel:'#6d4a2e'},
+      {hook:'machineFeeder',x:4.3,y:4.55,built:auto.feedBuilt,enabled:auto.feed,working:auto.feed&&state.animals.some(a=>(state.life.care[a.id]?.hunger??100)<50),body:'#e07a4a',wheel:'#5c4030'},
     ];
+    for(const rig of this.rigs){
+      const spec=specs.find(item=>item.x===rig.x);
+      if(!spec)continue;
+      const pose=machinePose(t,spec.enabled,spec.working),[x,y]=project(rig.x,rig.y,pose.bob);
+      rig.n.setPosition(x-p.w/2,p.h/2-y);rig.n.angle=pose.arm*22;
+    }
     for(const spec of specs){
-      if(!spec.built)continue;
+      if(!spec.built||this.p.art.has(spec.hook))continue;
       const pose=machinePose(t,spec.enabled,spec.working),[x,y]=project(spec.x,spec.y,pose.bob);
       p.ellipse(g,x,y+10,34,12,'#2d5528',60);
       p.ellipse(g,x,y,36,16,spec.enabled?'#f3d7a2':'#d9c7ae');

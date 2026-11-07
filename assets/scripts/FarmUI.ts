@@ -124,8 +124,8 @@ export class FarmUI {
     const state=this.state();
     if(panel==='breakfast'||panel==='story'||panel==='honors'||panel==='carpenter'||panel==='festival-games'||panel==='ice-fishing'||panel==='patrol'||panel==='town'||panel==='race'||panel==='summer-fishing'){
       const spec={
-        breakfast:['农场主线','bread',515],story:['地区故事','signpost',388],honors:['晴野荣誉','star',440],
-        carpenter:['家具制作','planks',675],'festival-games':['四季比赛','sunflower',735],
+        breakfast:['农场主线','bread',515],story:['地区故事','signpost',640],honors:['晴野荣誉','star',440],
+        carpenter:['家具制作','planks',860],'festival-games':['四季比赛','sunflower',735],
         'ice-fishing':['冰湖垂钓','fish',310],patrol:['宠物巡院','dog',330],town:['主线续章','bread',520],
         race:['障碍赛','dog',420], 'summer-fishing':['夏日渔赛','fish',360],
       } as const;

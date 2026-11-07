@@ -58,6 +58,10 @@ export interface FarmActivities {
   raceSerial: number;
   raceSeason: number;
   raceAt: number;
+  pumpkinWeigh: { startedAt: number } | null;
+  pumpkinWeighBonus: number;
+  festivalRite: { startedAt: number } | null;
+  festivalRiteBonus: number;
 }
 
 export function newActivities(): FarmActivities {
@@ -66,6 +70,7 @@ export function newActivities(): FarmActivities {
     ice: null, iceSerial: 0, patrol: null, patrolAt: { cat: 0, dog: 0 }, patrolCount: 0,
     stormSeason: -1, stormPlot: null, calendar: [], reserve: 0, furniture: null,
     summer: null, summerSerial: 0, summerScore: 0, race: null, raceSerial: 0, raceSeason: -1, raceAt: 0,
+    pumpkinWeigh: null, pumpkinWeighBonus: 0, festivalRite: null, festivalRiteBonus: 0,
   };
 }
 
@@ -77,6 +82,10 @@ export function migrateActivities(a: FarmActivities) {
   if (!Number.isInteger(a.raceSerial)) a.raceSerial = 0;
   if (!Number.isInteger(a.raceSeason)) a.raceSeason = -1;
   if (typeof a.raceAt !== 'number') a.raceAt = 0;
+  if (a.pumpkinWeigh === undefined) a.pumpkinWeigh = null;
+  if (!Number.isInteger(a.pumpkinWeighBonus)) a.pumpkinWeighBonus = 0;
+  if (a.festivalRite === undefined) a.festivalRite = null;
+  if (!Number.isInteger(a.festivalRiteBonus)) a.festivalRiteBonus = 0;
 }
 
 export function validActivities(a: FarmActivities, plots: Plot[]): boolean {
@@ -101,7 +110,9 @@ export function validActivities(a: FarmActivities, plots: Plot[]): boolean {
       && time(a.summer.startedAt) && time(a.summer.castAt) && a.summer.castAt >= a.summer.startedAt)
     && int(a.raceSerial) && int(a.raceSeason, -1) && time(a.raceAt)
     && (a.race === null || !!a.race && a.race.serial === a.raceSerial && int(a.race.serial, 1)
-      && int(a.race.animalId, 1) && int(a.race.gate, 0, 3) && int(a.race.hits, 0, a.race.gate) && time(a.race.gateAt));
+      && int(a.race.animalId, 1) && int(a.race.gate, 0, 3) && int(a.race.hits, 0, a.race.gate) && time(a.race.gateAt))
+    && int(a.pumpkinWeighBonus, 0, 30) && (a.pumpkinWeigh === null || !!a.pumpkinWeigh && time(a.pumpkinWeigh.startedAt))
+    && int(a.festivalRiteBonus, 0, 200) && (a.festivalRite === null || !!a.festivalRite && time(a.festivalRite.startedAt));
 }
 
 const fail = (message: string): Result => ({ ok: false, message });
@@ -130,11 +141,13 @@ export function judgePumpkin(s: FarmState, now = Date.now()): Result {
   if (a.pumpkinSeason === season) return fail('本季已经参赛');
   const item = s.inventory.pumpkin > 0 ? 'pumpkin' : 'goldenPumpkin';
   if (!a.pumpkin || !s.inventory[item]) return fail('请先收获南瓜，并保留一份参赛');
-  const score = a.pumpkin, tier = score >= 105 ? 3 : score >= 70 ? 2 : 1;
+  const score = a.pumpkin + a.pumpkinWeighBonus, tier = score >= 105 ? 3 : score >= 70 ? 2 : 1;
   s.inventory[item]--;
   a.pumpkinSeason = season;
   a.pumpkinRecord = Math.max(a.pumpkinRecord, score);
   a.pumpkin = 0;
+  a.pumpkinWeighBonus = 0;
+  a.pumpkinWeigh = null;
   s.coins += tier * 180;
   s.stars += tier * 2;
   return ok(`南瓜评选 · ${score}分 · ${tier * 180}金币和${tier * 2}农场星`);
@@ -277,11 +290,65 @@ export function claimCalendar(s: FarmState, now = Date.now()): Result {
   if (!event || s.activities.calendar.includes(event.key)) return fail('当前没有可领取的日历活动');
   if (s.inventory[event.item] < event.amount) return fail('活动物资还没备齐');
   s.inventory[event.item] -= event.amount;
+  const bonus = s.activities.festivalRiteBonus;
+  s.activities.festivalRiteBonus = 0;
+  s.activities.festivalRite = null;
   s.activities.calendar.push(event.key);
   if (s.activities.calendar.length > 128) s.activities.calendar.shift();
-  s.coins += event.coins;
+  s.coins += event.coins + bonus;
   s.stars += 4;
-  return ok(`${event.title}完成 · ${event.coins}金币与4农场星`);
+  return ok(`${event.title}完成 · ${event.coins + bonus}金币与4农场星`);
+}
+
+export function weighWindow(round: { startedAt: number }, now: number) {
+  const elapsed = now - round.startedAt;
+  return { elapsed, begin: 900, end: 1700, expired: elapsed > 4000 };
+}
+
+export function startPumpkinWeigh(s: FarmState, now = Date.now()): Result {
+  if (seasonIndex(s, now) % 4 !== 2) return fail('秋季才能给参赛南瓜称重');
+  if (s.activities.pumpkinSeason === seasonIndex(s, now)) return fail('本季南瓜已经送评');
+  if (!s.activities.pumpkin) return fail('先收获一颗培育过的南瓜');
+  s.activities.pumpkinWeigh = { startedAt: now };
+  return ok('秤开始摆动 · 指针进入绿色区时落秤');
+}
+
+export function pullPumpkinWeigh(s: FarmState, now = Date.now()): Result {
+  const round = s.activities.pumpkinWeigh;
+  if (!round) return fail('请先开始称重');
+  const timing = weighWindow(round, now);
+  s.activities.pumpkinWeigh = null;
+  if (!timing.expired && timing.elapsed >= timing.begin && timing.elapsed <= timing.end) {
+    s.activities.pumpkinWeighBonus = 15;
+    return ok('落秤正好 · 评选额外 +15 分');
+  }
+  s.activities.pumpkinWeighBonus = 0;
+  return ok('秤晃过去了，育成分维持原样');
+}
+
+export function riteWindow(round: { startedAt: number }, now: number) {
+  const elapsed = now - round.startedAt;
+  return { elapsed, begin: 800, end: 1800, expired: elapsed > 4500 };
+}
+
+export function startFestivalRite(s: FarmState, now = Date.now()): Result {
+  const event = calendarEvent(now);
+  if (!event || s.activities.calendar.includes(event.key)) return fail('这个月没有可参加的节日节奏');
+  s.activities.festivalRite = { startedAt: now };
+  return ok('节日节奏开始 · 鼓点进入绿色区时敲下');
+}
+
+export function playFestivalRite(s: FarmState, now = Date.now()): Result {
+  const round = s.activities.festivalRite;
+  if (!round) return fail('请先开始节日节奏');
+  const timing = riteWindow(round, now);
+  s.activities.festivalRite = null;
+  if (!timing.expired && timing.elapsed >= timing.begin && timing.elapsed <= timing.end) {
+    s.activities.festivalRiteBonus = 80;
+    return ok('节奏正好 · 交付时额外 +80 金币');
+  }
+  s.activities.festivalRiteBonus = 0;
+  return ok('鼓点错过了，交付奖励维持原样');
 }
 
 export const SUMMER_LIMIT_MS = 40000;

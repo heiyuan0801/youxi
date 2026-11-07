@@ -2,11 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { levelFloor, newFarm, parseSave, serialize } from '../assets/scripts/FarmModel';
 import { collectCraft, enqueueCraft } from '../assets/scripts/FarmFeatures';
-import { advanceTown, currentCommission, turnInCommission } from '../assets/scripts/FarmJourney';
+import { startFurniture } from '../assets/scripts/FarmRoom';
+import { ART_HOOKS } from '../assets/scripts/ArtHooks';
+import { advanceTown, currentCommission, finishExploreQuest, nextExploreQuest, turnInCommission } from '../assets/scripts/FarmJourney';
 import { beginExplore, levelTheme, puzzleFor, resolveExploreEvent, routes, takeRoute } from '../assets/scripts/FarmExplore';
 import { dominance, inherit, transmitAllele } from '../assets/scripts/FarmGenetics';
 import { baseGenome } from '../assets/scripts/FarmGenetics';
-import { jumpRace, pullSummerLine, raceWindow, startRace, startSummerContest, summerWindow } from '../assets/scripts/FarmActivities';
+import { claimCalendar, jumpRace, playFestivalRite, pullPumpkinWeigh, pullSummerLine, raceWindow, startFestivalRite, startPumpkinWeigh, startRace, startSummerContest, summerWindow, weighWindow } from '../assets/scripts/FarmActivities';
 import { claimFestival, openFactory, refreshLife, travel, unlockMap } from '../assets/scripts/FarmLife';
 import { machinePose } from '../assets/scripts/FarmMachines';
 
@@ -177,4 +179,59 @@ test('harvester and feeder poses only spin while the device is running', () => {
   assert.ok(Math.abs(working.arm) >= 0);
   assert.equal(working.working, true);
   assert.equal(idle.working, false);
+});
+
+test('explore quests follow the encounter chain and gem furniture is atomic', () => {
+  const s = newFarm(NOW);
+  s.xp = levelFloor(40);
+  s.coins = 5000;
+  s.life.maps.push('forest');
+  s.life.activeMap = 'forest';
+  s.advanced.explore.best.forest = s.advanced.explore.claimed.forest = 3;
+  s.inventory.herb = 1;
+  assert.equal(finishExploreQuest(s, 'forest-fox').ok, false);
+  s.advanced.explore.seen.forest = ['fox'];
+  assert.ok(finishExploreQuest(s, 'forest-fox').ok);
+  assert.equal(s.inventory.gem, 1);
+  assert.equal(nextExploreQuest(s, 'forest')?.id, 'forest-lamps');
+  assert.equal(finishExploreQuest(parseSave(serialize(s, NOW), NOW)!, 'forest-fox').ok, false);
+  s.life.factories.push('lumber');
+  s.inventory.planks = 4;
+  s.inventory.cloth = 1;
+  s.inventory.gem = 0;
+  assert.equal(startFurniture(s, 'cabinet', NOW).ok, false);
+  assert.equal(s.inventory.planks, 4);
+  s.inventory.gem = 1;
+  assert.ok(startFurniture(s, 'cabinet', NOW).ok);
+  assert.equal(s.inventory.gem, 0);
+  assert.equal(s.inventory.planks, 0);
+});
+
+test('pumpkin weigh-in and calendar rhythm add score without replacing the base rules', () => {
+  const s = newFarm(NOW);
+  s.life.epoch = NOW - 2 * 1_200_000;
+  refreshLife(s, NOW);
+  s.activities.pumpkin = 40;
+  assert.ok(startPumpkinWeigh(s, NOW).ok);
+  const hit = NOW + weighWindow(s.activities.pumpkinWeigh!, NOW).begin + 20;
+  assert.ok(pullPumpkinWeigh(s, hit).ok);
+  assert.equal(s.activities.pumpkinWeighBonus, 15);
+  assert.equal(s.activities.pumpkin, 40);
+  const october = Date.UTC(2026, 9, 1, 4);
+  s.inventory.corn = 3;
+  assert.ok(startFestivalRite(s, october).ok);
+  const beat = october + 800 + 30;
+  assert.ok(playFestivalRite(s, beat).ok);
+  assert.equal(s.activities.festivalRiteBonus, 80);
+  const before = s.coins;
+  assert.ok(claimCalendar(s, october).ok);
+  assert.equal(s.coins, before + 320 + 80);
+});
+
+test('art hooks name every drop-in file and do not collide', () => {
+  assert.equal(new Set(ART_HOOKS).size, ART_HOOKS.length);
+  assert.ok(ART_HOOKS.includes('fox'));
+  assert.ok(ART_HOOKS.includes('machineHarvester'));
+  assert.ok(ART_HOOKS.includes('forest-layer-01'));
+  assert.ok(ART_HOOKS.includes('coffeeBrew'));
 });

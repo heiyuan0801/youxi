@@ -82,6 +82,7 @@ const artisanOrders=[
  {level:30,person:'午后茶会',message:'想用一杯手冲咖啡，配上刚出炉的面包。',needs:{coffeeBrew:1,bread:1},coins:860,xp:48},
  {level:35,person:'花茶铺主',message:'薰衣草花茶和香草，招待今晚的客人。',needs:{floralTea:1,herb:1},coins:920,xp:54},
  {level:45,person:'极光旅人',message:'极光莓茶和手冲咖啡，暖一暖雪原的夜晚。',needs:{berryTea:1,coffeeBrew:1},coins:1680,xp:80},
+ {level:50,person:'庄园管家',message:'把咖啡、花茶和蛋糕装进庄园礼盒。',needs:{estateBox:1},coins:2800,xp:120},
  {level:26,person:'节庆甜品师',message:'想用巧克力和糖果装点丰收节的餐桌。',needs:{chocolate:1,candy:1},coins:2050,xp:95},
  {level:40,person:'稀有动物研究员',message:'收集彩虹奶和黄金羊毛，记录小院里的奇迹。',needs:{rainbowMilk:1,goldenWool:1},coins:1100,xp:120},
  {level:60,person:'金色丰收宴',message:'把黄金南瓜和极光莓做成丰收展品吧。',needs:{goldenPumpkin:2,auroraBerry:1},coins:2200,xp:180}
@@ -221,6 +222,7 @@ export function parseSave(raw:string|null,now=Date.now(),refresh=true):FarmState
     if(legacy){s.features=newFeatures(s.stats,now);for(const id of PRODUCTS)if(s.inventory[id]>0)s.features.album.counts[id]=s.inventory[id];}
     if(!validateFeatures(s.features,PRODUCTS))return null;
     if(s.advanced===undefined)s.advanced=migrateAdvanced(s,now);
+    if(s.advanced.explore&&s.advanced.explore.seen===undefined)s.advanced.explore.seen={};
     if(!validateAdvanced(s,PRODUCTS))return null;
     if(!validateEcology(s.ecology,s.animals))return null;
     if(s.journey===undefined)s.journey=newJourney(s);else migrateJourney(s.journey);

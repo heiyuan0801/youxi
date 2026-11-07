@@ -70,6 +70,18 @@ export const COMMISSIONS: { id: string; title: string; needs: Partial<Record<Pro
   { id: 'cellar', title: '酒窖盘点', needs: { vinegar: 2, grapeJuice: 1 }, coins: 1100, xp: 55 },
 ];
 
+export const EXPLORE_QUESTS: { id: string; map: TravelId; title: string; story: string; depth: number; seen: 'fox' | 'vein' | 'shell' | 'flare' | 'puzzle'; item: ProductId; amount: number; reward: ProductId; coins: number }[] = [
+  { id: 'forest-fox', map: 'forest', title: '送走林狐', story: '在第3层处理过林狐，再带回1份香草给护林人。', depth: 3, seen: 'fox', item: 'herb', amount: 1, reward: 'gem', coins: 240 },
+  { id: 'forest-lamps', map: 'forest', title: '林灯谜底', story: '解开第4层林灯，并用2份木材修好路牌。', depth: 4, seen: 'puzzle', item: 'wood', amount: 2, reward: 'planks', coins: 280 },
+  { id: 'forest-heart', map: 'forest', title: '林心回信', story: '走到第8层并再解一次谜题，留下1颗宝石。', depth: 8, seen: 'puzzle', item: 'gem', amount: 1, reward: 'cloth', coins: 420 },
+  { id: 'mine-vein', map: 'mine', title: '撑住晶脉', story: '在第3层处理晶脉裂缝，再交2份铜矿。', depth: 3, seen: 'vein', item: 'ore', amount: 2, reward: 'coal', coins: 320 },
+  { id: 'mine-cart', map: 'mine', title: '矿车谜题', story: '解开第4层矿车配重，用1块木板加固轨道。', depth: 4, seen: 'puzzle', item: 'planks', amount: 1, reward: 'gem', coins: 360 },
+  { id: 'beach-shell', map: 'beach', title: '归还海贝', story: '在第3层处理搁浅海贝，再留下2条鱼。', depth: 3, seen: 'shell', item: 'fish', amount: 2, reward: 'gem', coins: 380 },
+  { id: 'beach-tide', map: 'beach', title: '夜潮谜题', story: '走到第8层解开潮汐贝壳，带1份木材做标记。', depth: 8, seen: 'puzzle', item: 'wood', amount: 1, reward: 'cloth', coins: 460 },
+  { id: 'snow-flare', map: 'snow', title: '稳住极光', story: '在第3层处理极光裂隙，交2份冰晶。', depth: 3, seen: 'flare', item: 'ice', amount: 2, reward: 'auroraBerry', coins: 520 },
+  { id: 'snow-heart', map: 'snow', title: '极光之心', story: '走到第12层解开冰晶谜题，献上1颗宝石。', depth: 12, seen: 'puzzle', item: 'gem', amount: 1, reward: 'estateBox', coins: 880 },
+];
+
 export interface Journey {
   breakfast: number;
   stories: TravelId[];
@@ -77,6 +89,7 @@ export interface Journey {
   chapter: number;
   step: number;
   commission: number;
+  quests: string[];
 }
 
 export function newJourney(s?: FarmState): Journey {
@@ -88,13 +101,14 @@ export function newJourney(s?: FarmState): Journey {
       if (s.features.album.counts.bread) breakfast = s.stats.deliveries ? 4 : 3;
     }
   }
-  return { breakfast, stories: [], honors: [], chapter: 0, step: 0, commission: 0 };
+  return { breakfast, stories: [], honors: [], chapter: 0, step: 0, commission: 0, quests: [] };
 }
 
 export function migrateJourney(j: Journey) {
   if (!Number.isInteger(j.chapter)) j.chapter = 0;
   if (!Number.isInteger(j.step)) j.step = 0;
   if (!Number.isInteger(j.commission)) j.commission = 0;
+  if (!Array.isArray(j.quests)) j.quests = [];
 }
 
 export function validJourney(j: Journey): boolean {
@@ -106,7 +120,13 @@ export function validJourney(j: Journey): boolean {
     && (!j.honors.includes(100) || j.honors.includes(80) && j.honors.includes(90))
     && Number.isInteger(j.chapter) && j.chapter >= 0 && j.chapter <= TOWN_CHAPTERS.length
     && Number.isInteger(j.step) && j.step >= 0 && j.step < (j.chapter >= TOWN_CHAPTERS.length ? 1 : TOWN_CHAPTERS[j.chapter].steps.length)
-    && Number.isInteger(j.commission) && j.commission >= 0 && j.commission <= 100000;
+    && Number.isInteger(j.commission) && j.commission >= 0 && j.commission <= 100000
+    && Array.isArray(j.quests) && new Set(j.quests).size === j.quests.length
+    && j.quests.every(id => EXPLORE_QUESTS.some(q => q.id === id))
+    && ['forest', 'mine', 'beach', 'snow'].every(map => {
+      const chain = EXPLORE_QUESTS.filter(q => q.map === map).map(q => j.quests.includes(q.id));
+      return chain.every((done, index) => !done || chain.slice(0, index).every(Boolean));
+    });
 }
 
 export function breakfastReady(s: FarmState): boolean {
@@ -173,6 +193,27 @@ export function turnInCommission(s: FarmState): Result {
   s.journey.commission++;
   if (s.journey.commission % COMMISSIONS.length === 0) s.stars += 2;
   return { ok: true, message: `${job.title}送达 · ${coins}金币 · 第${lap + 1}轮` };
+}
+
+export const mapQuests = (map: TravelId) => EXPLORE_QUESTS.filter(q => q.map === map);
+export const nextExploreQuest = (s: FarmState, map: TravelId) => mapQuests(map).find(q => !s.journey.quests.includes(q.id));
+
+export function finishExploreQuest(s: FarmState, id: string): Result {
+  const quest = EXPLORE_QUESTS.find(q => q.id === id);
+  if (!quest || s.life.activeMap !== quest.map || !s.life.maps.includes(quest.map)) return { ok: false, message: '请到当地再交这则探索故事' };
+  if (s.journey.quests.includes(quest.id)) return { ok: false, message: '这则探索故事已经完成' };
+  const earlier = mapQuests(quest.map).filter(q => EXPLORE_QUESTS.indexOf(q) < EXPLORE_QUESTS.indexOf(quest));
+  if (earlier.some(q => !s.journey.quests.includes(q.id))) return { ok: false, message: '先完成上一则探索故事' };
+  if ((s.advanced.explore.claimed[quest.map] || 0) < quest.depth) return { ok: false, message: `先安全返程并完成第${quest.depth}层` };
+  if (!(s.advanced.explore.seen[quest.map] || []).includes(quest.seen)) return { ok: false, message: '先在分层探索里遇到这一幕' };
+  if (s.inventory[quest.item] < quest.amount) return { ok: false, message: '故事材料还没备齐' };
+  s.inventory[quest.item] -= quest.amount;
+  s.inventory[quest.reward]++;
+  discover(s, quest.reward);
+  s.coins += quest.coins;
+  s.stars += 2;
+  s.journey.quests.push(quest.id);
+  return { ok: true, message: `${quest.title}完成 · ${quest.coins}金币和2农场星` };
 }
 
 export function finishStory(s: FarmState, id: TravelId): Result {

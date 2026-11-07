@@ -1,7 +1,7 @@
 import {pathTo,walkable,BENCHES,Tile} from './SceneLayout';
 import {AnimalId} from './FarmCatalog';
 import type {PatrolKind} from './FarmActivities';
-import {animalClip,gaitPose,sampleKeys,SNIFF_POSE,CAT_CHASE_POSE,DOG_FIND_POSE} from './AnimalAnimation';
+import {animalClip,facingOf,gaitPose,sampleKeys,SNIFF_POSE,CAT_CHASE_POSE,DOG_FIND_POSE} from './AnimalAnimation';
 import type {AnimalPose} from './AnimalAnimation';
 export type AnimalAction='walk'|'run'|'idle'|'peck'|'scratch'|'flap'|'graze'|'tail'|'moo'|'sleep'|'startle'|'happy'|'signature'|'patrol-sniff'|'patrol-result';
 export interface MovingAnimal {id:number;kind:'chicken'|'cow';species:AnimalId;x:number;y:number;tx:number;ty:number;action:AnimalAction;left:number;frame:number;flip:boolean;hop:number;phase:number;pasture:boolean;path:Tile[];poseAt:number;}
@@ -161,7 +161,7 @@ export class FarmMotion {
     const clip=animalClip(a.species);
     if(!clip)return null;
     if(a.action==='signature')return sampleKeys(clip.keys,this.gestureProgress(a));
-    if(a.action==='walk'||a.action==='run')return gaitPose(clip,a.frame,a.action==='run');
+    if(a.action==='walk'||a.action==='run')return gaitPose(clip,a.frame,a.action==='run',facingOf(a.tx-a.x,a.ty-a.y));
     if(a.action==='patrol-sniff')return sampleKeys(SNIFF_POSE,this.time-a.poseAt);
     if(a.action==='patrol-result'&&this.cue?.actor===a&&this.cue.start!==null){
       const keys=!this.cue.found?SNIFF_POSE:a.species==='cat'?CAT_CHASE_POSE:DOG_FIND_POSE;
