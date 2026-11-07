@@ -6,7 +6,9 @@ import {Trait} from './FarmAdvanced';
 import {pondPanel,growthPanel,eventsPanel} from './EcologyPanels';
 import {Node,UITransform,Mask,ScrollView,Vec2,Vec3,view,SpriteFrame,Sprite,Texture2D,ImageAsset,UIOpacity,BlockInputEvents,Graphics,LabelOutline} from 'cc';
 import {Painter,empty,tint,XY} from './Drawing';
-import {FarmState,CropId,ProductId,DecoId,CROPS,DECOS,PRODUCTS,NAMES,PRICES,TASKS,Result,levelFor,levelFloor,levelCeil,canDeliver,expansionCost,skipOrder,deliver,sell,expand,buyAnimal,claimTask,unlockWithStars,expandWithStars,expandPen} from './FarmModel';
+import {FarmState,CropId,ProductId,DecoId,CROPS,DECOS,PRODUCTS,NAMES,PRICES,TASKS,Result,levelFor,levelFloor,levelCeil,canDeliver,expansionCost,skipOrder,deliver,sell,expand,buyAnimal,claimTask,unlockWithStars,expandWithStars,expandPen,readyPlot,cropById,plantAll,waterAll,harvestAll} from './FarmModel';
+import {SOIL_GROWTH_LABEL,SOIL_NAME,SOIL_WATER_LABEL,soilCostLabel,soilTier,upgradeSoil} from './FarmSoil';
+import {LOCALE_LABEL,LOCALES,LocaleId,t} from './SoilText';
 import {workshopPanel,fishingPanel,journalPanel,diaryHeight,DiaryTab,FeaturePanelContext} from './FeaturePanels';
 import {DAILY_GOALS,dailyProgress,fishingPhase,RECIPES,recipeFactory} from './FarmFeatures';
 import {ANIMALS,TRAVEL_MAPS,FactoryId,FurnitureId,MapId,SEASONS,WEATHER_NAMES} from './FarmCatalog';
@@ -18,7 +20,7 @@ import {RegionId} from './WorldData';
 import { FLOWER_PALETTE, FlowerChoice, repairStormPlot } from './FarmActivities';
 import { areaStoryPanel, breakfastPanel, carpenterPanel, festivalGamesPanel, honorsPanel, iceFishingPanel, patrolPanel } from './JourneyPanels';
 export type Panel='warehouse'|'orders'|'shop'|'tasks'|'workshop'|'fishing'|'world'|'levels'|'animals'|'travel'|'home'|'seasons'|'genetics'|'explore'|'automation'|'offline'|'ponds'|'growth'|'events'|'settings'|'privacy'|'confirm-reset'|'breakfast'|'story'|'honors'|'carpenter'|'festival-games'|'ice-fishing'|'patrol'|'restore-save'|null;
-export interface UICallbacks {act:(f:()=>Result)=>void;pick:(id:CropId)=>void;place:(id:DecoId)=>void;zoom:(factor:number)=>void;focus:(id:RegionId|'home')=>void;travel:(id:MapId)=>void;settings:(key:'sound'|'music'|'haptics')=>void;exportSave:()=>void;chooseSave:()=>void;restoreBackup:()=>void;confirmSave:()=>void;reset:()=>void;start:()=>void;}
+export interface UICallbacks {act:(f:()=>Result)=>void;pick:(id:CropId)=>void;place:(id:DecoId)=>void;zoom:(factor:number)=>void;focus:(id:RegionId|'home')=>void;travel:(id:MapId)=>void;settings:(key:'sound'|'music'|'haptics')=>void;setLocale:(id:LocaleId)=>void;exportSave:()=>void;chooseSave:()=>void;restoreBackup:()=>void;confirmSave:()=>void;reset:()=>void;start:()=>void;}
 const PALE='#fffcf4',LINE='#f2d8ac',INK='#5a3e2b',SOFT='#997455';
 export class FarmUI {
   panel:Panel=null;shopTab='土地';seedOpen=false;selected:CropId|null=null;started=true;
@@ -29,7 +31,7 @@ export class FarmUI {
   diaryTab:DiaryTab='成长';private liveUpdates:(()=>void)[]=[];
   private scrollId='';
   levelUp:number|null=null;private levelQueue:number[]=[];
-  landIndex:number|null=null;
+  landIndex:number|null=null;soilIndex:number|null=null;
   p!:Painter;private buttons:{label:string;n:Node}[]=[];private modalRoot!:Node;private toastRoot!:Node;
   private backdrop:SpriteFrame|null=null;private backdropTexture:Texture2D|null=null;private backdropCanvas:HTMLCanvasElement|null=null;
   constructor(public root:Node,private art:Map<string,SpriteFrame>,private state:()=>FarmState,private cb:UICallbacks){}
@@ -64,6 +66,8 @@ export class FarmUI {
       this.button(p,this.root,state.journey.breakfast<5?'农场主线':'晴野荣誉',w/2-14,w<650?92:sys.isNative?44:32,104,34,()=>this.open(state.journey.breakfast<5?'breakfast':'honors'),'#ffb150','#dc8a29',13);
       if(state.animals.some(a=>a.type==='cat'||a.type==='dog'))this.button(p,this.root,state.activities.patrol?'巡院线索':'宠物巡院',80,256,118,35,()=>this.open('patrol'),'#ab89d3','#8360ac',13);
       if(state.activities.stormPlot!==null)this.button(p,this.root,'疏通积水',209,256,118,35,()=>this.cb.act(()=>repairStormPlot(state)),'#58bde4','#3295bd',13);
+      this.button(p,this.root,t('soil.open',{},state.locale),348,256,136,35,()=>{this.shopTab='土地';this.open('shop');},'#8d6b4a','#6a4c32',13);
+      this.renderBatch(state,w,h);
     }
     this.button(p,this.root,'自动农场',w-115,sys.isNative?224:212,178,35,()=>this.open('automation'),'#ab89d3','#8360ac',13);
     if(state.advanced.auto.report)this.button(p,this.root,state.advanced.auto.report.unread?'离线收获 · 查看':'离线报告',w-115,sys.isNative?266:254,178,33,()=>this.open('offline'),'#ffb150','#dc8a29',13);
@@ -87,7 +91,7 @@ export class FarmUI {
   open(panel:Panel){this.panel=panel;this.seedOpen=false;this.render();}
   resetSelection(){
     this.levelUp=null;this.levelQueue=[];this.panel=null;this.seedOpen=false;this.selected=null;this.seedPage=0;
-    this.parents=[];this.companion=null;this.roomSelected=null;this.landIndex=null;this.restorePreview=null;this.scrollId='';
+    this.parents=[];this.companion=null;this.roomSelected=null;this.landIndex=null;this.soilIndex=null;this.restorePreview=null;this.scrollId='';
   }
   close(){if(this.levelUp!==null){this.levelUp=null;this.levelQueue=[];}else{this.panel=null;this.seedOpen=false;}this.render();}
   celebrate(from:number,to:number){const levels=Array.from({length:Math.max(0,to-from)},(_,i)=>from+i+1).filter(l=>!this.state().progression.claimedLevels.includes(l));this.levelQueue.push(...levels);if(this.levelUp===null)this.levelUp=this.levelQueue.shift()??null;this.seedOpen=false;this.render();}
@@ -96,7 +100,8 @@ export class FarmUI {
   tick(){for(const update of this.liveUpdates)update();}
   private renderSeeds(){
     const p=this.p,w=Math.min(760,p.w-16),height=238,x=p.w/2,y=p.h-height/2-10,root=p.node(this.root,'SeedPicker');const panel=p.rect(root,x,y+6,w,height,'#efd9b3',28);p.rect(root,x,y,w,height,PALE,28,'#ffffff',3);panel.addComponent(BlockInputEvents);
-    p.label(root,'选择种子',x-w/2+126,y-height/2+25,20,INK,215,30,true,'left');p.label(root,this.selected?'点按或滑过空地，连续播种':'选一种作物种到地里',x-w/2+169,y-height/2+49,12.5,SOFT,300,24,true,'left');this.closeButton(p,root,x+w/2-35,y-height/2+35,()=>{this.seedOpen=false;this.selected=null;this.render();});
+    const soilPlot=this.soilIndex!==null?this.state().plots[this.soilIndex]:undefined,soilName=soilPlot?.unlocked?t(SOIL_NAME[soilTier(soilPlot)],{},this.state().locale):'';
+    p.label(root,'选择种子',x-w/2+126,y-height/2+25,20,INK,215,30,true,'left');p.label(root,(this.selected?'点按或滑过空地，连续播种':'选一种作物种到地里')+(soilName?` · ${soilName}`:''),x-w/2+169,y-height/2+49,12.5,SOFT,340,24,true,'left');this.closeButton(p,root,x+w/2-35,y-height/2+35,()=>{this.seedOpen=false;this.selected=null;this.render();});
     this.button(p,root,'上一页',x+110,y-height/2+25,65,28,()=>{this.seedPage=(this.seedPage+Math.ceil(CROPS.length/6)-1)%Math.ceil(CROPS.length/6);this.render();},'#d6c4a4','#bba17b',11);p.label(root,`${this.seedPage+1}/${Math.ceil(CROPS.length/6)}`,x+166,y-height/2+25,12,SOFT,40,25);this.button(p,root,'下一页',x+222,y-height/2+25,65,28,()=>{this.seedPage=(this.seedPage+1)%Math.ceil(CROPS.length/6);this.render();},'#ffb150','#dc8a29',11);
     const cardW=Math.min(104,(w-34-50)/6),gap=10,start=x-w/2+16+cardW/2;
     CROPS.slice(this.seedPage*6,this.seedPage*6+6).forEach((c,i)=>{const xx=start+i*(cardW+gap),cy=y+29,locked=levelFor(this.state().xp)<c.level&&!this.state().cropUnlocks.includes(c.id),selected=this.selected===c.id;
@@ -178,11 +183,12 @@ export class FarmUI {
       });return;
     }
     if(panel==='shop'){
-      const contentH=this.shopTab==='装饰'?590:this.shopTab==='农场星'?1240:this.shopTab==='动物'?80+Math.ceil(ANIMALS.length/2)*325:390,m=this.modal('商店','market',600,contentH+70,contentH),{p,root,w}=m;
+      const contentH=this.shopTab==='装饰'?590:this.shopTab==='农场星'?1240:this.shopTab==='动物'?80+Math.ceil(ANIMALS.length/2)*325:640,m=this.modal('商店','market',600,contentH+70,contentH),{p,root,w}=m;
       p.rect(root,w/2,23,w,40,'#f5e6c8',20);['土地','动物','装饰','农场星'].forEach((tab,i)=>{const xx=w/8+i*w/4,n=p.rect(root,xx,23,w/4-4,34,this.shopTab===tab?'#ffffff':'#f5e6c8',18);p.label(root,tab,xx,23,14,this.shopTab===tab?INK:SOFT,w/4-8,28);p.hit(n,()=>{this.shopTab=tab;this.render();});this.buttons.push({label:'商店-'+tab,n});});
       if(this.shopTab==='土地'){
         const start=this.landIndex===null?0:this.landIndex<30?0:30+Math.floor((this.landIndex-30)/18)*18,end=this.landIndex===null?state.plots.length:start===0?30:start+18,target=state.plots.findIndex((plot,i)=>i>=start&&i<end&&!plot.unlocked),area=this.landIndex===null?'':start===0?'主农场':(['东侧草甸','甜蜜果林','阳光牧场'][Math.floor((start-30)/18)]||'');
         this.slot(p,root,w/2,225,w,323);const cx=w/2,cy=124;p.poly(root,[[cx,cy-30],[cx+82,cy+12],[cx,cy+54],[cx-82,cy+12]],'#7cd36a','#ffffff',3);p.poly(root,[[cx-82,cy+12],[cx,cy+54],[cx,cy+66],[cx-82,cy+24]],'#c98a52');p.poly(root,[[cx+82,cy+12],[cx,cy+54],[cx,cy+66],[cx+82,cy+24]],'#a86c3c');p.poly(root,[[cx,cy-16],[cx+56,cy+12],[cx,cy+40],[cx-56,cy+12]],'#a8714a');p.contain(root,'wheat',cx+74,cy-20,56);p.label(root,area?`开垦${area}`:'扩建田地',cx,219,20,INK,w-30,34);const n=state.plots.filter(p=>p.unlocked).length;p.label(root,`已有${n}/${state.plots.length}块地。地越多，收成越多！`,cx,251,13.5,SOFT,w-30,27);p.rect(root,cx,276,260,10,'#f1e2c8',5);p.rect(root,cx-130+260*n/state.plots.length/2,276,260*n/state.plots.length,10,'#a7744a',5);this.button(p,root,target<0?'这片田地已全部开垦':`购买田地 · ${expansionCost(state)}`,cx,324,210,48,()=>this.cb.act(()=>target<0?{ok:false,message:'这片田地已经全部开垦'}:expand(state,target)),'#67ca70','#3fa84d',17);p.label(root,'也可以直接点田里的价格牌',cx,368,12.5,SOFT,w-20,27);
+        this.renderSoilShop(p,root,w,state);
       }else if(this.shopTab==='动物'){
         ANIMALS.forEach((spec,i)=>{const id=spec.id,x=w/4+i%2*w/2,y=213+Math.floor(i/2)*325,locked=levelFor(state.xp)<spec.level&&!(spec.id==='whitePeacock'&&state.ecology.auroraAnimal);this.slot(p,root,x,y,w/2-8,309);p.pill(root,x-51,y-118,58,25,'#fff1d6');p.label(root,`${state.animals.filter(a=>a.type===id).length}/${animalCapacity(state,id)}`,x-51,y-118,13,INK,54,23);const img=p.contain(root,spec.sprite,x,y-41,116,120);if(locked){p.opacity(img,130);img.getComponent(Sprite)!.grayscale=true;p.pill(root,x,y-43,94,27,INK);p.label(root,`${spec.level}级解锁`,x,y-43,12,'#ffffff',91,25);}p.label(root,spec.name,x,y+46,20,INK,w/2-20,31);p.label(root,`${NAMES[spec.product]} · ${shortTime(spec.seconds)}`,x,y+77,13,SOFT,w/2-20,27);this.button(p,root,`购买 · ${spec.cost}`,x,y+120,w/2-30,44,()=>this.cb.act(()=>buyAnimal(state,id)),'#ff7aa2','#d64f7d',15.5);});
       }else if(this.shopTab==='装饰'){
@@ -199,10 +205,11 @@ export class FarmUI {
       p.rect(root,w/2,23,w,40,'#f5e6c8',20);(['成长','今日','建设','图鉴'] as const).forEach((tab,i)=>{const x=w/8+i*w/4,n=p.rect(root,x,23,w/4-4,34,this.diaryTab===tab?'#ffffff':'#f5e6c8',18);p.label(root,tab,x,23,14,this.diaryTab===tab?INK:SOFT,w/4-8,28);p.hit(n,()=>{this.diaryTab=tab;this.render();});this.buttons.push({label:'手记-'+tab,n});});journalPanel(this.featureContext(m),this.diaryTab);return;
     }
     if(panel==='settings'){
-      const m=this.modal('设置','',500,650,574),{p,root,w}=m;p.label(root,'声音与触感',w/2,18,18,'#7755a6',w-20,33);(['music','sound','haptics'] as const).forEach((key,i)=>{const y=80+i*63;this.slot(p,root,w/2,y,w,53);p.label(root,{music:'背景音乐',sound:'音效',haptics:'振动'}[key],100,y,16,INK,175,35,true,'left');const on=state[key];this.button(p,root,on?'开启':'关闭',w-52,y,80,34,()=>this.cb.settings(key),on?'#67ca70':'#c9bca5',on?'#3fa84d':'#ad9b7e',14);});
-      this.button(p,root,'导出存档',w/2,292,w-20,43,this.cb.exportSave,'#5ebde8','#3397c2',16);this.button(p,root,'隐私与存档说明',w/2,351,w-20,43,()=>this.open('privacy'),'#ab89d3','#8360ac',16);this.button(p,root,'重新开始',w/2,410,w-20,43,()=>this.open('confirm-reset'),'#ff7aa2','#d64f7d',16);
-      this.button(p,root,'导入存档',w/2,469,w-20,43,this.cb.chooseSave,'#67ca70','#3fa84d',16);
-      this.button(p,root,'恢复本机备份',w/2,528,w-20,43,this.cb.restoreBackup,'#ffb150','#dc8a29',16);return;
+      const m=this.modal('设置','',500,760,690),{p,root,w}=m;p.label(root,'声音与触感',w/2,18,18,'#7755a6',w-20,33);(['music','sound','haptics'] as const).forEach((key,i)=>{const y=80+i*63;this.slot(p,root,w/2,y,w,53);p.label(root,{music:'背景音乐',sound:'音效',haptics:'振动'}[key],100,y,16,INK,175,35,true,'left');const on=state[key];this.button(p,root,on?'开启':'关闭',w-52,y,80,34,()=>this.cb.settings(key),on?'#67ca70':'#c9bca5',on?'#3fa84d':'#ad9b7e',14);});
+      p.label(root,t('soil.lang',{},state.locale),w/2,262,16,'#7755a6',w-20,28);LOCALES.forEach((id,i)=>{const ww=(w-16)/5,x=ww/2+8+i*ww;this.button(p,root,LOCALE_LABEL[id],x,300,ww-6,36,()=>this.cb.setLocale(id),state.locale===id?'#67ca70':'#cfbfa1',state.locale===id?'#3fa84d':'#ad9875',12);});
+      this.button(p,root,'导出存档',w/2,362,w-20,43,this.cb.exportSave,'#5ebde8','#3397c2',16);this.button(p,root,'隐私与存档说明',w/2,421,w-20,43,()=>this.open('privacy'),'#ab89d3','#8360ac',16);this.button(p,root,'重新开始',w/2,480,w-20,43,()=>this.open('confirm-reset'),'#ff7aa2','#d64f7d',16);
+      this.button(p,root,'导入存档',w/2,539,w-20,43,this.cb.chooseSave,'#67ca70','#3fa84d',16);
+      this.button(p,root,'恢复本机备份',w/2,598,w-20,43,this.cb.restoreBackup,'#ffb150','#dc8a29',16);return;
     }
     if(panel==='restore-save'){
       const m=this.modal('确认恢复存档','',590,360,285),{p,root,w}=m,preview=this.restorePreview;
@@ -224,6 +231,33 @@ export class FarmUI {
   }
   private renderLevelUp(){const level=this.levelUp!,p=this.p,root=p.node(this.root,'LevelUpOverlay');if(this.backdrop){const n=p.node(root,'BlurredFarm',p.w/2,p.h/2,p.w,p.h),s=n.addComponent(Sprite);s.sizeMode=Sprite.SizeMode.CUSTOM;s.spriteFrame=this.backdrop;n.getComponent(UITransform)!.setContentSize(p.w,p.h);}const shade=p.rect(root,p.w/2,p.h/2,p.w+4,p.h+4,'#423d31',0,undefined,2,105);shade.addComponent(BlockInputEvents);levelUpCard(p,root,this.state(),level,(label,x,y,w,h,run,color,dark,font)=>this.button(p,root,label,x,y,w,h,run,color,dark,font),()=>{this.levelUp=this.levelQueue.shift()??null;if(level>levelFor(this.state().xp)||this.state().progression.claimedLevels.includes(level))this.render();else this.cb.act(()=>claimLevelReward(this.state(),level));});}
   private featureContext(m:{p:Painter;root:Node;w:number;h:number}):FeaturePanelContext{return{...m,state:this.state(),act:this.cb.act,button:(label,x,y,w,h,run,color,dark,font)=>this.button(m.p,m.root,label,x,y,w,h,run,color,dark,font),slot:(x,y,w,h)=>this.slot(m.p,m.root,x,y,w,h),live:f=>this.liveUpdates.push(f)};}
+  private renderBatch(state:FarmState,w:number,h:number){
+    const now=Date.now(),seed=this.selected?cropById(this.selected):null,locale=state.locale;
+    const open=(plot:FarmState['plots'][number],i:number)=>plot.unlocked&&!plot.crop&&state.activities.stormPlot!==i;
+    const plantable=seed&&seed.cost>0&&(levelFor(state.xp)>=seed.level||state.cropUnlocks.includes(seed.id))?Math.min(state.plots.filter(open).length,Math.floor(state.coins/seed.cost)):0;
+    const thirsty=state.plots.filter(plot=>!!plot.crop&&!plot.watered&&!readyPlot(plot,now)).length;
+    const ripe=state.plots.filter(plot=>readyPlot(plot,now)).length;
+    const batch=[
+      plantable>0&&this.selected?{label:`${t('hud.plant',{},locale)} · ${plantable}`,run:()=>this.cb.act(()=>plantAll(state,this.selected!)),color:'#67ca70',dark:'#3fa84d'}:null,
+      thirsty>0?{label:`${t('hud.water',{},locale)} · ${thirsty}`,run:()=>this.cb.act(()=>waterAll(state)),color:'#58bde4',dark:'#3295bd'}:null,
+      ripe>0?{label:`${t('hud.harvest',{},locale)} · ${ripe}`,run:()=>this.cb.act(()=>harvestAll(state)),color:'#ffb150',dark:'#dc8a29'}:null,
+    ].flatMap(item=>item?[item]:[]);
+    if(!batch.length)return;
+    const y=this.seedOpen?h-278:h-148,bw=Math.min(176,(w-24)/batch.length-8);
+    batch.forEach((item,i)=>{const x=w/2+(i-(batch.length-1)/2)*(bw+8);this.button(this.p,this.root,item.label,x,y,bw,44,item.run,item.color,item.dark,14);});
+  }
+  private renderSoilShop(p:Painter,root:Node,w:number,state:FarmState){
+    const locale=state.locale,idx=this.soilIndex,plot=idx!==null?state.plots[idx]:undefined,tier=plot?.unlocked?soilTier(plot):null;
+    this.slot(p,root,w/2,520,w,210);
+    p.label(root,t('soil.open',{},locale),w/2,438,18,INK,w-20,30);
+    p.label(root,`${t(SOIL_NAME[0],{},locale)} ${SOIL_GROWTH_LABEL[0]} · ${SOIL_WATER_LABEL[0]}`,w/2,472,13,SOFT,w-28,26);
+    p.label(root,`${t(SOIL_NAME[1],{},locale)} ${SOIL_GROWTH_LABEL[1]} · ${SOIL_WATER_LABEL[1]}    ${t(SOIL_NAME[2],{},locale)} ${SOIL_GROWTH_LABEL[2]} · ${SOIL_WATER_LABEL[2]}`,w/2,498,13,SOFT,w-28,26);
+    if(tier===null||idx===null){p.label(root,t('soil.pick',{},locale),w/2,548,14,SOFT,w-24,40);return;}
+    p.label(root,t('soil.current',{index:idx+1,name:t(SOIL_NAME[tier],{},locale)},locale),w/2,540,15,INK,w-24,28);
+    if(tier>=2){this.button(p,root,t('soil.max',{},locale),w/2,586,w-40,42,()=>this.toast(t('soil.max',{},locale)),'#cbbd9e','#ac9978',14);return;}
+    const next=(tier+1) as 1|2,label=`${t('soil.upgrade',{name:t(SOIL_NAME[next],{},locale)},locale)} · ${soilCostLabel(next,locale)}`;
+    this.button(p,root,label,w/2,586,w-40,42,()=>this.cb.act(()=>upgradeSoil(state,idx)),'#67ca70','#3fa84d',14);
+  }
   toast(message:string){if(!this.toastRoot)return;empty(this.toastRoot);const p=this.p,w=Math.min(p.w-24,message.length*15+60),n=p.pill(this.toastRoot,p.w/2,135,w,42);p.label(this.toastRoot,message,p.w/2,135,14.5,INK,w-20,35);setTimeout(()=>{if(n.isValid&&this.toastRoot.isValid)empty(this.toastRoot);},2300);}
   private title(){const p=this.p,n=p.node(this.root,'Title');p.rect(n,p.w/2,p.h/2,p.w,p.h,'#bfe1d2',0).addComponent(BlockInputEvents);const f=this.art.get('cover')!,ratio=f.rect.width/f.rect.height,ww=Math.max(p.w,p.h*ratio);p.image(n,'cover',p.w/2,ww/ratio/2,ww,ww/ratio);this.button(p,n,'开始游戏',p.w/2,p.h*.87,Math.min(300,p.w*.45),p.h<500?44:57,()=>{this.started=true;this.cb.start();this.panel=this.state().advanced.auto.report?.unread?'offline':null;this.render();},'#67ca70','#3fa84d',p.h<500?20:25);p.label(n,'种田 · 育种 · 装修 · 探索',p.w/2,p.h*.96,13,'#ffffff',300,25,true,'center','#5a3e2b');} 
 }

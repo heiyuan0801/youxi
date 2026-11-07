@@ -19,6 +19,7 @@ import {REGIONS,RegionId} from './WorldData';
 import {refreshFeatures,fishingPhase,rollDaily} from './FarmFeatures';
 import {PLOTS,unproject,freeGrass,project,BASE_Z,WIDTH,HEIGHT} from './SceneLayout';
 import {FarmState,Result,CropId,DecoId,SAVE_KEY,newFarm,parseSave,serialize,plant,harvest,water,readyPlot,secondsLeft,cropById,collectAnimal,buyDecoration,tendFlower,levelFor} from './FarmModel';
+import {LocaleId} from './SoilText';
 const {ccclass}=_decorator;
 const MAX_SAVE_BYTES=8*1024*1024;
 @ccclass('FarmApp')
@@ -47,7 +48,7 @@ export class FarmApp extends Component {
   }
   private initialize(p:Painter){
     this.world=p.node(this.node,'FarmWorld',800,450,9000,7000);const hud=p.node(this.node,'ReferenceUI');this.scene=new FarmScene(this.world,this.art,()=>this.state);this.sfx=new FarmAudio(this.node,this.soundClips,this.nativeClips);this.sfx.setEnabled(this.state.sound);
-    this.ui=new FarmUI(hud,this.art,()=>this.state,{act:f=>this.act(f),pick:id=>this.pick(id),place:id=>{this.placing=id;this.ui.toast('点一块空草地，放下新的装饰');},zoom:f=>this.zoom(f),focus:id=>this.focus(id),travel:id=>this.travelTo(id),settings:key=>{this.state[key]=!this.state[key];if(key==='sound')this.sfx.setEnabled(this.state.sound);if(key==='music')this.sfx.setMusic(this.state.music&&this.audioStarted);this.save();this.ui.render();},exportSave:()=>this.exportSave(),chooseSave:()=>this.chooseSave(),restoreBackup:()=>this.restoreBackup(),confirmSave:()=>this.confirmSave(),reset:()=>this.reset(),start:()=>this.startAudio()});
+    this.ui=new FarmUI(hud,this.art,()=>this.state,{act:f=>this.act(f),pick:id=>this.pick(id),place:id=>{this.placing=id;this.ui.toast('点一块空草地，放下新的装饰');},zoom:f=>this.zoom(f),focus:id=>this.focus(id),travel:id=>this.travelTo(id),settings:key=>{this.state[key]=!this.state[key];if(key==='sound')this.sfx.setEnabled(this.state.sound);if(key==='music')this.sfx.setMusic(this.state.music&&this.audioStarted);this.save();this.ui.render();},setLocale:(id:LocaleId)=>{this.state.locale=id;this.save();this.ui.render();},exportSave:()=>this.exportSave(),chooseSave:()=>this.chooseSave(),restoreBackup:()=>this.restoreBackup(),confirmSave:()=>this.confirmSave(),reset:()=>this.reset(),start:()=>this.startAudio()});
     this.ui.started=!!rawSession();
     this.world.on(Node.EventType.TOUCH_START,this.touchStart,this);this.world.on(Node.EventType.TOUCH_MOVE,this.touchMove,this);this.world.on(Node.EventType.TOUCH_END,this.touchEnd,this);this.world.on(Node.EventType.TOUCH_CANCEL,()=>{this.pointer=null;this.pinch=0;this.flush();});
     this.world.on(Node.EventType.MOUSE_WHEEL,(e:EventMouse)=>this.zoom(e.getScrollY()>0?1.08:1/1.08,e.getUILocation()));
@@ -73,6 +74,7 @@ export class FarmApp extends Component {
     const hit=this.scene.hit(at);if(!hit)return;
     if(hit.type==='plot'){
       const i=Number(hit.id),plot=this.state.plots[i];
+      if(plot.unlocked)this.ui.soilIndex=i;
       if(this.state.activities.stormPlot===i){this.act(()=>repairStormPlot(this.state),at);return;}
       if(!plot.unlocked){const start=i<30?0:30+Math.floor((i-30)/18)*18,end=i<30?30:start+18,next=this.state.plots.findIndex((p,n)=>n>=start&&n<end&&!p.unlocked);if(i===next){this.ui.landIndex=i;this.ui.shopTab='土地';this.ui.open('shop');}else this.ui.toast('先开垦这片田里有价格牌的地块吧');return;}
       if(readyPlot(plot)){this.act(()=>harvest(this.state,i),at);return;}

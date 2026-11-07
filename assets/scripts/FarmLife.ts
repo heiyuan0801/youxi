@@ -3,6 +3,7 @@ import {growthLevel,growAnimal} from './FarmEcology';
 import type {FarmState,Result,ProductId,Animal} from './FarmModel';
 import {ANIMALS,AnimalId,animalSpec,FACTORIES,FactoryId,TRAVEL_MAPS,TravelId,MapId,FURNITURE,FurnitureId,SEASONS,WEATHER_NAMES,WeatherId,EXTRA_CROPS} from './FarmCatalog';
 import {farmLevel,discover,rollDaily} from './FarmFeatures';
+import {soilTier,waterCutMs} from './FarmSoil';
 export interface AnimalCare {hunger:number;mood:number;health:number;bond:number;lastAt:number;groomAt:number;bornAt:number;adultAt:number;breedAt:number;}
 export interface FarmLife {
  schema:1;epoch:number;activeMap:MapId;maps:TravelId[];factories:FactoryId[];
@@ -31,7 +32,7 @@ export function refreshLife(s:FarmState,now=Date.now()){
  for(const p of s.plots){
   if(p.pauseAt!==undefined&&p.pauseUntil!==undefined&&now>=p.pauseUntil){p.plantedAt+=Math.max(0,p.pauseUntil-p.pauseAt);delete p.pauseAt;delete p.pauseUntil;changed=true;}
   if(!p.crop)continue;
-  if((weather==='rain'||weather==='storm'||weather==='thunder')&&!p.watered){p.plantedAt-=(p.growSeconds||20)*200;p.watered=true;changed=true;}
+  if((weather==='rain'||weather==='storm'||weather==='thunder')&&!p.watered){p.plantedAt-=waterCutMs(p.growSeconds||20,soilTier(p));p.watered=true;changed=true;}
   if(weather==='snow'&&p.pauseAt===undefined&&EXTRA_CROPS.some(c=>c.id===p.crop&&['cocoa','coffee','watermelon','cucumber','sugarcane'].includes(c.id))&&now<p.plantedAt+(p.growSeconds||20)*1000){p.pauseAt=now;p.pauseUntil=l.epoch+(win+1)*240000;changed=true;}
  }
  return changed;

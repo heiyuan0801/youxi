@@ -7,6 +7,8 @@ import {Ecology,newEcology,validateEcology,growAnimal} from './FarmEcology';
 import {FEATURE_ITEMS,FEATURE_NAMES,FEATURE_PRICES,FeatureProductId,FarmFeatures,newFeatures,validateFeatures,rollDaily,refreshFeatures,discover,farmLevel,RECIPES,recipeFactory,recipeProduct} from './FarmFeatures';
 import {FarmProgression,newProgression,validateProgression,animalCapacity} from './FarmProgression';
 import {EXTRA_CROPS,ExtraCropId,ANIMALS,animalSpec,AnimalId,TRAVEL_MAPS,AQUATIC} from './FarmCatalog';
+import {SOIL_WATER_LABEL,cropGrowSeconds,soilTier,waterCutMs,type SoilTier} from './FarmSoil';
+import {t,type LocaleId} from './SoilText';
 import {FarmLife,newLife,newCare,careFor,isAdult,efficiency,validateLife,refreshLife} from './FarmLife';
 export type {AnimalId} from './FarmCatalog';
 export type CropId = 'wheat' | 'carrot' | 'tomato' | 'strawberry' | 'corn' | 'pumpkin' | ExtraCropId;
@@ -25,7 +27,7 @@ export const NAMES = {...Object.fromEntries(CROPS.map(c=>[c.id,c.name])),egg:'�
 export const PRICES = {...Object.fromEntries(CROPS.map(c=>[c.id,c.sell])),egg:30,milk:62,...FEATURE_PRICES} as Record<ProductId,number>;
 export const DECOS=[{type:'bush',sprite:'bush',name:'花丛',cost:25,level:1,xp:1},{type:'pine',sprite:'tree_pine',name:'松树',cost:40,level:1,xp:2},{type:'tree',sprite:'tree_round',name:'绿树',cost:60,level:2,xp:3},{type:'hay',sprite:'hay',name:'干草堆',cost:50,level:2,xp:2},{type:'cherry',sprite:'tree_pink',name:'樱花树',cost:120,level:3,xp:5},{type:'scarecrow',sprite:'scarecrow',name:'稻草人',cost:90,level:4,xp:4},{type:'well',sprite:'well',name:'石井',cost:180,level:5,xp:6},{type:'sunflower',sprite:'sunflower',name:'向日葵',cost:0,level:1,xp:2,stars:8,task:'first-harvest'},{type:'signpost',sprite:'signpost',name:'路标',cost:0,level:1,xp:2,stars:8,task:'first-order'},{type:'bakery',sprite:'bakery',name:'面包摊',cost:0,level:1,xp:4,stars:14,task:'harvest-30'},{type:'swing',sprite:'swing',name:'秋千',cost:0,level:1,xp:4,stars:12,task:'animal-friend'}] as const;
 export type DecoId=typeof DECOS[number]['type'];
-export interface Plot { unlocked: boolean; crop: CropId | null; plantedAt: number; watered: boolean; growSeconds?:number; pauseAt?:number;pauseUntil?:number; composted?:boolean; }
+export interface Plot { unlocked: boolean; crop: CropId | null; plantedAt: number; watered: boolean; growSeconds?:number; pauseAt?:number;pauseUntil?:number; composted?:boolean; soil?:SoilTier; }
 export interface Animal { id: number; type: AnimalId; readyAt: number; }
 export interface Order { id: number; person: string; message: string; needs: Partial<Record<ProductId,number>>; coins: number; xp: number; }
 export interface FarmState {
@@ -37,7 +39,7 @@ export interface FarmState {
   features:FarmFeatures;
   progression:FarmProgression;
   life:FarmLife;ecology:Ecology;advanced:Advanced;
-  journey:Journey;activities:FarmActivities;
+  journey:Journey;activities:FarmActivities;locale:LocaleId;
 }
 export interface Result { ok:boolean; message:string; item?:ProductId; }
 const fail=(message:string):Result=>({ok:false,message});
@@ -57,7 +59,7 @@ export function newFarm(now=Date.now()):FarmState {
     {id:1,type:'hen',readyAt:now+6000},{id:2,type:'hen',readyAt:now+18000},
     {id:3,type:'hen',readyAt:now-1000},{id:4,type:'cow',readyAt:now+30000}],
     orders:[makeOrder(0),makeOrder(1),makeOrder(2)],orderSequence:3,
-    stats:{harvests:0,deliveries:0,expansions:0,products:0},claimed:[],decorations:[],savedAt:now,sound:true};
+    stats:{harvests:0,deliveries:0,expansions:0,products:0},claimed:[],decorations:[],savedAt:now,sound:true,locale:'zh-CN'};
 }
 const templates = [
   {person:'林奶奶',message:'早上的面包，就差新鲜的麦香啦。',needs:{wheat:3,carrot:1},coins:76,xp:12},
@@ -117,7 +119,7 @@ export function plant(s:FarmState,index:number,id:CropId,now=Date.now()):Result 
   if(s.activities.stormPlot===index)return fail('田里还有积水，先疏通再播种');
   if(p.crop)return fail('这块田里已经有作物了'); if(levelFor(s.xp)<c.level&&!s.cropUnlocks.includes(id))return fail(`${c.level}级解锁${c.name}`);
   if(s.coins<c.cost)return fail('金币不足，试试出售库存或完成订单');
-  s.coins-=c.cost;delete p.pauseAt;delete p.pauseUntil; Object.assign(p,{crop:id,plantedAt:now,watered:false,growSeconds:c.seconds*(1-.1*s.features.upgrades.irrigation)});return success(`种下${c.name}`,id);
+  s.coins-=c.cost;delete p.pauseAt;delete p.pauseUntil; Object.assign(p,{crop:id,plantedAt:now,watered:false,growSeconds:cropGrowSeconds(c.seconds,s.features.upgrades.irrigation,soilTier(p))});return success(`种下${c.name}`,id);
 }
 export function harvest(s:FarmState,index:number,now=Date.now()):Result {
   const p=s.plots[index]; if(!p?.crop||!readyPlot(p,now))return fail('作物还在慢慢长大');
@@ -128,7 +130,27 @@ export function harvest(s:FarmState,index:number,now=Date.now()):Result {
 export function water(s:FarmState,index:number,now=Date.now()):Result {
   const p=s.plots[index];if(!p?.crop||readyPlot(p,now))return fail('选择正在生长的作物浇水');
   if(p.watered)return fail('已经浇过水了，耐心等它长大吧');
-  p.plantedAt-=growSeconds(p)*200;p.watered=true;return success('浇水成功 · 生长时间缩短20%');
+  p.plantedAt-=waterCutMs(growSeconds(p),soilTier(p));p.watered=true;return success(t('soil.watered',{water:SOIL_WATER_LABEL[soilTier(p)]},s.locale));
+}
+const openPlot=(s:FarmState,index:number)=>!!s.plots[index]?.unlocked&&!s.plots[index].crop&&s.activities.stormPlot!==index;
+export function plantAll(s:FarmState,id:CropId,now=Date.now()):Result {
+  const c=cropById(id);if(!c)return fail(t('batch.noSeed',{},s.locale));
+  if(levelFor(s.xp)<c.level&&!s.cropUnlocks.includes(id))return fail(t('batch.plantLock',{level:c.level,name:c.name},s.locale));
+  const slots=s.plots.reduce((n,_,i)=>n+(openPlot(s,i)?1:0),0);
+  if(!slots)return fail(t('batch.plantNone',{},s.locale));
+  if(s.coins<c.cost)return fail(t('batch.plantCoins',{},s.locale));
+  let count=0,spent=0;
+  for(let i=0;i<s.plots.length;i++){if(!openPlot(s,i)||s.coins<c.cost)continue;const before=s.coins;if(!plant(s,i,id,now).ok)continue;count++;spent+=before-s.coins;}
+  if(!count)return fail(t('batch.plantNone',{},s.locale));
+  return success(t('batch.plant',{name:c.name,count,spent},s.locale)+(count<slots?t('batch.plantMore',{},s.locale):''),id);
+}
+export function waterAll(s:FarmState,now=Date.now()):Result {
+  let count=0;for(let i=0;i<s.plots.length;i++)if(water(s,i,now).ok)count++;
+  return count?success(t('batch.water',{count},s.locale)):fail(t('batch.waterNone',{},s.locale));
+}
+export function harvestAll(s:FarmState,now=Date.now()):Result {
+  const xp=s.xp;let count=0,item:ProductId|undefined;for(let i=0;i<s.plots.length;i++){const result=harvest(s,i,now);if(result.ok){count++;item=result.item;}}
+  return count?success(t('batch.harvest',{count,xp:s.xp-xp},s.locale),item):fail(t('batch.harvestNone',{},s.locale));
 }
 export function sell(s:FarmState,id:ProductId,amount:number):Result {
   if(!Number.isInteger(amount)||amount<1||s.inventory[id]<amount)return fail('库存不足');
@@ -199,7 +221,7 @@ export function parseSave(raw:string|null,now=Date.now(),refresh=true):FarmState
     if(s.ecology===undefined){s.ecology=newEcology();if(s.inventory)for(const id of ['carp','crucian','bass','lobster','crab'] as const)if(s.inventory[id]===undefined)s.inventory[id]=0;}
     if(!validateProgression(s.progression))return null;
     if(s.version!==1||!int(s.coins)||!int(s.xp)||!num(s.savedAt,1e15)||!s.inventory||!PRODUCTS.every(id=>int(s.inventory[id])))return null;
-    if(!Array.isArray(s.plots)||s.plots.length!==30+18*s.progression.regions.length||!s.plots.every(p=>typeof p.unlocked==='boolean'&&typeof p.watered==='boolean'&&(p.crop===null||CROPS.some(c=>c.id===p.crop))&&num(p.plantedAt,1e15)&&(!p.crop||p.unlocked)&&(p.growSeconds===undefined||(num(p.growSeconds,3600)&&p.growSeconds>0))&&((p.pauseAt===undefined&&p.pauseUntil===undefined)||(num(p.pauseAt,1e15)&&num(p.pauseUntil,1e15)&&p.pauseUntil!>=p.pauseAt!&&p.pauseUntil!-p.pauseAt!<=240000))))return null;
+    if(!Array.isArray(s.plots)||s.plots.length!==30+18*s.progression.regions.length||!s.plots.every(p=>typeof p.unlocked==='boolean'&&typeof p.watered==='boolean'&&(p.crop===null||CROPS.some(c=>c.id===p.crop))&&num(p.plantedAt,1e15)&&(!p.crop||p.unlocked)&&(p.growSeconds===undefined||(num(p.growSeconds,3600)&&p.growSeconds>0))&&((p.pauseAt===undefined&&p.pauseUntil===undefined)||(num(p.pauseAt,1e15)&&num(p.pauseUntil,1e15)&&p.pauseUntil!>=p.pauseAt!&&p.pauseUntil!-p.pauseAt!<=240000))&&(p.soil===undefined||p.soil===0||p.soil===1||p.soil===2)))return null;
     if(!Array.isArray(s.animals)||s.animals.length>60||!s.animals.every(a=>int(a.id)&&ANIMALS.some(v=>v.id===a.type)&&num(a.readyAt,1e15))||new Set(s.animals.map(a=>a.id)).size!==s.animals.length)return null;
     if(!Array.isArray(s.orders)||s.orders.length!==3||!int(s.orderSequence)||!s.orders.every(o=>int(o.id)&&typeof o.person==='string'&&typeof o.message==='string'&&int(o.coins)&&int(o.xp)&&o.needs&&Object.entries(o.needs).length>0&&Object.entries(o.needs).every(([id,n])=>PRODUCTS.includes(id as ProductId)&&int(n,99)&&n!>0)))return null;
     if(new Set(s.orders.map(o=>o.id)).size!==3||s.orders.some(o=>o.id>=s.orderSequence))return null;
@@ -213,6 +235,7 @@ export function parseSave(raw:string|null,now=Date.now(),refresh=true):FarmState
     if(!int(s.stars)||!int(s.days)||typeof s.activeDate!=='string'||!Array.isArray(s.cropUnlocks)||!s.cropUnlocks.every(id=>CROPS.some(c=>c.id===id)))return null;
     if(s.layoutVersion!==2){s.plots=[...s.plots.filter(p=>p.unlocked),...s.plots.filter(p=>!p.unlocked)];s.layoutVersion=2;}
     if(typeof s.sound!=='boolean')s.sound=true;
+    if(s.locale!=='zh-CN'&&s.locale!=='zh-TW'&&s.locale!=='en'&&s.locale!=='ja'&&s.locale!=='ko')s.locale='zh-CN';
     if(legacy){s.features=newFeatures(s.stats,now);for(const id of PRODUCTS)if(s.inventory[id]>0)s.features.album.counts[id]=s.inventory[id];}
     if(!validateFeatures(s.features,PRODUCTS))return null;
     if(s.advanced===undefined)s.advanced=migrateAdvanced(s,now);
