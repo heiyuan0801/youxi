@@ -120,7 +120,8 @@ try {
   fixture.inventory.wood = 10; fixture.inventory.planks = 6; fixture.inventory.cloth = 4; fixture.inventory.feed = 8;
   fixture.animals.push({ id: 5, type: 'dog', readyAt: now + 20000 });
   fixture.life.care[5] = { ...fixture.life.care[1] };
-  fixture.advanced.explore.best.forest = fixture.advanced.explore.claimed.forest = 1;
+  fixture.advanced.explore.best.forest = fixture.advanced.explore.claimed.forest = 3;
+  fixture.advanced.explore.seen.forest = ['fox'];
   fixture.plots[4] = { unlocked: true, crop: 'pumpkin', plantedAt: now - 400000, growSeconds: 360, watered: true, composted: true };
   fixture.features.album.counts = { wheat: 2, flour: 1, bread: 1 }; fixture.stats.deliveries = 1;
   // Simulate a real pre-update export. Preserve the mature pumpkin and other existing progress.
@@ -152,8 +153,10 @@ try {
   await button('旅行手册'); await button('前往青杉森林');
   await button('地区故事'); await button('完成委托 · 220金币');
   assert.deepEqual((await state()).journey.stories, ['forest']);
+  await button('完成探索故事');
+  assert.deepEqual((await state()).journey.quests, ['forest-fox']);
   await shot('forest-story'); await close(); await button('返回主农场');
-  pass('pet clue click on the actual farm, story gated by region and previous exploration');
+  pass('pet clue click and both forest story turn-ins through the region panel');
 
   await button('旅行手册'); await button('前往极光雪原');
   await page.setViewportSize({ width: 844, height: 390 }); await sleep(450);

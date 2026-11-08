@@ -7,7 +7,7 @@ page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()
 const state=()=>page.evaluate(()=>window.__SUNNY_FARM__.snapshot());const ready=()=>page.waitForFunction(()=>window.__SUNNY_FARM__?.ready,{},{timeout:25000});const pause=(ms=150)=>page.waitForTimeout(ms);
 const pass=name=>{checks.push(name);console.log('PASS',name);};
 async function click(x,y){const vp=page.viewportSize(),s=Math.min(vp.width/1600,vp.height/900);await page.touchscreen.tap((vp.width-1600*s)/2+x*s,(vp.height-900*s)/2+y*s);await pause();}
-async function button(label,index=0){const candidates=await page.evaluate(()=>window.__SUNNY_FARM__.buttons());const b=candidates.filter(b=>b.label===label||b.label.startsWith(label))[index];assert.ok(b,`Missing ${label}`);await click(b.x,b.y);}
+async function button(label,index=0){const candidates=await page.evaluate(()=>window.__SUNNY_FARM__.buttons());const exact=candidates.filter(b=>b.label===label);const b=(exact.length?exact:candidates.filter(b=>b.label.startsWith(label)))[index];assert.ok(b,`Missing ${label}`);await click(b.x,b.y);}
 async function close(){await page.keyboard.press('Escape');await pause();}
 async function shot(name){await pause(250);await page.screenshot({path:`artifacts/v07-${name}.png`});}
 async function reload(){await page.reload({waitUntil:'networkidle'});await ready();await pause(350);}

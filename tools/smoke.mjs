@@ -19,7 +19,7 @@ async function shot(name){await delay(250);await page.screenshot({path:`artifact
 await page.addInitScript(()=>{const raw=sessionStorage.getItem('__qingye_test_fixture');if(raw){localStorage.setItem('sunny-meadow-farm-v1',raw);sessionStorage.removeItem('__qingye_test_fixture');}});
 try{
  await page.goto('http://localhost:7526?v=0.7.2',{waitUntil:'networkidle'});await ready();await delay(2500);await shot('title');await button('开始游戏');await delay(500);
- assert.equal((await page.evaluate(()=>window.__SUNNY_FARM__.art())).length,202);assert.equal((await state()).plots.filter(p=>p.unlocked).length,9);check('202 original and expansion sprites/icons and the reference initial 9-plot farm load in Cocos');
+ assert.equal((await page.evaluate(()=>window.__SUNNY_FARM__.art())).length,260);assert.equal((await state()).plots.filter(p=>p.unlocked).length,9);check('260 original and expansion sprites/icons and the reference initial 9-plot farm load in Cocos');
  await shot('main');const motion0=await page.evaluate(()=>window.__SUNNY_FARM__.motion());await delay(1500);const motion1=await page.evaluate(()=>window.__SUNNY_FARM__.motion());
  assert.equal(motion1.animals.length,4);assert.ok(motion1.animals.some((a,i)=>a.x!==motion0.animals[i].x||a.y!==motion0.animals[i].y||a.frame!==motion0.animals[i].frame));assert.ok(motion1.vehicles.every((v,i)=>v.x!==motion0.vehicles[i].x));assert.equal(motion1.walkers.length,3);check('animals change position/frames, both road vehicles move, and three villagers exist');
  await plot(0);await plot(1);let s=await state();assert.equal(s.stats.harvests,2);assert.equal(s.inventory.wheat,4);check('tapping mature crops credits inventory and XP exactly once');

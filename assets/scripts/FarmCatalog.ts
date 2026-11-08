@@ -79,8 +79,8 @@ export const WEATHER_NAMES={sunny:'晴天',rain:'细雨',storm:'暴雨',thunder:
 export type WeatherId=keyof typeof WEATHER_NAMES;
 // Dedicated sprites can replace these aliases. Keys are product ids; values are existing crop art.
 export const ART_PLACEHOLDERS:Record<string,string>={coffeeBrew:'coffee',floralTea:'lavender',sunTea:'sunflowerCrop',berryTea:'auroraBerry',estateBox:'cake',cabinet:'bookshelf',teaTable:'desk'};
-export const furnitureGems=(f:{gems?:number})=>f.gems??0;
-export const furnitureLevel=(f:{level?:number})=>f.level??3;
+export const furnitureGems=(f:typeof FURNITURE[number])=>'gems' in f?f.gems:0;
+export const furnitureLevel=(f:typeof FURNITURE[number])=>'level' in f?f.level:3;
 
 export const AQUATIC=[
  {id:'carp',name:'鲤鱼',level:4,cost:180,seconds:90,output:2},

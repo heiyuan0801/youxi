@@ -24,6 +24,7 @@ export interface FestivalScores { pumpkin: number; flower: number; ice: number }
 export interface DecorEntry { at: number; score: number; theme: string; placed: number; rare: number; balance: number; votes: number }
 export interface SceneEvent { kind: 'mouse' | 'theft'; plot: number; at: number; delay: number }
 const blankScores = (): FestivalScores => ({ pumpkin: 0, flower: 0, ice: 0 });
+const MAX_DECOR_SCORE = 40 * (8 + 18) + 24 + 16 + 12;
 
 interface SummerRound {
   serial: number;
@@ -78,6 +79,7 @@ export interface FarmActivities {
   calendarPlay: string[];
   relics: string[];
   decorLog: DecorEntry[];
+  decorBest: number;
   scene: SceneEvent | null;
   sceneAt: number;
   stormCrop: number | null;
@@ -94,7 +96,7 @@ export function newActivities(): FarmActivities {
     summer: null, summerSerial: 0, summerScore: 0, race: null, raceSerial: 0, raceSeason: -1, raceAt: 0,
     pumpkinWeigh: null, pumpkinWeighBonus: 0, festivalRite: null, festivalRiteBonus: 0,
     festivalDay: '', festivalWeek: '', dayScore: blankScores(), weekScore: blankScores(), lifeScore: blankScores(),
-    dayClaim: '', weekClaim: '', calendarPlay: [], relics: [], decorLog: [],
+    dayClaim: '', weekClaim: '', calendarPlay: [], relics: [], decorLog: [], decorBest: 0,
     scene: null, sceneAt: 0, stormCrop: null, stormDelay: 0, stormDeco: null, stormWindow: -1,
   };
 }
@@ -122,6 +124,7 @@ export function migrateActivities(a: FarmActivities) {
   if (!Array.isArray(a.calendarPlay)) a.calendarPlay = [];
   if (!Array.isArray(a.relics)) a.relics = [];
   if (!Array.isArray(a.decorLog)) a.decorLog = [];
+  if (a.decorBest === undefined) a.decorBest = a.decorLog.reduce((best, entry) => Math.max(best, entry?.score ?? 0), 0);
   if (a.scene === undefined) a.scene = null;
   if (typeof a.sceneAt !== 'number') a.sceneAt = 0;
   if (a.stormCrop === undefined) a.stormCrop = null;
@@ -164,8 +167,8 @@ export function validActivities(a: FarmActivities, plots: Plot[]): boolean {
     && a.calendarPlay.every(key => typeof key === 'string' && /^\d{4}-(spring|summer|autumn|winter)$/.test(key))
     && Array.isArray(a.relics) && new Set(a.relics).size === a.relics.length && a.relics.length <= 12
     && a.relics.every(id => /^(forest|mine|beach|snow)-(4|8|12)$/.test(id))
-    && Array.isArray(a.decorLog) && a.decorLog.length <= 8
-    && a.decorLog.every(e => !!e && time(e.at) && int(e.score, 0, 500) && int(e.placed, 0, 40) && int(e.rare, 0, 40) && int(e.balance, 0, 40) && int(e.votes, 0, 1e6) && typeof e.theme === 'string' && e.theme.length <= 8)
+    && int(a.decorBest, 0, MAX_DECOR_SCORE) && Array.isArray(a.decorLog) && a.decorLog.length <= 8
+    && a.decorLog.every(e => !!e && time(e.at) && int(e.score, 0, a.decorBest) && int(e.placed, 0, 40) && int(e.rare, 0, 40) && int(e.balance, 0, 40) && int(e.votes, 0, 1e6) && typeof e.theme === 'string' && e.theme.length <= 8)
     && (a.scene === null || !!a.scene && (a.scene.kind === 'mouse' || a.scene.kind === 'theft') && int(a.scene.plot, -1, plots.length - 1) && time(a.scene.at) && int(a.scene.delay, 0, 120000))
     && time(a.sceneAt) && (a.stormCrop === null || int(a.stormCrop, 0, plots.length - 1)) && int(a.stormDelay, 0, 120000)
     && (a.stormDeco === null || int(a.stormDeco, 0, 39)) && int(a.stormWindow, -1);
@@ -379,10 +382,10 @@ export function repairStormPlot(s: FarmState): Result {
 }
 
 const CALENDAR = {
-  spring: { month: 4, title: '四月樱花信', item: 'herb', amount: 3, coins: 180 },
-  summer: { month: 7, title: '七月海边假日', item: 'fish', amount: 3, coins: 250 },
-  autumn: { month: 10, title: '十月丰收月', item: 'corn', amount: 3, coins: 320 },
-  winter: { month: 12, title: '十二月暖冬集市', item: 'bread', amount: 2, coins: 280 },
+  spring: { month: 4, title: '四月樱花信', item: 'herb', amount: 3, coins: 180, game: 'flower' },
+  summer: { month: 7, title: '七月海边假日', item: 'fish', amount: 3, coins: 250, game: 'summer' },
+  autumn: { month: 10, title: '十月丰收月', item: 'corn', amount: 3, coins: 320, game: 'pumpkin' },
+  winter: { month: 12, title: '十二月暖冬集市', item: 'bread', amount: 2, coins: 280, game: null },
 } as const;
 
 export function calendarEvent(now = Date.now()) {
@@ -665,11 +668,14 @@ export function scoreDecor(s: FarmState) {
 export function submitDecor(s: FarmState, now = Date.now()): Result {
   const card = scoreDecor(s);
   if (card.placed < 3) return fail('至少在小屋摆好3件家具，再参加本地装饰赛');
-  const best = s.activities.decorLog.reduce((max, entry) => Math.max(max, entry.score), 0);
-  s.activities.decorLog.unshift({ at: now, score: card.score, theme: card.theme, placed: card.placed, rare: card.rare, balance: card.balance, votes: 0 });
-  if (s.activities.decorLog.length > 8) s.activities.decorLog.pop();
-  if (card.score > best) s.coins += 30 + card.score;
-  return ok(`本地装饰赛 ${card.score}分 · ${card.theme} · 最高 ${Math.max(best, card.score)}。票数留给以后的好友评选`);
+  const a = s.activities;
+  a.decorLog.unshift({ at: now, ...card });
+  if (a.decorLog.length > 8) a.decorLog.pop();
+  if (card.score > a.decorBest) {
+    a.decorBest = card.score;
+    s.coins += 30 + card.score;
+  }
+  return ok(`本地装饰赛 ${card.score}分 · ${card.theme} · 最高 ${a.decorBest}。票数留给以后的好友评选`);
 }
 
 export function rollScene(s: FarmState, now = Date.now()): boolean {
@@ -755,14 +761,19 @@ export function repairStormDeco(s: FarmState): Result {
 export function claimCalendarPlay(s: FarmState, now = Date.now()): Result {
   const event = calendarEvent(now);
   if (!event) return fail('这个月没有节日小游戏');
-  if (s.activities.calendarPlay.includes(event.key)) return fail('本月节日小游戏已经领过');
+  const a = s.activities;
+  if (a.calendarPlay.includes(event.key)) return fail('本月节日小游戏已经领过');
   syncFestivalBoards(s, now);
-  const game = event.key.endsWith('spring') ? 'flower' : event.key.endsWith('summer') ? 'ice' : event.key.endsWith('autumn') ? 'pumpkin' : null;
-  const scores = s.activities.lifeScore;
-  const score = game ? Math.max(scores[game], s.activities.weekScore[game], s.activities.dayScore[game]) : Math.max(scores.pumpkin, scores.flower, scores.ice);
-  if (score < 60) return fail('先在对应节日小游戏里留下60分');
-  s.activities.calendarPlay.push(event.key);
-  if (s.activities.calendarPlay.length > 128) s.activities.calendarPlay.shift();
+  const game = event.game;
+  if (game === 'summer') {
+    if (a.summerScore < 2) return fail('先在夏日渔赛钓到2条鱼');
+  } else {
+    const scores = a.lifeScore;
+    const score = game ? Math.max(scores[game], a.weekScore[game], a.dayScore[game]) : Math.max(scores.pumpkin, scores.flower, scores.ice);
+    if (score < 60) return fail('先在对应节日小游戏里留下60分');
+  }
+  a.calendarPlay.push(event.key);
+  if (a.calendarPlay.length > 128) a.calendarPlay.shift();
   s.coins += 120;
   s.stars += 2;
   return ok(`${event.title}小游戏 · 120金币与2农场星`);

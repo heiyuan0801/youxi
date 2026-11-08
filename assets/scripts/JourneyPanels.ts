@@ -78,7 +78,7 @@ export function townPanel(c: FeaturePanelContext, honors: () => void, breakfast:
 }
 
 export function areaStoryPanel(c: FeaturePanelContext, explore: () => void) {
-  const { p, root, w, state: s, button, act } = c;
+  const { p, root, w, state: s, button, slot, act } = c;
   const map = TRAVEL_MAPS.find(m => m.id === s.life.activeMap);
   if (!map) {
     p.label(root, '打开旅行手册，到了目的地再找当地居民。', w / 2, 70, 16, INK, w - 15, 65);
@@ -177,7 +177,7 @@ export function festivalGamesPanel(c: FeaturePanelContext, flowers: FlowerChoice
   if (event) {
     button(a.festivalRite ? '敲下鼓点' : '节日节奏', w * .27, 679, w * .44, 36, () => act(() => a.festivalRite ? playFestivalRite(s) : startFestivalRite(s)), '#58bde4', '#3295bd', 13);
     button(a.calendar.includes(event.key) ? '本月已完成' : '交付物资', w * .73, 679, w * .44, 36, () => act(() => claimCalendar(s)));
-    button('节日小游戏奖', w / 2, 724, w - 20, 34, () => act(() => claimCalendarPlay(s)), '#ab89d3', '#8360ac', 13);
+    button(event.game === 'summer' ? '节日小游戏奖 · 夏日渔赛钓到2条' : '节日小游戏奖', w / 2, 724, w - 20, 34, () => act(() => claimCalendarPlay(s)), '#ab89d3', '#8360ac', 13);
   }
   slot(w / 2, 900, w, 250);
   p.label(root, '今日 · 本周 · 个人最好', w / 2, 800, 18, INK, w, 32);
@@ -295,7 +295,7 @@ export function summerFishingPanel(c: FeaturePanelContext) {
 
 export function decorPanel(c: FeaturePanelContext) {
   const { p, root, w, state: s, button, slot, act } = c;
-  const card = scoreDecor(s), best = s.activities.decorLog.reduce((max, entry) => Math.max(max, entry.score), 0);
+  const card = scoreDecor(s), best = s.activities.decorBest;
   p.label(root, '本地装饰赛', w / 2, 22, 22, INK, w, 36);
   p.label(root, '按当前小屋布局打分：摆放数量、稀有家具、左右前后的疏密、墙地是否成套。没有服务器，榜只留在这台设备上。', w / 2, 68, 13, SOFT, w - 16, 52);
   slot(w / 2, 168, w, 110);
