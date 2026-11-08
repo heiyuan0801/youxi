@@ -621,7 +621,7 @@ export function audioMix(s: FarmState) {
   return {
     music: s.music && !audio.muted && audio.bgm > 0,
     sound: s.sound && !audio.muted && audio.sfx > 0,
-    bgm: audio.muted ? 0 : audio.bgm / 100,
+    bgm: audio.muted || !s.music ? 0 : audio.bgm / 100,
     sfx: audio.muted || !s.sound ? 0 : audio.sfx / 100,
   };
 }

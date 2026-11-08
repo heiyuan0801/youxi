@@ -5,7 +5,7 @@ import {upgradeSoil, upgradeSoilBatch, soilTier, cropGrowSeconds} from '../asset
 import {t, itemName, localizeOrder, storyCopy, localDate, shiftLocal, atLocalNoon, weekKey} from '../assets/scripts/FarmI18n';
 import {submitFlowers} from '../assets/scripts/FarmActivities';
 import {
-  acceptTomorrow, advanceTutorial, claimAchievement, claimChecklist, claimLogin, claimNeighbor, toggleHud,
+  acceptTomorrow, advanceTutorial, audioMix, claimAchievement, claimChecklist, claimLogin, claimNeighbor, toggleHud,
   decorScore, deliverTomorrow, enterContest, markFestival, noteDecor, noteFestivalScore, noteRecipe,
   pickBlessing, redeemInvite, setVolume, skipTutorial, toggleMute, tutorialDone, revealRecipe,
 } from '../assets/scripts/FarmRetention';
@@ -104,6 +104,10 @@ test('volume clamps and mute does not forget the chosen levels', () => {
   setVolume(s, 'sfx', -4);
   assert.equal(s.retention.audio.bgm, 100);
   assert.equal(s.retention.audio.sfx, 0);
+  s.music = false;
+  assert.equal(audioMix(s).bgm, 0);
+  s.music = true;
+  assert.equal(audioMix(s).bgm, 1);
   toggleMute(s);
   assert.equal(s.retention.audio.muted, true);
   assert.equal(s.retention.audio.bgm, 100);

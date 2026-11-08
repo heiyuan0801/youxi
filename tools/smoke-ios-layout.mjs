@@ -6,7 +6,7 @@ const browser=await chromium.launch({headless:true,executablePath:process.env.CH
 const checks=[],errors=[];
 try{
  for(const [name,width,height] of [['iphone-small',667,375],['iphone-notch',852,393],['iphone-large',932,430],['ipad',1024,768]]){
-  const ctx=await browser.newContext({viewport:{width,height},hasTouch:true,acceptDownloads:true}),page=await ctx.newPage();
+  const ctx=await browser.newContext({locale:'zh-CN',viewport:{width,height},hasTouch:true,acceptDownloads:true}),page=await ctx.newPage();
   page.on('pageerror',e=>errors.push(e.message));
   await page.goto('http://localhost:7526/?ios-layout=0.8.0');
   await page.waitForFunction(()=>window.__SUNNY_FARM__?.ready);

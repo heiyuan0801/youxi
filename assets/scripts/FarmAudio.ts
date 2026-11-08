@@ -55,10 +55,10 @@ export class FarmAudio {
     else if (!enabled || this.bgmLevel === 0) this.music.stop();
   }
 
-  applyMix(opts: {music: boolean; sound: boolean; bgm: number; sfx: number; muted: boolean}) {
+  applyMix(bgm: number, sfx: number) {
     const clamp = (value: number) => Math.max(0, Math.min(1, value));
-    this.bgmLevel = opts.muted || !opts.music ? 0 : clamp(opts.bgm);
-    this.sfxLevel = opts.muted || !opts.sound ? 0 : clamp(opts.sfx);
+    this.bgmLevel = clamp(bgm);
+    this.sfxLevel = clamp(sfx);
     this.enabled = this.sfxLevel > 0;
     for (const [key, source] of this.sources) {
       source.volume = (volumes[key] ?? .46) * this.sfxLevel;

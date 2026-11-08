@@ -2,7 +2,7 @@ import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 import {writeFileSync,readFileSync} from 'node:fs';
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||'/Volumes/mac/ms-playwright/chromium-1248/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'});
-const context=await browser.newContext({viewport:{width:1600,height:900},acceptDownloads:true,hasTouch:true});
+const context=await browser.newContext({locale:'zh-CN',viewport:{width:1600,height:900},acceptDownloads:true,hasTouch:true});
 const page=await context.newPage(),errors=[],touchNotices=[],checks=[];
 page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()!=='error')return;if(m.text().startsWith('Ignored attempt to cancel a touchstart event with cancelable=false'))touchNotices.push(m.text());else errors.push(m.text());});
 const state=()=>page.evaluate(()=>window.__SUNNY_FARM__.snapshot());
@@ -10,7 +10,24 @@ const ready=()=>page.waitForFunction(()=>window.__SUNNY_FARM__?.ready,{},{timeou
 const check=name=>{checks.push(name);console.log('PASS',name);};
 const delay=(ms=150)=>page.waitForTimeout(ms);
 async function click(x,y){const vp=page.viewportSize(),s=Math.min(vp.width/1600,vp.height/900);await page.touchscreen.tap((vp.width-1600*s)/2+x*s,(vp.height-900*s)/2+y*s);await delay();}
-async function button(label,index=0){const buttons=await page.evaluate(()=>window.__SUNNY_FARM__.buttons());const exact=buttons.filter(b=>b.label===label);const b=(exact.length?exact:buttons.filter(b=>b.label.startsWith(label)))[index];assert.ok(b,`Missing button ${label} ${index}`);await click(b.x,b.y);}
+async function button(label,index=0){
+ for(let i=0;i<18;i++){
+  const buttons=await page.evaluate(()=>window.__SUNNY_FARM__.buttons());
+  const exact=buttons.filter(b=>b.label===label),b=(exact.length?exact:buttons.filter(b=>b.label.startsWith(label)))[index];
+  assert.ok(b,`Missing button ${label} ${index}`);
+  const bounds=await page.evaluate(async()=>{
+   if(!window.__SUNNY_FARM__.panel()||window.__SUNNY_FARM__.levelPopup()!==null)return null;
+   const cc=await System.import('cc'),scroll=cc.director.getScene().getComponentsInChildren(cc.ScrollView)[0];
+   if(!scroll)return null;
+   const y=900-scroll.node.worldPosition.y,h=scroll.node.getComponent(cc.UITransform).height*scroll.node.worldScale.y;
+   return [y-h/2,y+h/2];
+  });
+  if(!bounds||label==='×'||b.y>bounds[0]+12&&b.y<bounds[1]-12){await click(b.x,b.y);return;}
+  const {width,height}=page.viewportSize();await page.mouse.move(width/2+100,height/2);
+  await page.mouse.wheel(0,b.y<bounds[0]+12?-220:220);await delay(450);
+ }
+ throw Error(`Cannot scroll to ${label}`);
+}
 async function plot(i){const p=await page.evaluate(i=>window.__SUNNY_FARM__.plot(i),i);await click(p.x,p.y);}
 async function escape(){await page.keyboard.press('Escape');await delay();}
 async function grid(x,y,lift=0){const view=await page.evaluate(()=>window.__SUNNY_FARM__.view()),z=900/1150;return{x:800+(((x-y)*64-64)*z)*view.zoom+view.x,y:450+(((x+y)*32-640+lift)*z)*view.zoom-view.y};}
@@ -19,7 +36,7 @@ async function shot(name){await delay(250);await page.screenshot({path:`artifact
 await page.addInitScript(()=>{const raw=sessionStorage.getItem('__qingye_test_fixture');if(raw){localStorage.setItem('sunny-meadow-farm-v1',raw);sessionStorage.removeItem('__qingye_test_fixture');}});
 try{
  await page.goto('http://localhost:7526?v=0.7.2',{waitUntil:'networkidle'});await ready();await delay(2500);await shot('title');await button('开始游戏');await delay(500);
- assert.equal((await page.evaluate(()=>window.__SUNNY_FARM__.art())).length,260);assert.equal((await state()).plots.filter(p=>p.unlocked).length,9);check('260 original and expansion sprites/icons and the reference initial 9-plot farm load in Cocos');
+ assert.equal((await page.evaluate(()=>window.__SUNNY_FARM__.art())).length,274);assert.equal((await state()).plots.filter(p=>p.unlocked).length,9);check('274 original and expansion sprites/icons and the reference initial 9-plot farm load in Cocos');
  await shot('main');const motion0=await page.evaluate(()=>window.__SUNNY_FARM__.motion());await delay(1500);const motion1=await page.evaluate(()=>window.__SUNNY_FARM__.motion());
  assert.equal(motion1.animals.length,4);assert.ok(motion1.animals.some((a,i)=>a.x!==motion0.animals[i].x||a.y!==motion0.animals[i].y||a.frame!==motion0.animals[i].frame));assert.ok(motion1.vehicles.every((v,i)=>v.x!==motion0.vehicles[i].x));assert.equal(motion1.walkers.length,3);check('animals change position/frames, both road vehicles move, and three villagers exist');
  await plot(0);await plot(1);let s=await state();assert.equal(s.stats.harvests,2);assert.equal(s.inventory.wheat,4);check('tapping mature crops credits inventory and XP exactly once');

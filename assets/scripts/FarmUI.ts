@@ -200,15 +200,15 @@ export class FarmUI {
       const height=panel==='world'?760:210+116*Math.max(9,Math.min(100,Math.max(10,levelFor(state.xp)+2))-1),m=this.modal(panel==='world'?'开拓地图':'等级奖励',panel==='world'?'tree_round':'star',640,height+70,height),context=this.featureContext(m);if(panel==='world')worldPanel(context,id=>{this.panel=null;this.cb.focus(id);this.render();});else levelsPanel(context,level=>this.previewLevel(level));return;
     }
     if(panel==='workshop'||panel==='fishing'){
-      const contentH=panel==='workshop'?400+RECIPES.filter(r=>recipeFactory(r)===this.factory).length*150+Math.max(0,state.features.jobs.filter(j=>recipeFactory(RECIPES.find(r=>r.id===j.recipe)!)===this.factory).length-1)*66:this.fishTab==='pond'?900:this.fishTab==='classic'?565:570;
+      const compactFish=this.p.h<500;
+      const contentH=panel==='workshop'?400+RECIPES.filter(r=>recipeFactory(r)===this.factory).length*150+Math.max(0,state.features.jobs.filter(j=>recipeFactory(RECIPES.find(r=>r.id===j.recipe)!)===this.factory).length-1)*66:this.fishTab==='pond'?900:this.fishTab==='classic'?(compactFish?285:500):(compactFish?325:430);
       const m=this.modal(panel==='workshop'?'风车工坊':'抛竿收线',panel==='workshop'?'windmill':'fish',panel==='workshop'?700:660,contentH+70,contentH),context=this.featureContext(m);
       if(panel==='workshop')workshopPanel(context,this.factory,id=>{this.factory=id;this.render();},()=>this.open('carpenter'));
       else if(this.fishTab==='classic'){
         fishingPanel(context);
-        context.button(t('fish.newRod'),context.w/2,522,context.w-20,40,()=>{this.fishTab='cast';this.render();});
+        context.button(t('fish.newRod'),context.w/2,25,118,36,()=>{this.fishTab='cast';this.render();});
       }else{
-        anglingPanel(context,this.fishTab,tab=>{this.fishTab=tab;this.render();},this.fishSpot,this.fishBait,spot=>{this.fishSpot=spot;this.render();},bait=>{this.fishBait=bait;this.render();});
-        context.button(t('fish.classic'),context.w/2,this.fishTab==='pond'?843:447,context.w-20,40,()=>{this.fishTab='classic';this.render();});
+        anglingPanel(context,this.fishTab,tab=>{this.fishTab=tab;this.render();},this.fishSpot,this.fishBait,spot=>{this.fishSpot=spot;this.render();},bait=>{this.fishBait=bait;this.render();},compactFish,()=>{this.fishTab='classic';this.render();});
       }
       return;
     }

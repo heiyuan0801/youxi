@@ -2,7 +2,7 @@ import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 import {writeFileSync} from 'node:fs';
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||'/Volumes/mac/ms-playwright/chromium-1248/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'});
-const context=await browser.newContext({viewport:{width:1600,height:900},hasTouch:true});
+const context=await browser.newContext({locale:'zh-CN',viewport:{width:1600,height:900},hasTouch:true});
 await context.addInitScript(()=>{
  window.__audioProbe={starts:[],meters:[]};const original=AudioBufferSourceNode.prototype.start;
  AudioBufferSourceNode.prototype.start=function(...args){if(this.buffer){const data=this.buffer.getChannelData(0);let energy=0;for(const n of data)energy+=n*n;window.__audioProbe.starts.push({duration:this.buffer.duration,rms:Math.sqrt(energy/data.length),state:this.context.state});}return original.apply(this,args);};
@@ -20,7 +20,7 @@ async function plot(index){const p=await page.evaluate(i=>window.__SUNNY_FARM__.
 async function point(x,y,lift=0){const p=await page.evaluate(([x,y,z])=>window.__SUNNY_FARM__.point(x,y,z),[x,y,lift]);await click(p.x,p.y);}
 async function shot(name){await wait(150);await page.screenshot({path:`artifacts/v07-${name}.png`});}
 async function animal(id){
- const target=await page.evaluate(async id=>{const cc=await System.import('cc'),app=cc.director.getScene().getComponentsInChildren(cc.Component).find(c=>c.scene?.motion?.animals),a=app.scene.motion.animals.get(id);for(const lift of[-30,-45,-15])for(const dx of[0,-12,12]){const z=900/1150,local=[800+((a.x-a.y)*64-64)*z+dx,450+((a.x+a.y)*32-640+lift)*z],hit=app.scene.hit(local);if(hit?.type==='animal'&&hit.id===id){const v=app.world.getComponent(cc.UITransform).convertToWorldSpaceAR(new cc.Vec3(local[0]-800,450-local[1]));return{x:v.x,y:900-v.y};}}return null;},id);assert.ok(target,`No visible animal ${id}`);await click(target.x,target.y);
+ const target=await page.evaluate(async id=>{const cc=await System.import('cc'),app=cc.director.getScene().getComponentsInChildren(cc.Component).find(c=>c.scene?.motion?.animals),a=app.scene.motion.animals.get(id);for(const lift of[-30,-45,-15,-60,-75,-90,-110])for(const dx of[0,-12,12,-24,24]){const z=900/1150,local=[800+((a.x-a.y)*64-64)*z+dx,450+((a.x+a.y)*32-640+lift)*z],hit=app.scene.hit(local);if(hit?.type==='animal'&&hit.id===id){const v=app.world.getComponent(cc.UITransform).convertToWorldSpaceAR(new cc.Vec3(local[0]-800,450-local[1]));return{x:v.x,y:900-v.y};}}return null;},id);assert.ok(target,`No visible animal ${id}`);await click(target.x,target.y);
 }
 async function sound(key,duration){
  const probe=await page.evaluate(()=>{let peak=0;for(const a of window.__audioProbe.meters){const b=new Float32Array(a.fftSize);a.getFloatTimeDomainData(b);for(const v of b)peak=Math.max(peak,Math.abs(v));}return{starts:window.__audioProbe.starts,audio:window.__SUNNY_FARM__.audio(),peak};});
@@ -29,7 +29,7 @@ async function sound(key,duration){
 await page.addInitScript(()=>{const raw=sessionStorage.getItem('__qingye_test_fixture');if(raw){localStorage.setItem('sunny-meadow-farm-v1',raw);sessionStorage.removeItem('__qingye_test_fixture');}});
 try{
  await page.goto('http://localhost:7526/?v=0.7.2',{waitUntil:'networkidle'});await ready();await wait(2300);await button('开始游戏');await wait(200);
- assert.equal((await page.evaluate(()=>window.__SUNNY_FARM__.art())).length,260);assert.equal((await page.evaluate(()=>window.__SUNNY_FARM__.audio())).loaded.length,37);pass('260 images and 37 actual WAV clips load in the Cocos build');
+ assert.equal((await page.evaluate(()=>window.__SUNNY_FARM__.art())).length,274);assert.equal((await page.evaluate(()=>window.__SUNNY_FARM__.audio())).loaded.length,37);pass('274 images and 37 actual WAV clips load in the Cocos build');
  let legacy=await state();delete legacy.progression;for(const id of ['apple','honey','orchardBasket'])delete legacy.inventory[id];legacy.coins=781;legacy.features.daily.claimed=['harvest'];await seed(legacy);let s=await state();assert.equal(s.coins,781);assert.deepEqual(s.plots,legacy.plots);assert.deepEqual(s.features,legacy.features);assert.ok(await page.evaluate(()=>localStorage.getItem('sunny-meadow-farm-v1-before-v04')));pass('v0.3 progress migrates with a raw backup and no changes to existing production');
  await animal(3);await sound('chicken',1.2);await animal(4);await sound('cow',2.25);pass('real chicken and cow clicks produce running, non-silent decoded audio');
  await plot(0);await sound('harvest',.32);pass('harvesting a mature crop produces the dedicated harvest sound');

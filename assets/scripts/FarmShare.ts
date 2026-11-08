@@ -57,7 +57,7 @@ export function makeInviteCode(seed: number): string {
 
 export function validInviteCode(code: string): boolean {
   const value = code.trim().toUpperCase();
-  if (value.length !== 8 || [...value].some(char => !ALPHA.includes(char))) return false;
+  if (value.length !== 8 || value.split('').some(char => !ALPHA.includes(char))) return false;
   return value.slice(6) === checksum(value.slice(0, 6));
 }
 

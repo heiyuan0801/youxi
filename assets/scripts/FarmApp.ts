@@ -13,7 +13,7 @@ import {WORLD_ART} from './WorldArt';
 import {LIFE_ART} from './LifeArt';
 import {ART_PLACEHOLDERS,AquaticId,MapId,FactoryId,animalSpec} from './FarmCatalog';
 import {NEXT_ART} from './NextArt';
-import {refreshLife,travel,gather,autoFeed,careFor,isAdult} from './FarmLife';
+import {refreshLife,travel,gather,autoFeed,isAdult} from './FarmLife';
 import {FarmAudio,SOUND_KEYS,SoundKey,animalVoice,aquaticVoice} from './FarmAudio';
 import {worldWidth,hasRegion,collectOrchard} from './FarmProgression';
 import {REGIONS,RegionId} from './WorldData';
@@ -30,7 +30,7 @@ const MAX_SAVE_BYTES=8*1024*1024;
 export class FarmApp extends Component {
   state!:FarmState;private art=new Map<string,SpriteFrame>();private world!:Node;private scene!:FarmScene;private ui!:FarmUI;
   private pendingPlot:number|null=null;private placing:DecoId|null=null;private pointer:XY|null=null;private moved=0;private drag:'pan'|'plant'|'harvest'='pan';private visited=new Set<number>();private pinch=0;
-  private dirty=false;private clock=0;private signature='';private resize=()=>{};private audio:AudioContext|null=null;private audioStarted=false;private musicClock=0;private musicNote=0;
+  private dirty=false;private clock=0;private signature={world:'',hud:''};private resize=()=>{};private audio:AudioContext|null=null;private audioStarted=false;private musicClock=0;private musicNote=0;
   private backdropFrames=0;private afterDraw=()=>{if(++this.backdropFrames%15===0)this.ui?.captureBackdrop(game.canvas);};
   private nativeClips=new Map<string,AudioClip>();private soundClips=new Map<SoundKey,AudioClip>();private sfx!:FarmAudio;private dragLevel=1;
   private saveInput:HTMLInputElement|null=null;
@@ -69,13 +69,28 @@ export class FarmApp extends Component {
   private show=()=>{if(this.ui){const r=settleAutomation(this.state);refreshFeatures(this.state);refreshLife(this.state);touchRetention(this.state);this.save();this.refresh();if(r?.unread)this.ui.open('offline');this.applyAudio();}};
   private visibility=()=>{if(document.hidden)this.hide();else this.show();};
   private refresh(){this.scene.redraw();this.ui.render();this.signature=this.currentSignature();}
-  private currentSignature(){const now=Date.now();return this.state.plots.map(p=>readyPlot(p,now)?1:0).join('')+this.state.animals.map(a=>a.readyAt<=now?1:0).join('')+this.state.beds.map(t=>t?Math.min(3,Math.floor((now-t)/20000)):0).join('')+'|'+this.state.features.jobs.map(j=>now>=j.readyAt?1:0).join('')+'|'+fishingPhase(this.state,now)+'|'+anglingPhase(this.state,now)+'|'+[...this.state.progression.appleAt,...this.state.progression.honeyAt].map(t=>now>=t?1:0).join('')+'|'+this.state.animals.map(a=>Date.now()>=careFor(this.state,a).adultAt?1:0).join('')+'|'+Object.values(this.state.life.nodes).map(t=>now>=t?1:0).join('');}
+  private currentSignature(){
+    const s=this.state,now=Date.now(),map=s.life.activeMap,season=s.life.seasonIndex%4;
+    const crops=s.plots.map(plot=>readyPlot(plot,now)?1:0).join('');
+    const adult=s.animals.map(animal=>isAdult(s,animal,now)?1:0).join('');
+    const resources=Object.entries(s.life.nodes).filter(([key])=>key.startsWith(map+':')).map(([,at])=>now>=at?1:0).join('');
+    const plants=s.beds.map(at=>at?Math.min(3,Math.floor((now-at)/20000)):0).join('');
+    const orchard=[...s.progression.appleAt,...s.progression.honeyAt].map(at=>now>=at?1:0).join('');
+    const world=map==='home'?`${map}:${season}:${crops}:${plants}:${orchard}:${adult}`:`${map}:${season}:${resources}`;
+    const animals=s.animals.map(animal=>animal.readyAt<=now?1:0).join('');
+    const jobs=s.features.jobs.map(job=>now>=job.readyAt?1:0).join('');
+    const hud=`${crops}:${adult}:${animals}:${jobs}:${fishingPhase(s,now)}:${anglingPhase(s,now)}`;
+    return {world,hud};
+  }
   private save(){try{sys.localStorage.setItem(SAVE_KEY,serialize(this.state));}catch{this.ui?.toast('当前设备无法保存进度，请导出存档备份');}}
   private recordDay(){const now=new Date(Date.now()+8*60*60*1000).toISOString().slice(0,10);if(this.state.activeDate!==now){this.state.days++;this.state.activeDate=now;}}
   private act(f:()=>Result,at?:XY){this.startAudio();const settlement=settleAutomation(this.state);if(settlement)this.save();const previous=levelFor(this.state.xp),orders=this.state.stats.deliveries,harvests=this.state.stats.harvests,result=f();if(result.ok){this.recordDay();this.save();this.refresh();if(this.state.stats.deliveries>orders)this.scene.motion.sendTruck();if(at)this.scene.burst(at,result.item||'star');if(this.state.stats.harvests>harvests||result.item==='apple'||result.item==='honey')this.sfx.play('harvest');else this.chime(true);if(this.state.haptics){if(sys.isNative){nativeHaptic();}else if(typeof navigator!=='undefined'&&navigator.vibrate)navigator.vibrate(10);}const level=levelFor(this.state.xp);if(level>previous){this.sfx.play('levelup');this.ui.celebrate(previous,level);}else this.ui.toast(result.message);}else this.ui.toast(result.message);return result;}
-  private startAudio(){if(!this.audioStarted){this.audioStarted=true;try{sessionStorage.setItem('sunny-farm-started','1');}catch{}}this.applyAudio();if(sys.isNative||!sys.isBrowser)return;try{const Audio=window.AudioContext||(window as any).webkitAudioContext;if(Audio&&!this.audio)this.audio=new Audio();if(this.audio?.state==='suspended')void this.audio.resume();}catch{}}
+  private startAudio(){if(!this.audioStarted){this.audioStarted=true;try{sessionStorage.setItem('sunny-farm-started','1');}catch{}this.applyAudio();}if(sys.isNative||!sys.isBrowser)return;try{const Audio=window.AudioContext||(window as any).webkitAudioContext;if(Audio&&!this.audio)this.audio=new Audio();if(this.audio?.state==='suspended')void this.audio.resume();}catch{}}
   private chime(good:boolean){const gain=audioMix(this.state).sfx;if(gain<=0)return;if(sys.isNative){this.sfx.playUi();return;}if(!this.audio)return;const ctx=this.audio;[good?660:480,...(good?[880]:[])].forEach((f,i)=>this.note(f,ctx.currentTime+i*.07,.13,.025*gain));}
-  private applyAudio(){const mix=audioMix(this.state);this.sfx?.applyMix({music:this.state.music,sound:this.state.sound,bgm:this.state.retention.audio.bgm,sfx:this.state.retention.audio.sfx,muted:this.state.retention.audio.muted});if(mix.bgm<=0)this.sfx?.setMusic(false);else if(this.audioStarted)this.sfx?.setMusic(true);}
+  private applyAudio(){
+    const mix=audioMix(this.state);
+    this.sfx?.applyMix(this.audioStarted?mix.bgm:0,mix.sfx);
+  }
   private note(f:number,start:number,len:number,volume:number){if(!this.audio)return;const o=this.audio.createOscillator(),g=this.audio.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,start);g.gain.exponentialRampToValueAtTime(volume,start+.015);g.gain.exponentialRampToValueAtTime(.0001,start+len);o.connect(g);g.connect(this.audio.destination);o.start(start);o.stop(start+len+.01);}
   private local(e:EventTouch):XY{const q=e.getUILocation(),p=this.world.getComponent(UITransform)!.convertToNodeSpaceAR(new Vec3(q.x,q.y));return[p.x+800,450-p.y];}
   private touchStart(e:EventTouch){if(this.ui.panel||this.ui.levelUp!==null||!this.ui.started)return;this.startAudio();const touches=e.getAllTouches();if(touches.length>=2){const [a,b]=touches.map(t=>t.getUILocation());this.pinch=Math.hypot(a.x-b.x,a.y-b.y);this.pointer=null;return;}const q=e.getUILocation();this.pointer=[q.x,q.y];this.moved=0;this.visited.clear();this.dragLevel=levelFor(this.state.xp);const i=this.scene.plotAt(this.local(e));this.drag=i>=0&&readyPlot(this.state.plots[i])?'harvest':i>=0&&!this.state.plots[i].crop&&this.state.plots[i].unlocked&&this.ui.seedOpen&&this.ui.selected?'plant':'pan';}
@@ -255,7 +270,8 @@ export class FarmApp extends Component {
   update(dt:number){
     if(!this.scene)return;
     this.scene.update(Math.min(dt,.05));
-    const livePanel=this.ui.panel==='ice-fishing'||this.ui.panel==='race'||this.ui.panel==='summer-fishing';
+    const livePanel=this.ui.panel==='ice-fishing'||this.ui.panel==='race'||this.ui.panel==='summer-fishing'
+      ||this.ui.panel==='fishing'&&this.ui.fishTab==='cast'&&this.state.fishery.session?.reel;
     if(livePanel)this.ui.tick();
     this.clock+=dt;
     if(this.clock>.35){
@@ -285,8 +301,14 @@ export class FarmApp extends Component {
           return{ok:true,message:`小助手收获${ready.length}块田，喂养${fed}位伙伴`};
         });
       }
-      if(this.ui.panel!=='home'&&(changed||lifeChanged||storm||strike||scene||this.currentSignature()!==this.signature))this.refresh();
-      else if(this.dirty&&!this.pointer)this.flush();
+      if(this.dirty&&!this.pointer)this.flush();
+      else if(this.ui.panel!=='home'){
+        const signature=this.currentSignature();
+        const worldChanged=storm||strike||scene||signature.world!==this.signature.world;
+        if(worldChanged)this.scene.redraw();
+        if(worldChanged||changed||lifeChanged||signature.hud!==this.signature.hud)this.ui.render();
+        this.signature=signature;
+      }
       if(!livePanel)this.ui.tick();
     }
     const music=audioMix(this.state).bgm;
@@ -299,6 +321,6 @@ export class FarmApp extends Component {
       }
     }
   }
-  onDestroy(){this.saveInput?.remove();game.off(Game.EVENT_HIDE,this.hide);game.off(Game.EVENT_SHOW,this.show);if(sys.isBrowser){window.removeEventListener('pagehide',this.hide);document.removeEventListener('visibilitychange',this.visibility);}input.off(Input.EventType.KEY_DOWN,this.key,this);view.off('canvas-resize',this.resize);director.off(Director.EVENT_AFTER_DRAW,this.afterDraw);if(this.state)this.save();void this.audio?.close();}
+  onDestroy(){this.scene?.dispose();this.saveInput?.remove();game.off(Game.EVENT_HIDE,this.hide);game.off(Game.EVENT_SHOW,this.show);if(sys.isBrowser){window.removeEventListener('pagehide',this.hide);document.removeEventListener('visibilitychange',this.visibility);}input.off(Input.EventType.KEY_DOWN,this.key,this);view.off('canvas-resize',this.resize);director.off(Director.EVENT_AFTER_DRAW,this.afterDraw);if(this.state)this.save();void this.audio?.close();}
 }
 function rawSession(){if(sys.isNative)return false;try{return sessionStorage.getItem('sunny-farm-started');}catch{return true;}}

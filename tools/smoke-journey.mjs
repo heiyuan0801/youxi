@@ -10,7 +10,7 @@ const browser = await chromium.launch({
   headless: true,
   executablePath: process.env.CHROME_PATH || '/Volumes/mac/ms-playwright/chromium-1248/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing',
 });
-const context = await browser.newContext({ viewport: { width: 1600, height: 900 }, hasTouch: true });
+const context = await browser.newContext({ locale: 'zh-CN', viewport: { width: 1600, height: 900 }, hasTouch: true });
 const page = await context.newPage();
 const checks = [], errors = [];
 page.on('pageerror', e => errors.push(e.message));
@@ -135,10 +135,10 @@ try {
   pass('file picker import, corrupt input rejection, cancel, confirmation, and legacy migration');
 
   await plot(4); assert.equal((await state()).activities.pumpkin, 110);
-  await button('季节与自动化'); await button('四季比赛与日历'); await button('送南瓜参赛');
+  await button('节庆'); await button('四季比赛与日历'); await button('送南瓜参赛');
   assert.equal((await state()).activities.pumpkinRecord, 110);
   await shot('festival'); await close();
-  await button('我的小屋'); await button('家具制作台'); await button('制作绿叶小床');
+  await button('我的小屋 · 装修'); await button('家具制作台'); await button('制作绿叶小床');
   assert.equal((await state()).activities.furniture.type, 'bed');
   const furnitureTime = (await state()).activities.furniture.readyAt;
   await shot('carpenter'); await close();
@@ -174,7 +174,7 @@ try {
 
   await page.setViewportSize({ width: 1600, height: 900 }); await sleep(250);
   await sleep(Math.max(0, furnitureTime - Date.now() + 150));
-  await button('我的小屋'); await button('家具制作台'); await button('领取制成家具');
+  await button('我的小屋 · 装修'); await button('家具制作台'); await button('领取制成家具');
   assert.equal((await state()).advanced.room.items[0].type, 'bed');
   await close(); await button('设置'); await button('恢复本机备份'); await button('确认恢复');
   const restored = await state();

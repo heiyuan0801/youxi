@@ -34,6 +34,8 @@ export class FarmScene {
   placing:DecoId|null=null;
   private weather!:Graphics;
   private machines:Graphics|null=null;
+  private homeTerrain:Graphics|null=null;
+  private homeTerrainKey='';
   private rigs:{n:Node;x:number;y:number;kind:'harvest'|'feed'}[]=[];
   constructor(public root:Node,art:Map<string,import('cc').SpriteFrame>,private getState:()=>FarmState){this.p=new Painter(WIDTH,HEIGHT,art);}
   private groundRect(g:Graphics,x:number,y:number,w:number,h:number,fill:string,lift=0,r=.12,stroke?:string,line=1){const pts:XY[]=[];const rr=Math.min(r,w/2,h/2);for(const [cx,cy,start] of [[x+rr,y+rr,Math.PI],[x+w-rr,y+rr,Math.PI*1.5],[x+w-rr,y+h-rr,0],[x+rr,y+h-rr,Math.PI/2]])for(let i=0;i<=5;i++){const a=start+i*Math.PI/10;pts.push(project(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,lift));}this.p.path(g,pts,fill,stroke,line);}
@@ -41,7 +43,8 @@ export class FarmScene {
   private object(key:string,x:number,y:number,width:number,depth:number,bottom=true,parent=this.root){const meta=REF_ART[key]||(LIFE_ART[key]||NEXT_ART[key]),frame=this.p.art.get(key);const h=width*(meta?.h||frame?.rect.height||1)/(meta?.w||frame?.rect.width||1);const n=this.p.image(parent,key,x,y,width,h,bottom);if(parent===this.root)this.depth.push({n,depth});return n;}
   private addHit(key:string,x:number,y:number,w:number,depth:number,type:string,id:string|number){const m=REF_ART[key]||(LIFE_ART[key]||NEXT_ART[key]),f=this.p.art.get(key),ratio=(m?.h||f?.rect.height||1)/(m?.w||f?.rect.width||1);this.hits.push({key,x:x-w/2,y:y-w*ratio,w,h:w*ratio,depth,type,id});}
   redraw(){
-    this.rigs=[];const state=this.getState(),size=worldWidth(state),drawPaths=[...PATHS,...(size>22?[{x:22,y:4,w:size-22,h:1},{x:22,y:18,w:size-22,h:1},{x:22,y:21,w:size-22,h:1},...REGIONS.slice(0,state.progression.regions.length).map(r=>({x:r.x+7,y:5,w:1,h:13}))]:[])];this.motion.sync(state.animals,hasRegion(state,'pasture'),size,state.ecology.roaming);empty(this.root);this.depth=[];this.hits=[];this.trees=[];this.cropNodes=[];this.cloudNodes=[];this.animalNodes.clear();this.aquaticNodes=[];this.walkers=[];this.cars=[];this.flowers=[];this.particles=[];
+    this.homeTerrain?.node.removeFromParent();
+    this.rigs=[];const state=this.getState(),size=worldWidth(state);this.motion.sync(state.animals,hasRegion(state,'pasture'),size,state.ecology.roaming);empty(this.root);this.depth=[];this.hits=[];this.trees=[];this.cropNodes=[];this.cloudNodes=[];this.animalNodes.clear();this.aquaticNodes=[];this.walkers=[];this.cars=[];this.flowers=[];this.particles=[];
     const p=this.p,sky=p.g(this.root,'Sky');p.path(sky,[[-6000,-4000],[6000,-4000],[6000,4000],[-6000,4000]],'#fff3dc');
     if(state.life.activeMap!=='home'){
       this.motion.cancelPatrol();
@@ -55,21 +58,8 @@ export class FarmScene {
     // Public reference scene: 22x22 isometric island, 64x32 tile projection.
     for(let i=0;i<18;i++){const y=-100+i*80;const t=Math.min(1,i/13),r=Math.round(191+(255-191)*t),gg=Math.round(233+(243-233)*t),b=Math.round(255+(220-255)*t);p.path(sky,[[-2000,y],[3600,y],[3600,y+82],[-2000,y+82]],'#'+[r,gg,b].map(x=>x.toString(16).padStart(2,'0')).join(''));}
     for(let i=0;i<6;i++){const n=p.node(this.root,'Cloud');const cg=p.g(n);const x=800,y=450,size=1+i%3*.35;for(const [dx,dy,rx,ry] of [[0,0,70,26],[-40,8,44,20],[46,6,50,22],[8,-16,40,24]])p.ellipse(cg,x+dx*size,y+dy*size,rx*size,ry*size,'#ffffff',140);this.cloudNodes.push({n,phase:i*977});}
-    const g=p.g(this.root,'Terrain'),winter=seasonIndex(state)%4===3;
-    const [sx,sy]=project(size/2,11,190);p.ellipse(g,sx,sy,(1500+(size-22)*40)*Z,(560+(size-22)*12)*Z,'#467896',35);
-    const layers=['#b77a52','#c98d5f','#bb8157','#d39a6a'];for(let h=84;h>12;h-=4)this.groundRect(g,0,0,size,22,layers[Math.floor((84-h)/18)%4],h,.7);
-    this.groundRect(g,0,0,size,22,'#6fbd4b',12,.7);this.groundRect(g,0,0,size,22,'#86cf5c',6,.7);this.groundRect(g,0,0,size,22,winter?'#e9f4ed':'#a9de7c',0,.7);
-    for(let y=0;y<22;y++)for(let x=0;x<size;x++)if((x+y)%2===0&&!drawPaths.some(r=>inside(x,y,r)))this.groundRect(g,x,y,1,1,winter?'#f6fbf8':'#b0e286',0,0);
-    let rng=7;const rand=()=>{rng=(rng*1664525+1013904223)>>>0;return rng/4294967296;};
-    for(let i=0;i<180;i++){const x=rand()*size,y=rand()*18;if(!freeGrass(x,y,size))continue;const [u,v]=project(x,y);if(i%2){for(let j=0;j<5;j++)p.ellipse(g,u+Math.cos(j*1.256)*2.5,v+Math.sin(j*1.256)*1.6,2.1,2.1,['#ffffff','#ffb3c7','#ffe066','#c9b6ff'][i%4]);}else for(let j=-1;j<=1;j++)p.line(g,[[u+j*4,v],[u+j*5,v-(j===0?7:5)]],'#85bf68',1.3);}
-    this.groundRect(g,1,6,5,8,'#bfe38f',0,.35);this.groundEllipse(g,3.6,10.2,1.2,.8,'#b7bc76');this.groundEllipse(g,4.4,12.8,.7,.45,'#b7bc76');
-    this.groundRect(g,0,19,size,2,'#666d7c',0,0);this.groundRect(g,0,19.08,size,1.84,'#737b8b',0,0);
-    for(let x=0;x<size;x++)this.groundRect(g,x+.2,19.96,.5,.08,'#f7f7f6',0,0);
-    for(const x of [7,17])for(let i=0;i<5;i++)this.groundRect(g,x+.06+i*.19,19.12,.1,1.76,'#f7f7f6',0,0);
-    for(const r of [...drawPaths,{x:3,y:3.7,w:1,h:.6},{x:11,y:3.7,w:1,h:.6},{x:15.2,y:15.85,w:1.6,h:2.2},{x:18.6,y:3.75,w:.8,h:.5}]){this.groundRect(g,r.x+.04,r.y+.04,r.w-.08,r.h-.08,'#e2c993',5,.32);this.groundRect(g,r.x+.04,r.y+.04,r.w-.08,r.h-.08,'#fbf0d4',0,.32);}
-    this.groundEllipse(g,12,15.4,2.84,1.79,'#f2dca1');this.groundEllipse(g,12,15.44,2.54,1.49,'#4fb3dd');this.groundEllipse(g,12,15.4,2.5,1.45,'#7fd3f2');this.groundEllipse(g,11.5,15.1,1.37,.65,'#9fe0f7');
-    for(const [x,y,r]of[[13.3,14.9,.26],[10.6,15.9,.22],[12.4,16.25,.18]])this.groundEllipse(g,x,y,r,r,'#5fc06a');this.groundEllipse(g,13.32,14.88,.08,.08,'#ff9ec0');
-    this.groundRect(g,1.02,15.02,5.96,2.96,'#a7744a',6,.3);this.groundRect(g,1.02,15.02,5.96,2.96,'#d9b27a',0,.3);this.groundRect(g,1.1,15.1,5.8,2.8,'#c99a63',0,.24);
+    this.drawHomeTerrain(size,seasonIndex(state)%4===3,state.progression.regions.length);
+    const g=p.g(this.root,'Fields');
     GARDEN.forEach((b,i)=>{this.groundEllipse(g,b.x+.5,b.y+.5,.38,.38,'#7c4f30',3);this.groundEllipse(g,b.x+.5,b.y+.5,.38,.38,'#b07c52');const [x,y]=project(b.x+.5,b.y+.5);const ring=p.g(this.root,'FlowerBed-'+i);const pts=Array.from({length:24},(_,j)=>{const a=j/24*Math.PI*2;return project(b.x+.5+Math.cos(a)*.38,b.y+.5+Math.sin(a)*.38);});for(let j=0;j<pts.length;j+=2)p.line(ring,[pts[j],pts[(j+1)%pts.length]],'#e2c6a4',1.4);this.depth.push({n:ring.node,depth:b.x+b.y+.9});
       const planted=(state.beds||[])[i];if(planted){const age=(Date.now()-planted)/1000,key=age>=60?'wp_flower':age>30?'wp_leaf':age>10?'wp_sprout':'wp_seed';const n=this.object(key,x,y+8*Z,66*Z,b.x+b.y+1);this.flowers.push(n);}
     });
@@ -126,6 +116,36 @@ export class FarmScene {
     if(state.life.automation.feedBuilt){this.marker(4.3,4.55,state.life.automation.feed?'喂养器运转':'喂养器停着','automation',1);if(this.p.art.has('machineFeeder')){const [u,v]=project(4.3,4.55);const n=this.object('machineFeeder',u,v,70*Z,8.9);this.rigs.push({n,x:4.3,y:4.55,kind:'feed'});}}
     this.update(0);
   }
+  private drawHomeTerrain(size:number,winter:boolean,regions:number){
+    const key=`${size}:${winter}`;
+    if(this.homeTerrain&&this.homeTerrainKey===key){
+      this.homeTerrain.node.parent=this.root;
+      return;
+    }
+    this.homeTerrain?.node.destroy();
+    const p=this.p,g=p.g(this.root,'Terrain');
+    this.homeTerrain=g;
+    this.homeTerrainKey=key;
+    const drawPaths=[...PATHS,...(size>22?[
+      {x:22,y:4,w:size-22,h:1},{x:22,y:18,w:size-22,h:1},{x:22,y:21,w:size-22,h:1},
+      ...REGIONS.slice(0,regions).map(r=>({x:r.x+7,y:5,w:1,h:13})),
+    ]:[])];
+    const [sx,sy]=project(size/2,11,190);p.ellipse(g,sx,sy,(1500+(size-22)*40)*Z,(560+(size-22)*12)*Z,'#467896',35);
+    const layers=['#b77a52','#c98d5f','#bb8157','#d39a6a'];for(let h=84;h>12;h-=4)this.groundRect(g,0,0,size,22,layers[Math.floor((84-h)/18)%4],h,.7);
+    this.groundRect(g,0,0,size,22,'#6fbd4b',12,.7);this.groundRect(g,0,0,size,22,'#86cf5c',6,.7);this.groundRect(g,0,0,size,22,winter?'#e9f4ed':'#a9de7c',0,.7);
+    for(let y=0;y<22;y++)for(let x=0;x<size;x++)if((x+y)%2===0&&!drawPaths.some(r=>inside(x,y,r)))this.groundRect(g,x,y,1,1,winter?'#f6fbf8':'#b0e286',0,0);
+    let rng=7;const rand=()=>{rng=(rng*1664525+1013904223)>>>0;return rng/4294967296;};
+    for(let i=0;i<180;i++){const x=rand()*size,y=rand()*18;if(!freeGrass(x,y,size))continue;const [u,v]=project(x,y);if(i%2){for(let j=0;j<5;j++)p.ellipse(g,u+Math.cos(j*1.256)*2.5,v+Math.sin(j*1.256)*1.6,2.1,2.1,['#ffffff','#ffb3c7','#ffe066','#c9b6ff'][i%4]);}else for(let j=-1;j<=1;j++)p.line(g,[[u+j*4,v],[u+j*5,v-(j===0?7:5)]],'#85bf68',1.3);}
+    this.groundRect(g,1,6,5,8,'#bfe38f',0,.35);this.groundEllipse(g,3.6,10.2,1.2,.8,'#b7bc76');this.groundEllipse(g,4.4,12.8,.7,.45,'#b7bc76');
+    this.groundRect(g,0,19,size,2,'#666d7c',0,0);this.groundRect(g,0,19.08,size,1.84,'#737b8b',0,0);
+    for(let x=0;x<size;x++)this.groundRect(g,x+.2,19.96,.5,.08,'#f7f7f6',0,0);
+    for(const x of [7,17])for(let i=0;i<5;i++)this.groundRect(g,x+.06+i*.19,19.12,.1,1.76,'#f7f7f6',0,0);
+    for(const r of [...drawPaths,{x:3,y:3.7,w:1,h:.6},{x:11,y:3.7,w:1,h:.6},{x:15.2,y:15.85,w:1.6,h:2.2},{x:18.6,y:3.75,w:.8,h:.5}]){this.groundRect(g,r.x+.04,r.y+.04,r.w-.08,r.h-.08,'#e2c993',5,.32);this.groundRect(g,r.x+.04,r.y+.04,r.w-.08,r.h-.08,'#fbf0d4',0,.32);}
+    this.groundEllipse(g,12,15.4,2.84,1.79,'#f2dca1');this.groundEllipse(g,12,15.44,2.54,1.49,'#4fb3dd');this.groundEllipse(g,12,15.4,2.5,1.45,'#7fd3f2');this.groundEllipse(g,11.5,15.1,1.37,.65,'#9fe0f7');
+    for(const [x,y,r]of[[13.3,14.9,.26],[10.6,15.9,.22],[12.4,16.25,.18]])this.groundEllipse(g,x,y,r,r,'#5fc06a');this.groundEllipse(g,13.32,14.88,.08,.08,'#ff9ec0');
+    this.groundRect(g,1.02,15.02,5.96,2.96,'#a7744a',6,.3);this.groundRect(g,1.02,15.02,5.96,2.96,'#d9b27a',0,.3);this.groundRect(g,1.1,15.1,5.8,2.8,'#c99a63',0,.24);
+  }
+  dispose(){this.homeTerrain?.node.destroy();}
   private marker(x:number,y:number,label:string,type:string,id:number){
     const [u,v]=project(x,y,-43),width=Math.max(80,label.length*13+20),depth=x+y+30;
     const node=this.p.pill(this.root,u,v,width,31,'#fff1be');
@@ -189,7 +209,7 @@ export class FarmScene {
       if(pose.working)p.ellipse(g,x-18+pose.arm*16,y-34,3.5,3.5,'#fff4c8');
     }
   }
-  private drawWeather(t:number){if(!this.weather)return;const g=this.weather,p=this.p,w=weatherAt(this.getState());g.clear();if(['rain','storm','thunder','snow'].includes(w)){for(let i=0;i<46;i++){const x=(i*143.3+t*31)%1800-100,y=(i*83.7+t*(w==='snow'?35:330))%1100-100;if(w==='snow')p.ellipse(g,x+Math.sin(t+i)*12,y,2.5,2.5,'#ffffff',210);else p.line(g,[[x,y],[x-6,y+18]],'#a6d8f1',1.2,w==='rain'?110:180);}}if(w==='rainbow'||w==='aurora'){for(let i=0;i<6;i++)p.ellipse(g,700+i*36+Math.sin(t*.3)*30,80+i*8,390-i*34,30,['#ffafc2','#ffd37c','#b8e98c','#99dfeb','#c6b8f5','#f9bcdd'][i],35);}g.node.setSiblingIndex(this.root.children.length-1);}
+  private drawWeather(t:number){if(!this.weather)return;const g=this.weather,p=this.p,w=weatherAt(this.getState());g.clear();if(['rain','storm','thunder','snow'].includes(w)){for(let i=0;i<46;i++){const x=(i*143.3+t*31)%1800-100,y=(i*83.7+t*(w==='snow'?35:330))%1100-100;if(w==='snow')p.ellipse(g,x+Math.sin(t+i)*12,y,2.5,2.5,'#ffffff',210);else p.line(g,[[x,y],[x-6,y+18]],'#a6d8f1',1.2,w==='rain'?110:180);}}if(w==='rainbow'||w==='aurora'){for(let i=0;i<6;i++)p.ellipse(g,700+i*36+Math.sin(t*.3)*30,80+i*8,390-i*34,30,['#ffafc2','#ffd37c','#b8e98c','#99dfeb','#c6b8f5','#f9bcdd'][i],35);}}
   private drawRegions(g:Graphics){
     const p=this.p,state=this.getState(),size=worldWidth(state);
     for(const region of REGIONS.slice(0,state.progression.regions.length)){
@@ -360,6 +380,16 @@ export class FarmScene {
     this.smoke+=dt;if(this.smoke>.6){this.smoke=0;const [x,y]=project(3.5,2.5);const puff=this.p.node(this.root,'ChimneySmoke',x+80,y-270);const g=this.p.g(puff);this.p.ellipse(g,800,450,9,7,'#ffffff',70);this.particles.push({n:puff,left:2.6,max:2.6,vx:5,vy:20});}
     this.particles=this.particles.filter(a=>{a.left-=dt;if(a.left<=0){a.n.destroy();return false;}const pos=a.n.position;a.n.setPosition(pos.x+a.vx*dt,pos.y+a.vy*dt);this.p.opacity(a.n,Math.min(1,a.left/a.max)*210);return true;});
     this.drawMachines(t);
-    this.drawWeather(t);this.sortTimer+=dt;if(this.sortTimer>.12||dt===0){this.sortTimer=0;this.depth.sort((a,b)=>a.depth-b.depth).forEach(a=>a.n.setSiblingIndex(this.root.children.length-1));this.ripples.node.setSiblingIndex(this.root.children.length-1);this.ambient.node.setSiblingIndex(this.root.children.length-1);this.price.setSiblingIndex(this.root.children.length-1);this.timerRoot.setSiblingIndex(this.root.children.length-1);for(const a of this.particles)a.n.setSiblingIndex(this.root.children.length-1);}
+    this.drawWeather(t);this.sortTimer+=dt;if(this.sortTimer>.12||dt===0){this.sortTimer=0;this.sortHomeLayers();}
+  }
+  private sortHomeLayers(){
+    this.depth.sort((a,b)=>a.depth-b.depth);
+    const layers=[...this.depth.map(entry=>entry.n),this.ripples.node,this.ambient.node,
+      this.price,this.timerRoot,...this.particles.map(particle=>particle.n),this.weather.node];
+    let index=this.root.children.length-1;
+    for(let i=layers.length-1;i>=0;i--,index--){
+      const node=layers[i];
+      if(this.root.children[index]!==node)node.setSiblingIndex(index);
+    }
   }
 }

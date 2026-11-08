@@ -1,6 +1,7 @@
 import type {FeaturePanelContext} from './FeaturePanels';
 import {artHook, fishArtHook} from './ArtHooks';
 import {itemName, t} from './FarmI18n';
+import {t as uiText} from './Locale';
 import {
   BAITS, FISH, POND_UNLOCK_COST, POND_UPGRADES, anglingPhase, buyAnglingBait, castRod, feedPondFish,
   harvestPondFish, hookBite, pondCapacity, reelCheck, reelMarker, sellPondFish, stockPond, unlockPond,
@@ -10,36 +11,38 @@ import {
 const INK = '#5a3e2b', SOFT = '#997455';
 export type FishTab = 'cast' | 'pond';
 
-export function anglingPanel(c: FeaturePanelContext, tab: FishTab, setTab: (tab: FishTab) => void, spot: SpotId, bait: BaitId, setSpot: (spot: SpotId) => void, setBait: (bait: BaitId) => void) {
+export function anglingPanel(c: FeaturePanelContext, tab: FishTab, setTab: (tab: FishTab) => void, spot: SpotId, bait: BaitId, setSpot: (spot: SpotId) => void, setBait: (bait: BaitId) => void, compact: boolean, classic: () => void) {
   const {p, root, w, state: s, button, slot, act, live} = c;
   const locale = s.retention?.locale;
   const has = (key: string) => p.art.has(key);
-  (['cast', 'pond'] as const).forEach((id, index) => {
-    button(t(id === 'cast' ? 'fish.tabCast' : 'fish.tabPond', {}, locale), w / 4 + index * w / 2, 24, w / 2 - 12, 36, () => setTab(id), tab === id ? '#57bddd' : '#dfcfb2', tab === id ? '#3493b1' : '#beaa87', 14);
+  (['cast', 'pond', 'classic'] as const).forEach((id, index) => {
+    const label = id === 'classic' ? uiText('fish.classic') : t(id === 'cast' ? 'fish.tabCast' : 'fish.tabPond', {}, locale);
+    button(label, (index + .5) * w / 3, 24, w / 3 - 12, 36, id === 'classic' ? classic : () => setTab(id), tab === id ? '#57bddd' : '#dfcfb2', tab === id ? '#3493b1' : '#beaa87', 14);
   });
   if (tab === 'pond') return pondTab(c, locale, has);
   const phase = anglingPhase(s);
   const session = s.fishery.session;
-  p.contain(root, artHook('hook-rod', has), 36, 78, 52, 52);
+  const baitY = compact ? 68 : 78, spotY = compact ? 109 : 132;
+  p.contain(root, artHook('hook-rod', has), 36, baitY, 52, 52);
   BAITS.forEach((entry, index) => {
-    const x = 120 + index * 150;
-    p.contain(root, artHook(`hook-bait-${entry.id}`, has), x - 28, 78, 28, 28);
-    button(`${t(`bait.${entry.id}`, {}, locale)} ${s.fishery.bait[entry.id]}`, x + 36, 78, 108, 34, () => { setBait(entry.id); act(() => buyAnglingBait(s, entry.id)); }, bait === entry.id ? '#ffb150' : '#dfcfb2', '#dc8a29', 11);
+    const x = 105 + index * (w - 160) / 3;
+    p.contain(root, artHook(`hook-bait-${entry.id}`, has), x - 28, baitY, 28, 28);
+    button(`${t(`bait.${entry.id}`, {}, locale)} ${s.fishery.bait[entry.id]}`, x + 36, baitY, 108, 34, () => { setBait(entry.id); act(() => buyAnglingBait(s, entry.id)); }, bait === entry.id ? '#ffb150' : '#dfcfb2', '#dc8a29', 11);
   });
   (['home', 'beach', 'snow'] as const).forEach((id, index) => {
-    button(t(`spot.${id}`, {}, locale), w / 6 + index * w / 3, 132, w / 3 - 10, 34, () => setSpot(id), spot === id ? '#57bddd' : '#dfcfb2', '#3493b1', 12);
+    button(t(`spot.${id}`, {}, locale), w / 6 + index * w / 3, spotY, w / 3 - 10, 34, () => setSpot(id), spot === id ? '#57bddd' : '#dfcfb2', '#3493b1', 12);
   });
-  const status = p.label(root, '', w / 2, 176, 15, INK, w - 16, 36);
+  const status = p.label(root, '', w / 2, compact ? 143 : 176, 15, INK, w - 16, 34);
   const paint = () => {
     const now = Date.now();
     const current = anglingPhase(s, now);
-    status.string = current === 'waiting' ? t('fish.wait', {}, locale) : current === 'bite' ? t('fish.hook', {pulls: FISH.find(fish => fish.id === session?.species)?.pulls || 1}, locale) : current === 'reel' ? `${t('fish.reeling', {}, locale)} ${session?.reel ? Math.round(reelMarker(session.reel, now)) : ''}` : current === 'escaped' ? t('fish.escaped', {}, locale) : t('fish.cast', {}, locale);
+    status.string = current === 'waiting' ? t('fish.wait', {}, locale) : current === 'bite' ? t('fish.hook', {pulls: FISH.find(fish => fish.id === session?.species)?.pulls || 1}, locale) : current === 'reel' ? t('fish.reeling', {}, locale) : current === 'escaped' ? t('fish.escaped', {}, locale) : t('fish.cast', {}, locale);
   };
   paint();
   live(paint);
   if (session?.reel) {
     const reel = session.reel;
-    const y = 230;
+    const y = compact ? 174 : 230;
     const trackW = w - 48;
     p.rect(root, w / 2, y, trackW, 18, '#d7eef5', 8);
     p.rect(root, 24 + trackW * (reel.zone + reel.width / 2) / 100, y, trackW * reel.width / 100, 18, '#8ed48a', 8);
@@ -50,12 +53,13 @@ export function anglingPanel(c: FeaturePanelContext, tab: FishTab, setTab: (tab:
     };
     move();
     live(move);
-    p.label(root, `${reel.hits}/${reel.pulls}`, w / 2, 262, 13, SOFT, w - 20, 24);
+    p.label(root, `${reel.hits}/${reel.pulls}`, w / 2, y + (compact ? 25 : 32), 13, SOFT, w - 20, 24);
   }
   const action = phase === 'reel' ? () => reelCheck(s) : phase === 'bite' ? () => hookBite(s) : () => castRod(s, spot, bait);
-  button(phase === 'reel' ? t('fish.reelBtn', {}, locale) : phase === 'bite' ? t('fish.lift', {}, locale) : phase === 'waiting' ? t('fish.wait', {}, locale) : t('fish.tabCast', {}, locale), w / 2, 320, Math.min(280, w - 24), 48, () => act(action), phase === 'bite' || phase === 'reel' ? '#ff7aa2' : '#57bddd', '#3493b1', 18);
-  p.contain(root, artHook('hook-fish-bucket', has), 36, 378, 36, 36);
-  p.label(root, s.fishery.codex.length ? s.fishery.codex.map(id => itemName(id, id, locale)).join('、') : '·', w / 2 + 16, 378, 13, SOFT, w - 70, 40);
+  button(phase === 'reel' ? t('fish.reelBtn', {}, locale) : phase === 'bite' ? t('fish.lift', {}, locale) : phase === 'waiting' ? t('fish.wait', {}, locale) : t('fish.tabCast', {}, locale), w / 2, compact ? 231 : 320, Math.min(280, w - 24), 44, () => act(action), phase === 'bite' || phase === 'reel' ? '#ff7aa2' : '#57bddd', '#3493b1', 18);
+  const codexY=compact ? 288 : 378;
+  p.contain(root, artHook('hook-fish-bucket', has), 36, codexY, 36, 36);
+  p.label(root, s.fishery.codex.length ? s.fishery.codex.map(id => itemName(id, id, locale)).join('、') : '·', w / 2 + 16, codexY, 13, SOFT, w - 70, 40);
 }
 
 function pondTab(c: FeaturePanelContext, locale: string | undefined, has: (key: string) => boolean) {
