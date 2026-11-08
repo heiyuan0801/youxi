@@ -25,6 +25,17 @@ for(let attempt=0;attempt<3;attempt++){
   if(code!==36)throw Error(`Creator exited ${code}`);
   hasScene=existsSync(file)&&Object.keys(JSON.parse(readFileSync(file)).scenes||{}).length===1;
  }
- if(hasScene){console.log('Android project exported:',staging);break;}
+ if(hasScene){
+  const app=join(staging,'native/engine/android/app'),javaDir=join(app,'src/com/cocos/game');
+  cpSync('platforms/android/QingyeFrameRate.java',join(javaDir,'QingyeFrameRate.java'));
+  const activity=join(javaDir,'AppActivity.java'),source=readFileSync(activity,'utf8');
+  const onCreate='super.onCreate(savedInstanceState);';
+  if(!source.includes(onCreate))throw Error('Cocos Android Activity template changed');
+  if(!source.includes('QingyeFrameRate.install'))writeFileSync(activity,source.replace(onCreate,onCreate+'\n        QingyeFrameRate.install(this, getSurfaceView());'));
+  const proguard=join(app,'proguard-rules.pro'),rules=readFileSync(proguard,'utf8');
+  const keep='-keep class com.cocos.game.QingyeFrameRate { public static void setTarget(int); }';
+  if(!rules.includes(keep))writeFileSync(proguard,rules+'\n'+keep+'\n');
+  console.log('Android project exported:',staging);break;
+ }
  if(attempt===2)throw Error('Android scene import validation failed');
 }

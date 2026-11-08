@@ -9,7 +9,7 @@ import {Trait} from './FarmAdvanced';
 import {pondPanel,growthPanel,eventsPanel} from './EcologyPanels';
 import {Node,UITransform,Mask,ScrollView,Vec2,Vec3,view,SpriteFrame,Sprite,Texture2D,ImageAsset,UIOpacity,BlockInputEvents,Graphics,LabelOutline} from 'cc';
 import {Painter,empty,tint,XY} from './Drawing';
-import {FarmState,CropId,ProductId,DecoId,CROPS,DECOS,PRODUCTS,NAMES,PRICES,TASKS,Result,levelFor,levelFloor,levelCeil,canDeliver,expansionCost,skipOrder,deliver,sell,expand,buyAnimal,claimTask,unlockWithStars,expandWithStars,expandPen,readyPlot,plantAll,waterAll,harvestAll,cropById} from './FarmModel';
+import {FarmState,FrameRate,CropId,ProductId,DecoId,CROPS,DECOS,PRODUCTS,NAMES,PRICES,TASKS,Result,levelFor,levelFloor,levelCeil,canDeliver,expansionCost,skipOrder,deliver,sell,expand,buyAnimal,claimTask,unlockWithStars,expandWithStars,expandPen,readyPlot,plantAll,waterAll,harvestAll,cropById} from './FarmModel';
 import {workshopPanel,fishingPanel,journalPanel,diaryHeight,DiaryTab,FeaturePanelContext} from './FeaturePanels';
 import {DAILY_GOALS,dailyProgress,fishingPhase,RECIPES,recipeFactory} from './FarmFeatures';
 import {anglingPhase, type BaitId, type SpotId} from './FarmAngling';
@@ -27,7 +27,7 @@ import {agendaHeight, agendaPanel, type AgendaTab} from './RetentionPanels';
 import {advanceTutorial, dismissShare, skipTutorial, tutorialPrompt} from './FarmRetention';
 import {itemName, localizeOrder, t as retentionText} from './FarmI18n';
 import {momentText} from './FarmShare';
-export interface UICallbacks {act:(f:()=>Result)=>void;pick:(id:CropId)=>void;place:(id:DecoId)=>void;zoom:(factor:number)=>void;focus:(id:RegionId|'home')=>void;travel:(id:MapId)=>void;settings:(key:'sound'|'music'|'haptics')=>void;setVolume:(kind:'bgm'|'sfx',value:number)=>void;toggleMute:()=>void;setLocale:(locale:LocaleId)=>void;toggleHud:(side:'left'|'right')=>void;share:(which:'invite'|'pending'|'latest')=>void;askRedeem:()=>void;exportSave:()=>void;chooseSave:()=>void;restoreBackup:()=>void;confirmSave:()=>void;reset:()=>void;start:()=>void;}
+export interface UICallbacks {act:(f:()=>Result)=>void;pick:(id:CropId)=>void;place:(id:DecoId)=>void;zoom:(factor:number)=>void;focus:(id:RegionId|'home')=>void;travel:(id:MapId)=>void;settings:(key:'sound'|'music'|'haptics')=>void;setVolume:(kind:'bgm'|'sfx',value:number)=>void;toggleMute:()=>void;setLocale:(locale:LocaleId)=>void;setFrameRate:(rate:FrameRate)=>void;toggleHud:(side:'left'|'right')=>void;share:(which:'invite'|'pending'|'latest')=>void;askRedeem:()=>void;exportSave:()=>void;chooseSave:()=>void;restoreBackup:()=>void;confirmSave:()=>void;reset:()=>void;start:()=>void;}
 const PALE='#fffcf4',LINE='#f2d8ac',INK='#5a3e2b',SOFT='#997455';
 export class FarmUI {
   panel:Panel=null;shopTab='土地';seedOpen=false;selected:CropId|null=null;started=true;
@@ -250,17 +250,23 @@ export class FarmUI {
       p.rect(root,w/2,23,w,40,'#f5e6c8',20);(['成长','今日','建设','图鉴'] as const).forEach((tab,i)=>{const x=w/8+i*w/4,n=p.rect(root,x,23,w/4-4,34,this.diaryTab===tab?'#ffffff':'#f5e6c8',18);p.label(root,tab,x,23,14,this.diaryTab===tab?INK:SOFT,w/4-8,28);p.hit(n,()=>{this.diaryTab=tab;this.render();});this.buttons.push({label:'手记-'+tab,n});});journalPanel(this.featureContext(m),this.diaryTab);return;
     }
     if(panel==='settings'){
-      const locale=state.retention?.locale,m=this.modal(t('set.title'),'',560,820,980),{p,root,w}=m;p.label(root,retentionText('settings.audio',{},locale),w/2,18,18,'#7755a6',w-20,33);(['music','sound','haptics'] as const).forEach((key,i)=>{const y=72+i*52;this.slot(p,root,w/2,y,w,46);p.label(root,t(key==='music'?'set.music':key==='sound'?'set.sound':'set.haptics'),100,y,16,INK,175,32,true,'left');const on=state[key];this.button(p,root,on?t('set.on'):t('set.off'),w-52,y,80,34,()=>this.cb.settings(key),on?'#67ca70':'#c9bca5',on?'#3fa84d':'#ad9b7e',14);});
-      (['bgm','sfx'] as const).forEach((kind,i)=>{const y=236+i*52,value=state.retention.audio[kind];this.slot(p,root,w/2,y,w,46);p.label(root,retentionText(kind==='bgm'?'settings.bgm':'settings.sfx',{},locale),88,y,14,INK,120,30,true,'left');this.button(p,root,'−',w-132,y,44,34,()=>this.cb.setVolume(kind,value-10),'#d9c4a3','#bca381',18);p.label(root,`${value}%`,w-78,y,14,INK,52,28);this.button(p,root,'+',w-36,y,44,34,()=>this.cb.setVolume(kind,value+10),'#d9c4a3','#bca381',18);});
-      this.button(p,root,retentionText(state.retention.audio.muted?'settings.unmute':'settings.mute',{},locale),w/2,344,w-20,40,()=>this.cb.toggleMute(),state.retention.audio.muted?'#67ca70':'#c9bca5','#3fa84d',14);
-      p.label(root,t('set.lang'),w/2,388,16,'#7755a6',w-20,28);LOCALES.forEach((id,i)=>{const ww=(w-16)/5,x=ww/2+8+i*ww;this.button(p,root,LOCALE_LABEL[id],x,424,ww-6,36,()=>this.cb.setLocale(id),locale===id?'#67ca70':'#cfbfa1',locale===id?'#3fa84d':'#ad9875',12);});
-      p.label(root,retentionText('settings.code',{code:state.retention.share.code},locale),w/2,470,14,INK,w-16,28);
-      this.button(p,root,retentionText('hud.share',{},locale),w/2,516,w-20,42,()=>this.cb.share('invite'),'#5ebde8','#3397c2',15);
-      if(state.retention.share.latest)this.button(p,root,retentionText('settings.shareLatest',{},locale),w/2,566,w-20,40,()=>this.cb.share('latest'),'#ffb150','#dc8a29',14);
-      this.button(p,root,retentionText('settings.redeem',{},locale),w/2,618,w-20,40,()=>this.cb.askRedeem(),'#ab89d3','#8360ac',14);
-      this.button(p,root,t('set.export'),w/2,674,w-20,40,this.cb.exportSave,'#5ebde8','#3397c2',15);this.button(p,root,t('set.privacy'),w/2,722,w-20,40,()=>this.open('privacy'),'#ab89d3','#8360ac',15);this.button(p,root,t('set.reset'),w/2,770,w-20,40,()=>this.open('confirm-reset'),'#ff7aa2','#d64f7d',15);
-      this.button(p,root,t('set.import'),w/2,818,w-20,40,this.cb.chooseSave,'#67ca70','#3fa84d',15);
-      this.button(p,root,t('set.restore'),w/2,866,w-20,40,this.cb.restoreBackup,'#ffb150','#dc8a29',15);return;
+      const locale=state.retention?.locale,m=this.modal(t('set.title'),'',560,820,1032),{p,root,w}=m;p.label(root,retentionText('settings.audio',{},locale),w/2,18,18,'#7755a6',w-20,33);(['music','sound','haptics'] as const).forEach((key,i)=>{const y=72+i*52;this.slot(p,root,w/2,y,w,46);p.label(root,t(key==='music'?'set.music':key==='sound'?'set.sound':'set.haptics'),100,y,16,INK,175,32,true,'left');const on=state[key];this.button(p,root,on?t('set.on'):t('set.off'),w-52,y,80,34,()=>this.cb.settings(key),on?'#67ca70':'#c9bca5',on?'#3fa84d':'#ad9b7e',14);});
+      this.slot(p,root,w/2,236,w,46);
+      p.label(root,t('set.frameRate'),100,236,16,INK,175,32,true,'left');
+      ([60,120] as const).forEach((rate,i)=>{
+        const selected=state.frameRate===rate;
+        this.button(p,root,`${rate} FPS`,w-159+i*106,236,96,40,()=>this.cb.setFrameRate(rate),selected?'#67ca70':'#cfbfa1',selected?'#3fa84d':'#ad9875',14);
+      });
+      (['bgm','sfx'] as const).forEach((kind,i)=>{const y=288+i*52,value=state.retention.audio[kind];this.slot(p,root,w/2,y,w,46);p.label(root,retentionText(kind==='bgm'?'settings.bgm':'settings.sfx',{},locale),88,y,14,INK,120,30,true,'left');this.button(p,root,'−',w-132,y,44,34,()=>this.cb.setVolume(kind,value-10),'#d9c4a3','#bca381',18);p.label(root,`${value}%`,w-78,y,14,INK,52,28);this.button(p,root,'+',w-36,y,44,34,()=>this.cb.setVolume(kind,value+10),'#d9c4a3','#bca381',18);});
+      this.button(p,root,retentionText(state.retention.audio.muted?'settings.unmute':'settings.mute',{},locale),w/2,396,w-20,40,()=>this.cb.toggleMute(),state.retention.audio.muted?'#67ca70':'#c9bca5','#3fa84d',14);
+      p.label(root,t('set.lang'),w/2,440,16,'#7755a6',w-20,28);LOCALES.forEach((id,i)=>{const ww=(w-16)/5,x=ww/2+8+i*ww;this.button(p,root,LOCALE_LABEL[id],x,476,ww-6,36,()=>this.cb.setLocale(id),locale===id?'#67ca70':'#cfbfa1',locale===id?'#3fa84d':'#ad9875',12);});
+      p.label(root,retentionText('settings.code',{code:state.retention.share.code},locale),w/2,522,14,INK,w-16,28);
+      this.button(p,root,retentionText('hud.share',{},locale),w/2,568,w-20,42,()=>this.cb.share('invite'),'#5ebde8','#3397c2',15);
+      if(state.retention.share.latest)this.button(p,root,retentionText('settings.shareLatest',{},locale),w/2,618,w-20,40,()=>this.cb.share('latest'),'#ffb150','#dc8a29',14);
+      this.button(p,root,retentionText('settings.redeem',{},locale),w/2,670,w-20,40,()=>this.cb.askRedeem(),'#ab89d3','#8360ac',14);
+      this.button(p,root,t('set.export'),w/2,726,w-20,40,this.cb.exportSave,'#5ebde8','#3397c2',15);this.button(p,root,t('set.privacy'),w/2,774,w-20,40,()=>this.open('privacy'),'#ab89d3','#8360ac',15);this.button(p,root,t('set.reset'),w/2,822,w-20,40,()=>this.open('confirm-reset'),'#ff7aa2','#d64f7d',15);
+      this.button(p,root,t('set.import'),w/2,870,w-20,40,this.cb.chooseSave,'#67ca70','#3fa84d',15);
+      this.button(p,root,t('set.restore'),w/2,918,w-20,40,this.cb.restoreBackup,'#ffb150','#dc8a29',15);return;
     }
     if(panel==='restore-save'){
       const m=this.modal(t('restore.title'),'',590,360,285),{p,root,w}=m,preview=this.restorePreview;

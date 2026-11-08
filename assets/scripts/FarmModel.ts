@@ -33,11 +33,12 @@ export type DecoId=typeof DECOS[number]['type'];
 export interface Plot { unlocked: boolean; crop: CropId | null; plantedAt: number; watered: boolean; growSeconds?:number; pauseAt?:number;pauseUntil?:number; composted?:boolean; soil?:SoilTier; }
 export interface Animal { id: number; type: AnimalId; readyAt: number; }
 export interface Order { id: number; person: string; message: string; needs: Partial<Record<ProductId,number>>; coins: number; xp: number; }
+export type FrameRate = 60 | 120;
 export interface FarmState {
   version: 1; coins: number; xp: number; inventory: Record<ProductId,number>; plots: Plot[];
   animals: Animal[]; orders: Order[]; orderSequence: number;
   stats: { harvests:number; deliveries:number; expansions:number; products:number };
-  claimed: string[]; decorations: {type:DecoId;x:number;y:number}[]; savedAt:number; sound:boolean;
+  claimed: string[]; decorations: {type:DecoId;x:number;y:number}[]; savedAt:number; sound:boolean; frameRate:FrameRate;
   layoutVersion:2; stars:number;days:number;activeDate:string;cropUnlocks:CropId[];beds:number[];music:boolean;haptics:boolean;penBonus:{hen:number;cow:number};
   features:FarmFeatures;
   progression:FarmProgression;
@@ -62,7 +63,7 @@ export function newFarm(now=Date.now()):FarmState {
     {id:1,type:'hen',readyAt:now+6000},{id:2,type:'hen',readyAt:now+18000},
     {id:3,type:'hen',readyAt:now-1000},{id:4,type:'cow',readyAt:now+30000}],
     orders:[makeOrder(0),makeOrder(1),makeOrder(2)],orderSequence:3,
-    stats:{harvests:0,deliveries:0,expansions:0,products:0},claimed:[],decorations:[],savedAt:now,sound:true,locale:'zh-CN',retention:newRetention(now),fishery:newFishery()};
+    stats:{harvests:0,deliveries:0,expansions:0,products:0},claimed:[],decorations:[],savedAt:now,sound:true,frameRate:60,locale:'zh-CN',retention:newRetention(now),fishery:newFishery()};
 }
 const templates = [
   {person:'林奶奶',message:'早上的面包，就差新鲜的麦香啦。',needs:{wheat:3,carrot:1},coins:76,xp:12},
@@ -248,6 +249,7 @@ export function parseSave(raw:string|null,now=Date.now(),refresh=true):FarmState
     if(!int(s.stars)||!int(s.days)||typeof s.activeDate!=='string'||!Array.isArray(s.cropUnlocks)||!s.cropUnlocks.every(id=>CROPS.some(c=>c.id===id)))return null;
     if(s.layoutVersion!==2){s.plots=[...s.plots.filter(p=>p.unlocked),...s.plots.filter(p=>!p.unlocked)];s.layoutVersion=2;}
     if(typeof s.sound!=='boolean')s.sound=true;
+    if(s.frameRate!==120)s.frameRate=60;
     if(legacy){s.features=newFeatures(s.stats,now);for(const id of PRODUCTS)if(s.inventory[id]>0)s.features.album.counts[id]=s.inventory[id];}
     if(!validateFeatures(s.features,PRODUCTS))return null;
     if(s.advanced===undefined)s.advanced=migrateAdvanced(s,now);

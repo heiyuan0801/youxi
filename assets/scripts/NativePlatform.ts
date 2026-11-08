@@ -1,7 +1,12 @@
 import {sys,native} from 'cc';
 import type {Insets} from './HudLayout';
+import type {FrameRate} from './FarmModel';
 // Creator's declaration describes Android's signature argument; Objective-C selectors omit it.
 const objc=(selector:string,...args:string[])=>(native.reflection.callStaticMethod as any)('QingyeBridge',selector,...args);
+export function requestAndroidFrameRate(rate:FrameRate){
+ if(!sys.isNative||sys.os!==sys.OS.ANDROID)return;
+ try{native.reflection.callStaticMethod('com/cocos/game/QingyeFrameRate','setTarget','(I)V',rate);}catch{}
+}
 export function nativeInsets():Partial<Insets>{
  if(!sys.isNative||sys.os!==sys.OS.IOS)return{};
  try{return JSON.parse(objc('safeAreaJSON') as string);}catch{return{};}

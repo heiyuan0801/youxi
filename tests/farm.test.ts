@@ -2,6 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {newFarm,plant,harvest,water,sell,deliver,expand,collectAnimal,buyAnimal,claimTask,buyDecoration,readyPlot,secondsLeft,serialize,parseSave,levelFor,expansionCost,plantAll,waterAll,harvestAll} from '../assets/scripts/FarmModel';
 const NOW=1800000000000;
+test('frame rate survives save and load and old saves default to 60 FPS',()=>{
+ const s=newFarm(NOW);assert.equal(s.frameRate,60);
+ s.frameRate=120;const raw=serialize(s,NOW);assert.equal(parseSave(raw,NOW,false)?.frameRate,120);
+ const legacy=JSON.parse(raw);delete legacy.frameRate;
+ assert.equal(parseSave(JSON.stringify(legacy),NOW,false)?.frameRate,60);
+ legacy.frameRate=240;assert.equal(parseSave(JSON.stringify(legacy),NOW,false)?.frameRate,60);
+});
 test('a planted crop costs money once and cannot be harvested early',()=>{
  const s=newFarm(NOW),before=s.coins;assert.equal(plant(s,4,'wheat',NOW).ok,true);assert.equal(s.coins,before-5);
  assert.equal(plant(s,4,'wheat',NOW).ok,false);assert.equal(harvest(s,4,NOW+19999).ok,false);

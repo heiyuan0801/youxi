@@ -1,4 +1,4 @@
-import {nativeHaptic,exportNativeSave,beginNativeSaveImport,takeNativeSaveImport,shareNative,beginInvitePrompt,takeInvitePrompt} from './NativePlatform';
+import {nativeHaptic,exportNativeSave,beginNativeSaveImport,takeNativeSaveImport,shareNative,beginInvitePrompt,takeInvitePrompt,requestAndroidFrameRate} from './NativePlatform';
 import {detectLocale,isLocale,setActiveLocale,type LocaleId} from './Locale';
 import {compostPumpkin,damageStorm,recordStorm,repairStormPlot,resolveScene,rollScene,searchPatrol,PATROL_SPOTS} from './FarmActivities';
 import {settleAutomation} from './FarmAutomation';
@@ -21,7 +21,7 @@ import {refreshFeatures,fishingPhase,rollDaily} from './FarmFeatures';
 import {anglingPhase} from './FarmAngling';
 import {ART_HOOKS, FARM_ART_HOOKS, hookStem} from './ArtHooks';
 import {PLOTS,unproject,freeGrass,project,BASE_Z,WIDTH,HEIGHT} from './SceneLayout';
-import {FarmState,Result,CropId,DecoId,SAVE_KEY,newFarm,parseSave,serialize,plant,harvest,water,readyPlot,secondsLeft,cropById,collectAnimal,buyDecoration,tendFlower,levelFor} from './FarmModel';
+import {FarmState,FrameRate,Result,CropId,DecoId,SAVE_KEY,newFarm,parseSave,serialize,plant,harvest,water,readyPlot,secondsLeft,cropById,collectAnimal,buyDecoration,tendFlower,levelFor} from './FarmModel';
 import {audioMix,markShared,redeemInvite,setFarmLocale,setVolume,sharePayloadFor,toggleHud,toggleMute,touchRetention} from './FarmRetention';
 import {presentShare,type ShareHost} from './FarmShare';
 const {ccclass}=_decorator;
@@ -31,7 +31,14 @@ export class FarmApp extends Component {
   state!:FarmState;private art=new Map<string,SpriteFrame>();private world!:Node;private scene!:FarmScene;private ui!:FarmUI;
   private pendingPlot:number|null=null;private placing:DecoId|null=null;private pointer:XY|null=null;private moved=0;private drag:'pan'|'plant'|'harvest'='pan';private visited=new Set<number>();private pinch=0;
   private dirty=false;private clock=0;private signature={world:'',hud:''};private resize=()=>{};private audio:AudioContext|null=null;private audioStarted=false;private musicClock=0;private musicNote=0;
-  private backdropFrames=0;private afterDraw=()=>{if(++this.backdropFrames%15===0)this.ui?.captureBackdrop(game.canvas);};
+  private lastBackdropAt=0;
+  private afterDraw=()=>{
+    if(!sys.isBrowser||this.pointer||this.pinch)return;
+    const now=performance.now();
+    if(now-this.lastBackdropAt<250)return;
+    this.lastBackdropAt=now;
+    this.ui?.captureBackdrop(game.canvas);
+  };
   private nativeClips=new Map<string,AudioClip>();private soundClips=new Map<SoundKey,AudioClip>();private sfx!:FarmAudio;private dragLevel=1;
   private saveInput:HTMLInputElement|null=null;
   private nativeSavePending=false;private invitePending=false;
@@ -39,7 +46,7 @@ export class FarmApp extends Component {
   onLoad(){
     view.setDesignResolutionSize(WIDTH,HEIGHT,ResolutionPolicy.SHOW_ALL);if(sys.isBrowser)view.resizeWithBrowserSize(true);profiler.hideStats();
     let raw:string|null=null;try{raw=sys.localStorage.getItem(SAVE_KEY);}catch{}
-    const loaded=parseSave(raw,Date.now(),false);this.state=loaded||newFarm();if(!loaded)this.state.locale=detectLocale(sys.isBrowser ? navigator.language : typeof sys.languageCode==='string'&&sys.languageCode?sys.languageCode:undefined);else if(!isLocale(this.state.locale))this.state.locale='zh-CN';this.state.retention.locale=this.state.locale;setActiveLocale(this.state.locale);settleAutomation(this.state);refreshFeatures(this.state);refreshLife(this.state);
+    const loaded=parseSave(raw,Date.now(),false);this.state=loaded||newFarm();this.applyFrameRate();if(!loaded)this.state.locale=detectLocale(sys.isBrowser ? navigator.language : typeof sys.languageCode==='string'&&sys.languageCode?sys.languageCode:undefined);else if(!isLocale(this.state.locale))this.state.locale='zh-CN';this.state.retention.locale=this.state.locale;setActiveLocale(this.state.locale);settleAutomation(this.state);refreshFeatures(this.state);refreshLife(this.state);
     if(raw){try{const old=JSON.parse(raw);if(!loaded)sys.localStorage.setItem(SAVE_KEY+'-unreadable-backup',raw);else{if(!old.features)sys.localStorage.setItem(SAVE_KEY+'-before-v03',raw);if(!old.progression)sys.localStorage.setItem(SAVE_KEY+'-before-v04',raw);if(!old.life)sys.localStorage.setItem(SAVE_KEY+'-before-v05',raw);if(!old.ecology)sys.localStorage.setItem(SAVE_KEY+'-before-v06',raw);if(!old.advanced)sys.localStorage.setItem(SAVE_KEY+'-before-v07',raw);if(!old.journey)sys.localStorage.setItem(SAVE_KEY+'-before-v08',raw);}if(old.layoutVersion!==2)sys.localStorage.setItem(SAVE_KEY+'-before-v02',raw);}catch{try{sys.localStorage.setItem(SAVE_KEY+'-unreadable-backup',raw);}catch{}}}
     const p=new Painter(WIDTH,HEIGHT,this.art),loading=p.label(this.node,'晴野物语 · 正在准备农场…',800,450,24,'#5a3e2b',600,80);
     const adopt=(key:string,texture:Texture2D)=>{texture.setFilters(Texture2D.Filter.LINEAR,Texture2D.Filter.LINEAR);const frame=new SpriteFrame();frame.texture=texture;this.art.set(key,frame);};
@@ -57,7 +64,7 @@ export class FarmApp extends Component {
     for(const [alias,source] of Object.entries(ART_PLACEHOLDERS)){const frame=this.art.get(source);if(frame&&!this.art.has(alias))this.art.set(alias,frame);}
     this.world=p.node(this.node,'FarmWorld',800,450,9000,7000);const hud=p.node(this.node,'ReferenceUI');this.scene=new FarmScene(this.world,this.art,()=>this.state);    touchRetention(this.state);
     this.sfx=new FarmAudio(this.node,this.soundClips,this.nativeClips);this.applyAudio();
-    this.ui=new FarmUI(hud,this.art,()=>this.state,{act:f=>this.act(f),pick:id=>this.pick(id),place:id=>{this.placing=id;this.ui.toast('点一块空草地，放下新的装饰');},zoom:f=>this.zoom(f),focus:id=>this.focus(id),travel:id=>this.travelTo(id),settings:key=>{this.state[key]=!this.state[key];this.applyAudio();this.save();this.ui.render();},setVolume:(kind,value)=>{const result=setVolume(this.state,kind,value);this.applyAudio();this.save();this.ui.toast(result.message);this.ui.render();},toggleMute:()=>{const result=toggleMute(this.state);this.applyAudio();this.save();this.ui.toast(result.message);this.ui.render();},setLocale:(locale:LocaleId)=>{setFarmLocale(this.state,locale);setActiveLocale(this.state.locale);this.save();this.ui.render();},toggleHud:side=>{toggleHud(this.state,side);this.save();this.ui.render();},share:which=>void this.share(which),askRedeem:()=>this.askRedeem(),exportSave:()=>this.exportSave(),chooseSave:()=>this.chooseSave(),restoreBackup:()=>this.restoreBackup(),confirmSave:()=>this.confirmSave(),reset:()=>this.reset(),start:()=>this.startAudio()});
+    this.ui=new FarmUI(hud,this.art,()=>this.state,{act:f=>this.act(f),pick:id=>this.pick(id),place:id=>{this.placing=id;this.ui.toast('点一块空草地，放下新的装饰');},zoom:f=>this.zoom(f),focus:id=>this.focus(id),travel:id=>this.travelTo(id),settings:key=>{this.state[key]=!this.state[key];this.applyAudio();this.save();this.ui.render();},setVolume:(kind,value)=>{const result=setVolume(this.state,kind,value);this.applyAudio();this.save();this.ui.toast(result.message);this.ui.render();},toggleMute:()=>{const result=toggleMute(this.state);this.applyAudio();this.save();this.ui.toast(result.message);this.ui.render();},setFrameRate:rate=>this.setFrameRate(rate),setLocale:(locale:LocaleId)=>{setFarmLocale(this.state,locale);setActiveLocale(this.state.locale);this.save();this.ui.render();},toggleHud:side=>{toggleHud(this.state,side);this.save();this.ui.render();},share:which=>void this.share(which),askRedeem:()=>this.askRedeem(),exportSave:()=>this.exportSave(),chooseSave:()=>this.chooseSave(),restoreBackup:()=>this.restoreBackup(),confirmSave:()=>this.confirmSave(),reset:()=>this.reset(),start:()=>this.startAudio()});
     this.ui.started=!!rawSession();
     this.world.on(Node.EventType.TOUCH_START,this.touchStart,this);this.world.on(Node.EventType.TOUCH_MOVE,this.touchMove,this);this.world.on(Node.EventType.TOUCH_END,this.touchEnd,this);this.world.on(Node.EventType.TOUCH_CANCEL,()=>{this.pointer=null;this.pinch=0;this.flush();});
     this.world.on(Node.EventType.MOUSE_WHEEL,(e:EventMouse)=>this.zoom(e.getScrollY()>0?1.08:1/1.08,e.getUILocation()));
@@ -66,7 +73,7 @@ export class FarmApp extends Component {
     (globalThis as any).__SUNNY_FARM__={ready:true,version:'0.8.0',snapshot:()=>JSON.parse(JSON.stringify(this.state)),motion:()=>this.scene.motion.snapshot(),audio:()=>this.sfx.snapshot(),levelPopup:()=>this.ui.levelUp,world:()=>({width:worldWidth(this.state),height:22,plots:this.state.plots.length}),point:(x:number,y:number,lift=0)=>this.mapPoint(x,y,lift),panel:()=>this.ui.panel,buttons:()=>this.ui.diagnostics,art:()=>Array.from(this.art.keys()),view:()=>({x:this.world.position.x,y:this.world.position.y,zoom:this.world.scale.x,selected:this.ui.selected,seedOpen:this.ui.seedOpen}),plot:(i:number)=>{const b=PLOTS[i];return this.mapPoint(b.x+.5,b.y+.5);}};
   }
   private hide=()=>{this.sfx?.setMusic(false);if(this.state){settleAutomation(this.state);this.save();}};
-  private show=()=>{if(this.ui){const r=settleAutomation(this.state);refreshFeatures(this.state);refreshLife(this.state);touchRetention(this.state);this.save();this.refresh();if(r?.unread)this.ui.open('offline');this.applyAudio();}};
+  private show=()=>{if(this.ui){const r=settleAutomation(this.state);refreshFeatures(this.state);refreshLife(this.state);touchRetention(this.state);this.save();this.refresh();if(r?.unread)this.ui.open('offline');this.applyAudio();this.applyFrameRate();}};
   private visibility=()=>{if(document.hidden)this.hide();else this.show();};
   private refresh(){this.scene.redraw();this.ui.render();this.signature=this.currentSignature();}
   private currentSignature(){
@@ -87,6 +94,18 @@ export class FarmApp extends Component {
   private act(f:()=>Result,at?:XY){this.startAudio();const settlement=settleAutomation(this.state);if(settlement)this.save();const previous=levelFor(this.state.xp),orders=this.state.stats.deliveries,harvests=this.state.stats.harvests,result=f();if(result.ok){this.recordDay();this.save();this.refresh();if(this.state.stats.deliveries>orders)this.scene.motion.sendTruck();if(at)this.scene.burst(at,result.item||'star');if(this.state.stats.harvests>harvests||result.item==='apple'||result.item==='honey')this.sfx.play('harvest');else this.chime(true);if(this.state.haptics){if(sys.isNative){nativeHaptic();}else if(typeof navigator!=='undefined'&&navigator.vibrate)navigator.vibrate(10);}const level=levelFor(this.state.xp);if(level>previous){this.sfx.play('levelup');this.ui.celebrate(previous,level);}else this.ui.toast(result.message);}else this.ui.toast(result.message);return result;}
   private startAudio(){if(!this.audioStarted){this.audioStarted=true;try{sessionStorage.setItem('sunny-farm-started','1');}catch{}this.applyAudio();}if(sys.isNative||!sys.isBrowser)return;try{const Audio=window.AudioContext||(window as any).webkitAudioContext;if(Audio&&!this.audio)this.audio=new Audio();if(this.audio?.state==='suspended')void this.audio.resume();}catch{}}
   private chime(good:boolean){const gain=audioMix(this.state).sfx;if(gain<=0)return;if(sys.isNative){this.sfx.playUi();return;}if(!this.audio)return;const ctx=this.audio;[good?660:480,...(good?[880]:[])].forEach((f,i)=>this.note(f,ctx.currentTime+i*.07,.13,.025*gain));}
+  private setFrameRate(rate:FrameRate){
+    if(this.state.frameRate===rate)return;
+    this.state.frameRate=rate;
+    this.applyFrameRate();
+    this.save();
+    this.ui.render();
+  }
+  private applyFrameRate(){
+    const rate=this.state.frameRate;
+    if(game.frameRate!==rate)game.frameRate=rate;
+    requestAndroidFrameRate(rate);
+  }
   private applyAudio(){
     const mix=audioMix(this.state);
     this.sfx?.applyMix(this.audioStarted?mix.bgm:0,mix.sfx);
@@ -251,7 +270,7 @@ export class FarmApp extends Component {
       sys.localStorage.setItem(SAVE_KEY+'-before-restore',serialize(this.state));
       sys.localStorage.setItem(SAVE_KEY,serialize(next));
     }catch{this.ui.toast('存储空间不足，当前农场已保留');return;}
-    this.pendingSave=null;this.state=next;setActiveLocale(next.locale);
+    this.pendingSave=null;this.state=next;setActiveLocale(next.locale);this.applyFrameRate();
     this.pendingPlot=null;this.placing=null;this.pointer=null;this.dirty=false;
     this.ui.resetSelection();this.scene.motion.cancelPatrol();this.scene.motion.animals.clear();
     this.world.setPosition(0,0);this.world.setScale(1,1,1);
@@ -261,8 +280,8 @@ export class FarmApp extends Component {
   private reset(){
     try{sys.localStorage.setItem(SAVE_KEY+'-before-reset',serialize(this.state));}
     catch{this.ui.toast('备份失败，当前农场已保留');return;}
-    const locale=this.state.locale;
-    this.state=newFarm();setFarmLocale(this.state,locale);setActiveLocale(locale);
+    const {locale,frameRate}=this.state;
+    this.state=newFarm();this.state.frameRate=frameRate;setFarmLocale(this.state,locale);setActiveLocale(locale);
     this.applyAudio();
     this.ui.resetSelection();this.pendingSave=null;this.pendingPlot=null;this.placing=null;this.pointer=null;this.dirty=false;
     this.scene.motion.cancelPatrol();this.scene.motion.animals.clear();this.world.setPosition(0,0);this.world.setScale(1,1,1);this.save();this.refresh();
