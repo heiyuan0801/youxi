@@ -1,4 +1,5 @@
 import type {FarmState,Result,ProductId,Animal} from './FarmModel';
+import {noteFestivalPlay} from './FarmRetention';
 import {AQUATIC,AquaticId,ANIMALS,AnimalId,animalSpec} from './FarmCatalog';
 import {careFor,isAdult,seasonIndex,weatherAt} from './FarmLife';
 import {farmLevel,discover} from './FarmFeatures';
@@ -56,7 +57,7 @@ export function seasonEvents(s:FarmState,now=Date.now()){return SEASON_EVENTS.sl
 export function deliverSeasonEvent(s:FarmState,index:number,now=Date.now()):Result{
  if(!Number.isInteger(index)||index<0||index>2)return fail('没有这个活动');const season=seasonIndex(s,now),e=seasonEvents(s,now)[index];
  if(s.ecology.eventSeason===season&&s.ecology.events.includes(index))return fail('本季活动奖励已领取');const needs=Object.entries(e.needs) as [ProductId,number][];if(needs.some(([id,n])=>s.inventory[id]<n))return fail('材料还没准备齐，去种植、养殖或工坊制作吧');
- if(s.ecology.eventSeason!==season){s.ecology.eventSeason=season;s.ecology.events=[];}for(const [id,n]of needs)s.inventory[id]-=n;s.ecology.events.push(index);s.coins+=e.coins;s.stars+=e.stars;return ok(`${e.name}完成 · ${e.coins}金币 · ${e.stars}农场星`);
+  if(s.ecology.eventSeason!==season){s.ecology.eventSeason=season;s.ecology.events=[];}for(const [id,n]of needs)s.inventory[id]-=n;s.ecology.events.push(index);s.coins+=e.coins;s.stars+=e.stars;noteFestivalPlay(s,now);return ok(`${e.name}完成 · ${e.coins}金币 · ${e.stars}农场星`);
 }
 export function unlockAuroraAnimal(s:FarmState,now=Date.now()):Result{
  if(weatherAt(s,now)!=='aurora')return fail('在极光天气中寻找白色孔雀');if(s.ecology.auroraAnimal)return fail('白色孔雀已开放领养');s.ecology.auroraAnimal=true;return ok('极光奇遇 · 白色孔雀已提前开放领养，可前往商店购买');

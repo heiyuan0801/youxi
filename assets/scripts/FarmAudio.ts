@@ -19,6 +19,8 @@ export class FarmAudio {
   private events: { key: SoundKey; time: number }[] = [];
   private activeAnimalSound: SoundKey | null = null;
   private enabled = true;
+  private bgmLevel = 1;
+  private sfxLevel = 1;
 
   constructor(parent: Node, clips: Map<SoundKey, AudioClip>, extra = new Map<string, AudioClip>()) {
     for (const key of ['theme', 'ui']) {
@@ -48,12 +50,25 @@ export class FarmAudio {
 
   setMusic(enabled: boolean) {
     if (!this.music) return;
-    if (enabled && !this.music.playing) this.music.play();
-    else if (!enabled) this.music.stop();
+    this.music.volume = this.bgmLevel;
+    if (enabled && this.bgmLevel > 0 && !this.music.playing) this.music.play();
+    else if (!enabled || this.bgmLevel === 0) this.music.stop();
+  }
+
+  applyMix(opts: {music: boolean; sound: boolean; bgm: number; sfx: number; muted: boolean}) {
+    const clamp = (value: number) => Math.max(0, Math.min(1, value));
+    this.bgmLevel = opts.muted || !opts.music ? 0 : clamp(opts.bgm);
+    this.sfxLevel = opts.muted || !opts.sound ? 0 : clamp(opts.sfx);
+    this.enabled = this.sfxLevel > 0;
+    for (const [key, source] of this.sources) {
+      source.volume = (volumes[key] ?? .46) * this.sfxLevel;
+      if (this.sfxLevel === 0) source.stop();
+    }
+    this.setMusic(this.bgmLevel > 0);
   }
 
   playUi() {
-    if (this.enabled && this.ui?.clip) this.ui.playOneShot(this.ui.clip, .5);
+    if (this.sfxLevel > 0 && this.ui?.clip) this.ui.playOneShot(this.ui.clip, .5 * this.sfxLevel);
   }
 
   setEnabled(enabled: boolean) {

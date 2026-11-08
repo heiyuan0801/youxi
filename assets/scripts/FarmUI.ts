@@ -1,4 +1,4 @@
-import {SOIL_GROWTH_LABEL,SOIL_NAME,SOIL_WATER_LABEL,soilCostLabel,soilTier,upgradeSoil} from './FarmSoil';
+import {SOIL_GROWTH_LABEL,SOIL_NAME,SOIL_WATER_LABEL,soilCostLabel,soilTier,upgradeSoil,upgradeSoilBatch} from './FarmSoil';
 import {t as soilText} from './SoilText';
 import {hudLayout,MIN_TOUCH} from './HudLayout';
 import {LOCALE_LABEL,LOCALES,setActiveLocale,t,tx,type LocaleId} from './Locale';
@@ -12,6 +12,8 @@ import {Painter,empty,tint,XY} from './Drawing';
 import {FarmState,CropId,ProductId,DecoId,CROPS,DECOS,PRODUCTS,NAMES,PRICES,TASKS,Result,levelFor,levelFloor,levelCeil,canDeliver,expansionCost,skipOrder,deliver,sell,expand,buyAnimal,claimTask,unlockWithStars,expandWithStars,expandPen,readyPlot,plantAll,waterAll,harvestAll,cropById} from './FarmModel';
 import {workshopPanel,fishingPanel,journalPanel,diaryHeight,DiaryTab,FeaturePanelContext} from './FeaturePanels';
 import {DAILY_GOALS,dailyProgress,fishingPhase,RECIPES,recipeFactory} from './FarmFeatures';
+import {anglingPhase, type BaitId, type SpotId} from './FarmAngling';
+import {anglingPanel} from './AnglingPanels';
 import {ANIMALS,TRAVEL_MAPS,FactoryId,FurnitureId,MapId,SEASONS,WEATHER_NAMES} from './FarmCatalog';
 import {seasonIndex,weatherAt} from './FarmLife';
 import {animalsPanel,travelPanel,homePanel,seasonPanel} from './LifePanels';
@@ -20,8 +22,12 @@ import {worldPanel,levelsPanel,levelUpCard} from './ProgressionPanels';
 import {RegionId} from './WorldData';
 import { FLOWER_PALETTE, FlowerChoice, repairStormCrop, repairStormDeco, repairStormPlot, resolveScene } from './FarmActivities';
 import { areaStoryPanel, breakfastPanel, carpenterPanel, decorPanel, festivalGamesPanel, honorsPanel, iceFishingPanel, patrolPanel, racePanel, summerFishingPanel, townPanel } from './JourneyPanels';
-export type Panel='warehouse'|'orders'|'shop'|'tasks'|'workshop'|'fishing'|'world'|'levels'|'animals'|'travel'|'home'|'seasons'|'genetics'|'explore'|'automation'|'offline'|'ponds'|'growth'|'events'|'settings'|'privacy'|'confirm-reset'|'breakfast'|'story'|'honors'|'carpenter'|'festival-games'|'ice-fishing'|'patrol'|'town'|'race'|'summer-fishing'|'decor'|'restore-save'|null;
-export interface UICallbacks {act:(f:()=>Result)=>void;pick:(id:CropId)=>void;place:(id:DecoId)=>void;zoom:(factor:number)=>void;focus:(id:RegionId|'home')=>void;travel:(id:MapId)=>void;settings:(key:'sound'|'music'|'haptics')=>void;setLocale:(id:LocaleId)=>void;exportSave:()=>void;chooseSave:()=>void;restoreBackup:()=>void;confirmSave:()=>void;reset:()=>void;start:()=>void;}
+export type Panel='warehouse'|'orders'|'shop'|'tasks'|'workshop'|'fishing'|'world'|'levels'|'animals'|'travel'|'home'|'seasons'|'genetics'|'explore'|'automation'|'offline'|'ponds'|'growth'|'events'|'settings'|'privacy'|'confirm-reset'|'breakfast'|'story'|'honors'|'carpenter'|'festival-games'|'ice-fishing'|'patrol'|'town'|'race'|'summer-fishing'|'decor'|'restore-save'|'agenda'|null;
+import {agendaHeight, agendaPanel, type AgendaTab} from './RetentionPanels';
+import {advanceTutorial, dismissShare, skipTutorial, tutorialPrompt} from './FarmRetention';
+import {itemName, localizeOrder, t as retentionText} from './FarmI18n';
+import {momentText} from './FarmShare';
+export interface UICallbacks {act:(f:()=>Result)=>void;pick:(id:CropId)=>void;place:(id:DecoId)=>void;zoom:(factor:number)=>void;focus:(id:RegionId|'home')=>void;travel:(id:MapId)=>void;settings:(key:'sound'|'music'|'haptics')=>void;setVolume:(kind:'bgm'|'sfx',value:number)=>void;toggleMute:()=>void;setLocale:(locale:LocaleId)=>void;toggleHud:(side:'left'|'right')=>void;share:(which:'invite'|'pending'|'latest')=>void;askRedeem:()=>void;exportSave:()=>void;chooseSave:()=>void;restoreBackup:()=>void;confirmSave:()=>void;reset:()=>void;start:()=>void;}
 const PALE='#fffcf4',LINE='#f2d8ac',INK='#5a3e2b',SOFT='#997455';
 export class FarmUI {
   panel:Panel=null;shopTab='土地';seedOpen=false;selected:CropId|null=null;started=true;
@@ -32,7 +38,7 @@ export class FarmUI {
   diaryTab:DiaryTab='成长';private liveUpdates:(()=>void)[]=[];
   private scrollId='';
   levelUp:number|null=null;private levelQueue:number[]=[];
-  landIndex:number|null=null;soilIndex:number|null=null;
+  landIndex:number|null=null;soilIndex:number|null=null;agendaTab:AgendaTab='morning';fishTab:'cast'|'pond'|'classic'='cast';fishSpot:SpotId='home';fishBait:BaitId='worm';
   p!:Painter;private buttons:{label:string;n:Node}[]=[];private modalRoot!:Node;private toastRoot!:Node;
   private backdrop:SpriteFrame|null=null;private backdropTexture:Texture2D|null=null;private backdropCanvas:HTMLCanvasElement|null=null;
   constructor(public root:Node,private art:Map<string,SpriteFrame>,private state:()=>FarmState,private cb:UICallbacks){}
@@ -42,6 +48,7 @@ export class FarmUI {
   }
   get diagnostics(){return this.buttons.filter(b=>b.n.activeInHierarchy).map(b=>{const a=b.n.worldPosition;return{label:b.label,x:a.x,y:900-a.y,w:b.n.getComponent(UITransform)!.width*this.root.scale.x,h:b.n.getComponent(UITransform)!.height*this.root.scale.y};});}
   private button(p:Painter,parent:Node,label:string,x:number,y:number,w:number,h:number,run:()=>void,color='#67ca70',dark='#3fa94d',font=16){const n=p.button(parent,label,x,y,w,h,run,color,dark,font);this.buttons.push({label,n});return n;}
+  private chromeToggle(p:Painter,name:string,glyph:string,x:number,y:number,run:()=>void){const n=this.button(p,this.root,glyph,x,y,44,44,run,'#fff6e4','#e4d0aa',22);this.buttons[this.buttons.length-1].label=name;n.name='Button-'+name;return n;}
   private closeButton(p:Painter,parent:Node,x:number,y:number,run:()=>void){this.button(p,parent,'×',x,y,44,44,run,'#ff7aa2','#d64d7d',26);}
   private iconButton(p:Painter,parent:Node,label:string,key:string,x:number,y:number,w:number,h:number,run:()=>void,fill=PALE){const n=p.rect(parent,x,y,w,h,fill,h/2,'#ffffff',2);p.contain(n,key,p.w/2,p.h/2,w*.67,h*.67);n.name='Button-'+label;p.hit(n,run);this.buttons.push({label,n});return n;}
   private money(p:Painter,parent:Node,value:number|string,x:number,y:number,size=17,key='coin',w=90){p.contain(parent,key,x-w/2+size*.6,y,size*1.25);p.label(parent,String(value),x+size*.4,y,size,key==='coin'?'#a87505':'#d38300',w-size*1.3,size*1.5,true);}
@@ -50,13 +57,20 @@ export class FarmUI {
     const id=[this.panel,this.panel==='tasks'?this.diaryTab:this.panel==='shop'?this.shopTab:this.panel==='workshop'?this.factory:''].join(':'),previous=this.modalRoot?.isValid?this.modalRoot.getComponentInChildren(ScrollView):null,offset=id===this.scrollId?previous?.getScrollOffset():null;this.scrollId=id;
     empty(this.root);this.buttons=[];this.liveUpdates=[];const frame=view.getFrameSize(),layout=hudLayout(frame.width,frame.height,sys.isNative,nativeInsets());this.root.setScale(layout.scale,layout.scale,1);this.root.setPosition(layout.x,layout.y,0);this.p=new Painter(layout.width,layout.height,this.art);const p=this.p,w=p.w,h=p.h,state=this.state();setActiveLocale(state.locale||'zh-CN');const lv=levelFor(state.xp),left=state.xp-levelFloor(lv),next=levelCeil(lv)-levelFloor(lv);
     // The reference HUD has no large title/task boxes and no full-width bottom toolbar.
+    const {left:leftOpen,right:rightOpen}=state.retention.hud;
+    const locale=state.locale;
     const ratio=lv>=100?1:Math.min(1,left/next);p.pill(this.root,165,43,200,40);p.label(this.root,t('hud.level',{n:lv}),149,33,11,SOFT,120,18,true,'left');p.rect(this.root,153,51,130,11,'#f1e2c8',5);if(ratio>0)p.rect(this.root,88+130*ratio/2,51,Math.max(4,130*ratio),11,'#69c957',5);p.label(this.root,lv>=100?t('hud.max'):`${left}/${next}`,235,43,12,SOFT,52,24);
     const levelStar=p.contain(this.root,'star',51,43,62);p.label(this.root,String(lv),51,45,22,INK,45,45,true,'center','#ffffff');p.hit(levelStar,()=>this.open('levels'));this.buttons.push({label:t('hud.levels'),n:levelStar});
+    if(leftOpen){
     const ready=state.features.jobs.filter(j=>j.readyAt<=Date.now()).length;
-    for(const [x,label,key,panel]of [[80,ready?t('hud.workshopReady',{n:ready}):t('hud.workshop'),'windmill','workshop'],[209,fishingPhase(state)==='bite'?t('hud.bite'):t('hud.fishing'),'fish','fishing']] as const){const n=p.pill(this.root,x,108,118,40);p.contain(n,key,p.w/2-36,p.h/2,33,36);p.label(n,label,p.w/2+16,p.h/2,14,INK,76,32);p.hit(n,()=>this.open(panel));this.buttons.push({label:panel==='workshop'?t('hud.workshop'):t('hud.fishing'),n});}
+    for(const [x,label,key,panel]of [[80,ready?t('hud.workshopReady',{n:ready}):t('hud.workshop'),'windmill','workshop'],[209,anglingPhase(state)==='bite'||anglingPhase(state)==='reel'||fishingPhase(state)==='bite'?t('hud.bite'):t('hud.fishing'),'fish','fishing']] as const){const n=p.pill(this.root,x,108,118,40);p.contain(n,key,p.w/2-36,p.h/2,33,36);p.label(n,label,p.w/2+16,p.h/2,14,INK,76,32);p.hit(n,()=>this.open(panel));this.buttons.push({label:panel==='workshop'?t('hud.workshop'):t('hud.fishing'),n});}
     for(const [x,label,key,panel]of [[80,t('hud.world'),'tree_round','world'],[209,unclaimedLevels(state).length?t('hud.levelsReady',{n:unclaimedLevels(state).length}):t('hud.levels'),'star','levels']] as const){const n=p.pill(this.root,x,158,118,40);p.contain(n,key,p.w/2-37,p.h/2,32,34);p.label(n,label,p.w/2+15,p.h/2,13,INK,79,32);p.hit(n,()=>this.open(panel));this.buttons.push({label:panel==='world'?t('hud.world'):t('hud.levels'),n});}
     for(const [x,label,key,panel]of [[80,t('hud.animals'),'duck','animals'],[209,t('hud.travel'),'forestCamp','travel']] as const){const n=p.pill(this.root,x,208,118,40);p.contain(n,key,p.w/2-37,p.h/2,32,34);p.label(n,label,p.w/2+15,p.h/2,13,INK,79,32);p.hit(n,()=>this.open(panel));this.buttons.push({label,n});}
+    }
+    this.chromeToggle(p,retentionText(leftOpen?'hud.leftHide':'hud.leftShow',{},locale),leftOpen?'⌃':'⌄',296,43,()=>this.cb.toggleHud('left'));
+    if(rightOpen){
     const dayLabel=t('season.'+(seasonIndex(state)%4))+' · '+t('weather.'+weatherAt(state));const season=p.pill(this.root,w-115,sys.isNative?136:124,178,35);p.label(season,dayLabel+' · '+t('hud.festival'),p.w/2,p.h/2,13,SOFT,168,31);p.hit(season,()=>this.open('seasons'));this.buttons.push({label:t('hud.festival'),n:season});const home=p.pill(this.root,w-115,sys.isNative?180:168,178,35);p.label(home,t('hud.home'),p.w/2,p.h/2,13,SOFT,168,31);p.hit(home,()=>this.open('home'));this.buttons.push({label:t('hud.home'),n:home});
+    }
     if(state.life.activeMap!=='home'){
       const name=TRAVEL_MAPS.find(m=>m.id===state.life.activeMap)!.name,y=w<1000?h-137:38;
       p.pill(this.root,w/2,y,310,48);p.label(this.root,t('hud.here',{name:tx('map.'+state.life.activeMap,name)}),w/2-66,y,12,INK,160,35);
@@ -71,10 +85,14 @@ export class FarmUI {
       if(state.activities.stormDeco!==null)this.button(p,this.root,t('hud.stormDeco'),209,300,118,35,()=>this.cb.act(()=>repairStormDeco(state)),'#ffb150','#dc8a29',13);
       if(state.activities.scene){this.button(p,this.root,state.activities.scene.kind==='mouse'?t('hud.mouse'):t('hud.dog'),80,344,118,35,()=>this.cb.act(()=>resolveScene(state,true)),'#ab89d3','#8360ac',12);this.button(p,this.root,t('hud.ignore'),209,344,118,35,()=>this.cb.act(()=>resolveScene(state,false)),'#cfbfa1','#ad9875',13);}
       this.button(p,this.root,soilText('soil.open',{},state.locale),348,256,136,35,()=>{this.shopTab='土地';this.open('shop');},'#8d6b4a','#6a4c32',13);
-      if(seasonIndex(state)%4===3)this.button(p,this.root,t('hud.ice'),w-115,sys.isNative?310:298,178,33,()=>this.open('ice-fishing'),'#58bde4','#3295bd',13);
+      if(rightOpen&&seasonIndex(state)%4===3)this.button(p,this.root,t('hud.ice'),w-115,sys.isNative?354:342,178,33,()=>this.open('ice-fishing'),'#58bde4','#3295bd',13);
     }
+    if(rightOpen){
     this.button(p,this.root,t('hud.auto'),w-115,sys.isNative?224:212,178,35,()=>this.open('automation'),'#ab89d3','#8360ac',13);
     if(state.advanced.auto.report)this.button(p,this.root,state.advanced.auto.report.unread?t('hud.offlineNew'):t('hud.offline'),w-115,sys.isNative?266:254,178,33,()=>this.open('offline'),'#ffb150','#dc8a29',13);
+    this.button(p,this.root,retentionText('hud.agenda',{},locale),w-115,sys.isNative?310:298,178,35,()=>this.open('agenda'),'#67ca70','#3fa84d',13);
+    }
+    this.chromeToggle(p,retentionText(rightOpen?'hud.rightHide':'hud.rightShow',{},locale),rightOpen?'⌃':'⌄',w-115,rightOpen?(sys.isNative?404:392):(sys.isNative?136:124),()=>this.cb.toggleHud('right'));
     const right=w-20,topY=Math.max(MIN_TOUCH,sys.isNative?44:32),secondY=sys.isNative?90:78;p.pill(this.root,right-230,topY,114,40);p.contain(this.root,'coin',right-261,topY,44);p.label(this.root,String(state.coins),right-218,topY,20,INK,65,35);
     this.iconButton(p,this.root,t('hud.zoomIn'),'ui_plus',right-132,topY,MIN_TOUCH,MIN_TOUCH,()=>this.cb.zoom(1.2));
     this.iconButton(p,this.root,t('hud.zoomOut'),'ui_minus',right-80,topY,MIN_TOUCH,MIN_TOUCH,()=>this.cb.zoom(1/1.2));
@@ -92,12 +110,13 @@ export class FarmUI {
     if(this.seedOpen)this.renderSeeds();
     this.modalRoot=p.node(this.root,'Modal');this.toastRoot=p.node(this.root,'ToastLayer');
     if(this.panel)this.renderPanel(this.panel);
+    if(this.started&&!this.panel&&!this.seedOpen&&this.levelUp===null&&state.life.activeMap==='home'){this.renderTutorialBar();this.renderShareChip();}
     if(offset){const scroll=this.modalRoot.getComponentInChildren(ScrollView);if(scroll)scroll.scrollToOffset(offset,0);}
     if(!this.started)this.title();
     if(this.levelUp!==null)this.renderLevelUp();
   }
   private gear(p:Painter,n:Node,x:number,y:number){const g=p.g(n);const pts:XY[]=[];for(let i=0;i<24;i++){const a=i/24*Math.PI*2,r=i%3===0?9:7.5;pts.push([x+Math.cos(a)*r,y+Math.sin(a)*r]);}p.path(g,pts,'#a98bd9','#ffffff',1.8);g.strokeColor=tint('#ffffff');g.lineWidth=1.5;g.circle(x-p.w/2,p.h/2-y,3);g.stroke();}
-  open(panel:Panel){this.panel=panel;this.seedOpen=false;this.render();}
+  open(panel:Panel){if(panel==='fishing'&&this.state().features.fishing.cast&&!this.state().fishery.session)this.fishTab='classic';this.panel=panel;this.seedOpen=false;this.render();}
   resetSelection(){
     this.levelUp=null;this.levelQueue=[];this.panel=null;this.seedOpen=false;this.selected=null;this.seedPage=0;
     this.parents=[];this.companion=null;this.roomSelected=null;this.landIndex=null;this.soilIndex=null;this.restorePreview=null;this.scrollId='';
@@ -117,7 +136,7 @@ export class FarmUI {
     CROPS.slice(this.seedPage*6,this.seedPage*6+6).forEach((c,i)=>{const xx=start+i*(cardW+gap),cy=y+29,locked=levelFor(this.state().xp)<c.level&&!this.state().cropUnlocks.includes(c.id),selected=this.selected===c.id;
       const n=this.slot(p,root,xx,cy,cardW,151);if(selected)p.rect(n,p.w/2,p.h/2,cardW,151,'#f3ffe9',18,'#64c85b',3);
       const im=p.contain(root,c.id,xx,cy-36,64,70);if(locked){p.opacity(im,90);im.getComponent(Sprite)!.grayscale=true;}
-      p.label(root,tx('crop.'+c.id,c.name),xx,cy+12,14.5,INK,cardW-6,24);p.label(root,shortTime(c.seconds),xx,cy+32,11,SOFT,cardW-6,20);
+      p.label(root,itemName(c.id,c.name,this.state().retention?.locale),xx,cy+12,14.5,INK,cardW-6,24);p.label(root,shortTime(c.seconds),xx,cy+32,11,SOFT,cardW-6,20);
       p.rect(root,xx,cy+55,cardW-10,19,'#fff3d1',10);p.contain(root,'coin',xx-cardW/2+20,cy+55,16);p.label(root,`${c.cost} → ${c.sell}`,xx+6,cy+55,12,'#b97a00',cardW-22,18);
       if(locked){p.pill(root,xx,cy-33,57,24,'#82796d','#ffffff');p.label(root,`${c.level}级`,xx,cy-33,11,'#ffffff',54,22);}if(selected){p.rect(root,xx+cardW/2-4,cy-71,24,24,'#61c45b',12,'#ffffff',2);p.label(root,'✓',xx+cardW/2-4,cy-71,16,'#ffffff',22,22);}
       p.hit(n,()=>{if(locked){this.toast(`${c.level}级解锁${c.name}`);return;}this.selected=c.id;this.cb.pick(c.id);this.render();});this.buttons.push({label:'种子-'+c.name,n});
@@ -137,6 +156,7 @@ export class FarmUI {
   }
   private renderPanel(panel:Exclude<Panel,null>){
     const state=this.state();
+    if(panel==='agenda'){const height=agendaHeight(this.agendaTab),m=this.modal(retentionText('hud.agenda',{},state.retention.locale),'school',700,Math.min(height+70,this.p.h*.9),height);agendaPanel(this.featureContext(m),this.agendaTab,tab=>{this.agendaTab=tab;this.render();});return;}
     if(panel==='breakfast'||panel==='story'||panel==='honors'||panel==='carpenter'||panel==='festival-games'||panel==='ice-fishing'||panel==='patrol'||panel==='town'||panel==='race'||panel==='summer-fishing'||panel==='decor'){
       const spec={
         breakfast:['农场主线','bread',515],story:['地区故事','signpost',640],honors:['晴野荣誉','star',440],
@@ -180,25 +200,35 @@ export class FarmUI {
       const height=panel==='world'?760:210+116*Math.max(9,Math.min(100,Math.max(10,levelFor(state.xp)+2))-1),m=this.modal(panel==='world'?'开拓地图':'等级奖励',panel==='world'?'tree_round':'star',640,height+70,height),context=this.featureContext(m);if(panel==='world')worldPanel(context,id=>{this.panel=null;this.cb.focus(id);this.render();});else levelsPanel(context,level=>this.previewLevel(level));return;
     }
     if(panel==='workshop'||panel==='fishing'){
-      const contentH=panel==='workshop'?400+RECIPES.filter(r=>recipeFactory(r)===this.factory).length*150+Math.max(0,state.features.jobs.filter(j=>recipeFactory(RECIPES.find(r=>r.id===j.recipe)!)===this.factory).length-1)*66:Math.min(500,this.p.h*.86-70),m=this.modal(panel==='workshop'?'风车工坊':'池塘钓鱼',panel==='workshop'?'windmill':'fish',panel==='workshop'?700:640,contentH+70,contentH),context=this.featureContext(m);if(panel==='workshop')workshopPanel(context,this.factory,id=>{this.factory=id;this.render();},()=>this.open('carpenter'));else fishingPanel(context);return;
+      const contentH=panel==='workshop'?400+RECIPES.filter(r=>recipeFactory(r)===this.factory).length*150+Math.max(0,state.features.jobs.filter(j=>recipeFactory(RECIPES.find(r=>r.id===j.recipe)!)===this.factory).length-1)*66:this.fishTab==='pond'?900:this.fishTab==='classic'?565:570;
+      const m=this.modal(panel==='workshop'?'风车工坊':'抛竿收线',panel==='workshop'?'windmill':'fish',panel==='workshop'?700:660,contentH+70,contentH),context=this.featureContext(m);
+      if(panel==='workshop')workshopPanel(context,this.factory,id=>{this.factory=id;this.render();},()=>this.open('carpenter'));
+      else if(this.fishTab==='classic'){
+        fishingPanel(context);
+        context.button(t('fish.newRod'),context.w/2,522,context.w-20,40,()=>{this.fishTab='cast';this.render();});
+      }else{
+        anglingPanel(context,this.fishTab,tab=>{this.fishTab=tab;this.render();},this.fishSpot,this.fishBait,spot=>{this.fishSpot=spot;this.render();},bait=>{this.fishBait=bait;this.render();});
+        context.button(t('fish.classic'),context.w/2,this.fishTab==='pond'?843:447,context.w-20,40,()=>{this.fishTab='classic';this.render();});
+      }
+      return;
     }
     if(panel==='warehouse'){
       const items=PRODUCTS.filter(id=>state.inventory[id]>0),rows=Math.ceil(items.length/3),height=Math.max(250,rows*194+80),m=this.modal('仓库','barn',560,height+70,height),{p,root,w}=m;
       p.rect(root,w/2,24,w,42,'#fff1d6',16);p.label(root,'库存总价值',80,24,13.5,SOFT,138,32,true,'left');this.money(p,root,items.reduce((a,id)=>a+state.inventory[id]*PRICES[id],0),w-55,24,18,'coin',95);
       if(!items.length){p.contain(root,'hay',w/2,112,96);p.label(root,'仓库还是空的',w/2,181,19,INK,w-20,32);p.label(root,'收获蔬菜，收集鸡蛋和牛奶，让仓库热闹起来吧！',w/2,216,13.5,SOFT,w-24,40);}
-      items.forEach((id,i)=>{const ww=(w-20)/3,x=ww/2+(i%3)*(ww+10),y=146+Math.floor(i/3)*194;this.slot(p,root,x,y,ww,181);p.contain(root,id,x,y-45,68);p.pill(root,x+27,y-18,43,23,INK);p.label(root,`×${state.inventory[id]}`,x+27,y-18,13,'#ffffff',39,22);p.label(root,NAMES[id],x,y+8,15,INK,ww-8,25);this.money(p,root,`${PRICES[id]}/个`,x,y+31,12.5,'coin',82);this.button(p,root,'卖1个',x-ww/4,y+64,ww/2-7,36,()=>this.cb.act(()=>sell(state,id,1)),'#ffca55','#dfa432',13.5);this.button(p,root,'全部卖出',x+ww/4,y+64,ww/2-7,36,()=>this.cb.act(()=>sell(state,id,state.inventory[id])),'#6bcb70','#44a750',13);});
+      items.forEach((id,i)=>{const ww=(w-20)/3,x=ww/2+(i%3)*(ww+10),y=146+Math.floor(i/3)*194,name=itemName(id,NAMES[id],state.retention?.locale);this.slot(p,root,x,y,ww,181);p.contain(root,id,x,y-45,68);p.pill(root,x+27,y-18,43,23,INK);p.label(root,`×${state.inventory[id]}`,x+27,y-18,13,'#ffffff',39,22);p.label(root,name,x,y+8,15,INK,ww-8,25);this.money(p,root,`${PRICES[id]}/个`,x,y+31,12.5,'coin',82);this.button(p,root,'卖1个',x-ww/4,y+64,ww/2-7,36,()=>this.cb.act(()=>sell(state,id,1)),'#ffca55','#dfa432',13.5);this.button(p,root,'全部卖出',x+ww/4,y+64,ww/2-7,36,()=>this.cb.act(()=>sell(state,id,state.inventory[id])),'#6bcb70','#44a750',13);});
       p.label(root,'小提示：交订单比在集市零卖赚得多哦！',w/2,height-17,12,SOFT,w-10,28);return;
     }
     if(panel==='orders'){
       const m=this.modal('订单','truck',600,838,818),{p,root,w}=m;p.label(root,`已交付${state.stats.deliveries}单 · 把新鲜农产品送给邻居吧`,w/2,15,13,SOFT,w,30);
-      state.orders.forEach((o,i)=>{const y=166+i*260;this.slot(p,root,w/2,y,w,246);p.rect(root,43,y-81,56,56,['#ffe3ec','#e2f7ef','#e3f2fd'][i],16,'#ffffff',2);p.contain(root,['girl','grandpa','boy'][i],43,y-75,48,63);p.label(root,o.person,157,y-91,17,INK,154,29,true,'left');this.money(p,root,o.coins,117,y-64,15,'coin',76);this.money(p,root,o.xp,200,y-64,15,'star',72);this.button(p,root,'↻',w-30,y-80,34,34,()=>this.cb.act(()=>skipOrder(state,o.id)),'#d9c4a3','#bca381',20);
-        p.rect(root,w/2,y-20,w-24,53,'#f1f9ff',17,'#cfe9f7',2);p.label(root,`“${o.message}”`,w/2,y-20,15.5,'#1f5d80',w-48,47);
-        Object.entries(o.needs).forEach(([key,n],j)=>{const id=key as ProductId,ok=state.inventory[id]>=n!,xx=89+j*151;p.rect(root,xx,y+45,136,52,ok?'#effbe9':'#fffaf1',15,ok?'#bfe8b8':LINE,2);p.contain(root,id,xx-43,y+45,40);p.label(root,NAMES[id],xx+13,y+33,11.5,SOFT,78,22,true,'left');p.label(root,`${Math.min(state.inventory[id],n!)}/${n}`,xx+13,y+54,15,ok?'#3ca55a':'#d6553f',78,24,true,'left');});
+      state.orders.forEach((o,i)=>{const y=166+i*260,view=localizeOrder(o.person,o.message,state.retention?.locale);this.slot(p,root,w/2,y,w,246);p.rect(root,43,y-81,56,56,['#ffe3ec','#e2f7ef','#e3f2fd'][i],16,'#ffffff',2);p.contain(root,['girl','grandpa','boy'][i],43,y-75,48,63);p.label(root,view.person,157,y-91,17,INK,154,29,true,'left');this.money(p,root,o.coins,117,y-64,15,'coin',76);this.money(p,root,o.xp,200,y-64,15,'star',72);this.button(p,root,'↻',w-30,y-80,34,34,()=>this.cb.act(()=>skipOrder(state,o.id)),'#d9c4a3','#bca381',20);
+        p.rect(root,w/2,y-20,w-24,53,'#f1f9ff',17,'#cfe9f7',2);p.label(root,`“${view.message}”`,w/2,y-20,15.5,'#1f5d80',w-48,47);
+        Object.entries(o.needs).forEach(([key,n],j)=>{const id=key as ProductId,ok=state.inventory[id]>=n!,xx=89+j*151;p.rect(root,xx,y+45,136,52,ok?'#effbe9':'#fffaf1',15,ok?'#bfe8b8':LINE,2);p.contain(root,id,xx-43,y+45,40);p.label(root,itemName(id,NAMES[id],state.retention?.locale),xx+13,y+33,11.5,SOFT,78,22,true,'left');p.label(root,`${Math.min(state.inventory[id],n!)}/${n}`,xx+13,y+54,15,ok?'#3ca55a':'#d6553f',78,24,true,'left');});
         this.button(p,root,canDeliver(state,o)?'交货':'货不够',w/2,y+101,w-24,44,()=>this.cb.act(()=>deliver(state,o.id)),canDeliver(state,o)?'#3cc9a6':'#badacc',canDeliver(state,o)?'#269f84':'#9fbdad',16);
       });return;
     }
     if(panel==='shop'){
-      const contentH=this.shopTab==='装饰'?590:this.shopTab==='农场星'?1240:this.shopTab==='动物'?80+Math.ceil(ANIMALS.length/2)*325:640,m=this.modal('商店','market',600,contentH+70,contentH),{p,root,w}=m;
+      const contentH=this.shopTab==='装饰'?590:this.shopTab==='农场星'?1240:this.shopTab==='动物'?80+Math.ceil(ANIMALS.length/2)*325:690,m=this.modal('商店','market',600,contentH+70,contentH),{p,root,w}=m;
       p.rect(root,w/2,23,w,40,'#f5e6c8',20);['土地','动物','装饰','农场星'].forEach((tab,i)=>{const xx=w/8+i*w/4,n=p.rect(root,xx,23,w/4-4,34,this.shopTab===tab?'#ffffff':'#f5e6c8',18);p.label(root,tab,xx,23,14,this.shopTab===tab?INK:SOFT,w/4-8,28);p.hit(n,()=>{this.shopTab=tab;this.render();});this.buttons.push({label:'商店-'+tab,n});});
       if(this.shopTab==='土地'){
         const start=this.landIndex===null?0:this.landIndex<30?0:30+Math.floor((this.landIndex-30)/18)*18,end=this.landIndex===null?state.plots.length:start===0?30:start+18,target=state.plots.findIndex((plot,i)=>i>=start&&i<end&&!plot.unlocked),area=this.landIndex===null?'':start===0?'主农场':(['东侧草甸','甜蜜果林','阳光牧场'][Math.floor((start-30)/18)]||'');
@@ -220,11 +250,17 @@ export class FarmUI {
       p.rect(root,w/2,23,w,40,'#f5e6c8',20);(['成长','今日','建设','图鉴'] as const).forEach((tab,i)=>{const x=w/8+i*w/4,n=p.rect(root,x,23,w/4-4,34,this.diaryTab===tab?'#ffffff':'#f5e6c8',18);p.label(root,tab,x,23,14,this.diaryTab===tab?INK:SOFT,w/4-8,28);p.hit(n,()=>{this.diaryTab=tab;this.render();});this.buttons.push({label:'手记-'+tab,n});});journalPanel(this.featureContext(m),this.diaryTab);return;
     }
     if(panel==='settings'){
-      const m=this.modal(t('set.title'),'',520,780,700),{p,root,w}=m;p.label(root,t('set.audio'),w/2,18,18,'#7755a6',w-20,33);(['music','sound','haptics'] as const).forEach((key,i)=>{const y=72+i*58;this.slot(p,root,w/2,y,w,50);p.label(root,t(key==='music'?'set.music':key==='sound'?'set.sound':'set.haptics'),100,y,16,INK,175,35,true,'left');const on=state[key];this.button(p,root,on?t('set.on'):t('set.off'),w-52,y,80,34,()=>this.cb.settings(key),on?'#67ca70':'#c9bca5',on?'#3fa84d':'#ad9b7e',14);});
-      p.label(root,t('set.lang'),w/2,250,18,'#7755a6',w-20,30);LOCALES.forEach((id,i)=>{const ww=(w-16)/5,x=ww/2+4+i*ww;this.button(p,root,LOCALE_LABEL[id],x,292,ww-6,40,()=>this.cb.setLocale(id),state.locale===id?'#67ca70':'#cfbfa1',state.locale===id?'#3fa84d':'#ad9875',11);});
-      this.button(p,root,t('set.export'),w/2,360,w-20,42,this.cb.exportSave,'#5ebde8','#3397c2',16);this.button(p,root,t('set.privacy'),w/2,412,w-20,42,()=>this.open('privacy'),'#ab89d3','#8360ac',16);this.button(p,root,t('set.reset'),w/2,464,w-20,42,()=>this.open('confirm-reset'),'#ff7aa2','#d64f7d',16);
-      this.button(p,root,t('set.import'),w/2,516,w-20,42,this.cb.chooseSave,'#67ca70','#3fa84d',16);
-      this.button(p,root,t('set.restore'),w/2,568,w-20,42,this.cb.restoreBackup,'#ffb150','#dc8a29',16);return;
+      const locale=state.retention?.locale,m=this.modal(t('set.title'),'',560,820,980),{p,root,w}=m;p.label(root,retentionText('settings.audio',{},locale),w/2,18,18,'#7755a6',w-20,33);(['music','sound','haptics'] as const).forEach((key,i)=>{const y=72+i*52;this.slot(p,root,w/2,y,w,46);p.label(root,t(key==='music'?'set.music':key==='sound'?'set.sound':'set.haptics'),100,y,16,INK,175,32,true,'left');const on=state[key];this.button(p,root,on?t('set.on'):t('set.off'),w-52,y,80,34,()=>this.cb.settings(key),on?'#67ca70':'#c9bca5',on?'#3fa84d':'#ad9b7e',14);});
+      (['bgm','sfx'] as const).forEach((kind,i)=>{const y=236+i*52,value=state.retention.audio[kind];this.slot(p,root,w/2,y,w,46);p.label(root,retentionText(kind==='bgm'?'settings.bgm':'settings.sfx',{},locale),88,y,14,INK,120,30,true,'left');this.button(p,root,'−',w-132,y,44,34,()=>this.cb.setVolume(kind,value-10),'#d9c4a3','#bca381',18);p.label(root,`${value}%`,w-78,y,14,INK,52,28);this.button(p,root,'+',w-36,y,44,34,()=>this.cb.setVolume(kind,value+10),'#d9c4a3','#bca381',18);});
+      this.button(p,root,retentionText(state.retention.audio.muted?'settings.unmute':'settings.mute',{},locale),w/2,344,w-20,40,()=>this.cb.toggleMute(),state.retention.audio.muted?'#67ca70':'#c9bca5','#3fa84d',14);
+      p.label(root,t('set.lang'),w/2,388,16,'#7755a6',w-20,28);LOCALES.forEach((id,i)=>{const ww=(w-16)/5,x=ww/2+8+i*ww;this.button(p,root,LOCALE_LABEL[id],x,424,ww-6,36,()=>this.cb.setLocale(id),locale===id?'#67ca70':'#cfbfa1',locale===id?'#3fa84d':'#ad9875',12);});
+      p.label(root,retentionText('settings.code',{code:state.retention.share.code},locale),w/2,470,14,INK,w-16,28);
+      this.button(p,root,retentionText('hud.share',{},locale),w/2,516,w-20,42,()=>this.cb.share('invite'),'#5ebde8','#3397c2',15);
+      if(state.retention.share.latest)this.button(p,root,retentionText('settings.shareLatest',{},locale),w/2,566,w-20,40,()=>this.cb.share('latest'),'#ffb150','#dc8a29',14);
+      this.button(p,root,retentionText('settings.redeem',{},locale),w/2,618,w-20,40,()=>this.cb.askRedeem(),'#ab89d3','#8360ac',14);
+      this.button(p,root,t('set.export'),w/2,674,w-20,40,this.cb.exportSave,'#5ebde8','#3397c2',15);this.button(p,root,t('set.privacy'),w/2,722,w-20,40,()=>this.open('privacy'),'#ab89d3','#8360ac',15);this.button(p,root,t('set.reset'),w/2,770,w-20,40,()=>this.open('confirm-reset'),'#ff7aa2','#d64f7d',15);
+      this.button(p,root,t('set.import'),w/2,818,w-20,40,this.cb.chooseSave,'#67ca70','#3fa84d',15);
+      this.button(p,root,t('set.restore'),w/2,866,w-20,40,this.cb.restoreBackup,'#ffb150','#dc8a29',15);return;
     }
     if(panel==='restore-save'){
       const m=this.modal(t('restore.title'),'',590,360,285),{p,root,w}=m,preview=this.restorePreview;
@@ -252,12 +288,15 @@ export class FarmUI {
     p.label(root,soilText('soil.open',{},locale),w/2,438,18,INK,w-20,30);
     p.label(root,`${soilText(SOIL_NAME[0],{},locale)} ${SOIL_GROWTH_LABEL[0]} · ${SOIL_WATER_LABEL[0]}`,w/2,472,13,SOFT,w-28,26);
     p.label(root,`${soilText(SOIL_NAME[1],{},locale)} ${SOIL_GROWTH_LABEL[1]} · ${SOIL_WATER_LABEL[1]}    ${soilText(SOIL_NAME[2],{},locale)} ${SOIL_GROWTH_LABEL[2]} · ${SOIL_WATER_LABEL[2]}`,w/2,498,13,SOFT,w-28,26);
+    this.button(p,root,retentionText('soil.batchBtn',{},locale),w/2,641,w-40,42,()=>this.cb.act(()=>upgradeSoilBatch(state)),'#8d6b4a','#6a4c32',14);
     if(tier===null||idx===null){p.label(root,soilText('soil.pick',{},locale),w/2,548,14,SOFT,w-24,40);return;}
     p.label(root,soilText('soil.current',{index:idx+1,name:soilText(SOIL_NAME[tier],{},locale)},locale),w/2,540,15,INK,w-24,28);
     if(tier>=2){this.button(p,root,soilText('soil.max',{},locale),w/2,586,w-40,42,()=>this.toast(soilText('soil.max',{},locale)),'#cbbd9e','#ac9978',14);return;}
     const next=(tier+1) as 1|2,label=`${soilText('soil.upgrade',{name:soilText(SOIL_NAME[next],{},locale)},locale)} · ${soilCostLabel(next,locale)}`;
     this.button(p,root,label,w/2,586,w-40,42,()=>this.cb.act(()=>upgradeSoil(state,idx)),'#67ca70','#3fa84d',14);
   }
+  private renderTutorialBar(){const state=this.state(),prompt=state.retention?tutorialPrompt(state):null;if(!prompt)return;const p=this.p,y=145,w=Math.min(460,p.w-24),root=p.node(this.root,'Tutorial');p.rect(root,p.w/2,y,w,78,'#fff7e8',18,'#e7c48a',2);p.label(root,prompt.title,p.w/2,y-22,15,INK,w-24,24);p.label(root,prompt.body,p.w/2,y+2,12,SOFT,w-24,28);if(prompt.canContinue)this.button(p,root,retentionText('tut.next',{},state.retention.locale),p.w/2-70,y+28,120,30,()=>this.cb.act(()=>advanceTutorial(state,'continue')),'#67ca70','#3fa84d',13);this.button(p,root,retentionText('tut.skip',{},state.retention.locale),p.w/2+70,y+28,120,30,()=>this.cb.act(()=>skipTutorial(state)),'#c9bca5','#ad9b7e',13);}
+  private renderShareChip(){const state=this.state(),card=state.retention?.share.pending;if(!card)return;const p=this.p,y=p.h-214,copy=momentText(card,state.retention.locale,state.retention.share.code),w=Math.min(520,p.w-24);p.rect(this.root,p.w/2,y,w,64,'#e8f6ea',16,'#b7dfb4',2);p.label(this.root,copy.line,p.w/2,y-14,12,INK,w-24,22);this.button(p,this.root,retentionText('hud.share',{},state.retention.locale),p.w/2-64,y+16,140,28,()=>this.cb.share('pending'),'#67ca70','#3fa84d',12);this.button(p,this.root,retentionText('hud.later',{},state.retention.locale),p.w/2+84,y+16,88,28,()=>this.cb.act(()=>dismissShare(state)),'#c9bca5','#ad9b7e',12);}
   toast(message:string){if(!this.toastRoot)return;empty(this.toastRoot);const p=this.p,w=Math.min(p.w-24,message.length*15+60),n=p.pill(this.toastRoot,p.w/2,135,w,42);p.label(this.toastRoot,message,p.w/2,135,14.5,INK,w-20,35);setTimeout(()=>{if(n.isValid&&this.toastRoot.isValid)empty(this.toastRoot);},2300);}
   private title(){const p=this.p,n=p.node(this.root,'Title');p.rect(n,p.w/2,p.h/2,p.w,p.h,'#bfe1d2',0).addComponent(BlockInputEvents);const f=this.art.get('cover')!,ratio=f.rect.width/f.rect.height,ww=Math.max(p.w,p.h*ratio);p.image(n,'cover',p.w/2,ww/ratio/2,ww,ww/ratio);this.button(p,n,t('title.start'),p.w/2,p.h*.87,Math.min(300,p.w*.45),p.h<500?44:57,()=>{this.started=true;this.cb.start();this.panel=this.state().advanced.auto.report?.unread?'offline':null;this.render();},'#67ca70','#3fa84d',p.h<500?20:25);p.label(n,t('title.tag'),p.w/2,p.h*.96,13,'#ffffff',300,25,true,'center','#5a3e2b');} 
 }

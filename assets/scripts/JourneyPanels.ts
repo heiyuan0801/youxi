@@ -1,6 +1,7 @@
 import type { FeaturePanelContext } from './FeaturePanels';
 import { FURNITURE, TRAVEL_MAPS, animalSpec, furnitureGems, furnitureLevel } from './FarmCatalog';
 import { NAMES, ProductId } from './FarmModel';
+import { breakfastLine, honorLine, itemName, storyCopy } from './FarmI18n';
 import { seasonIndex } from './FarmLife';
 import { AREA_STORIES, BREAKFAST_STEPS, COMMISSIONS, HONORS, TOWN_CHAPTERS, advanceBreakfast, advanceTown, breakfastReady, claimHonor, commissionLap, currentCommission, finishExploreQuest, finishStory, honorReady, nextExploreQuest, turnInCommission } from './FarmJourney';
 import { FLOWER_PALETTE, FlowerChoice, ICE_CONTROL_MS, ICE_ROUND_MS, RACE_MS, SUMMER_LIMIT_MS, calendarEvent, claimCalendar, claimCalendarPlay, claimDailyFestival, claimWeeklyFestival, flowerScore, iceControlWindow, iceWindow, judgePumpkin, jumpRace, playFestivalRite, practiceFlowers, pullIceLine, pullPumpkinWeigh, pullSummerLine, raceWindow, scoreDecor, startDailyWeigh, startFestivalRite, startIceControl, startIceFishing, startPatrol, startPumpkinWeigh, startRace, startSummerContest, submitDecor, submitFlowers, summerWindow } from './FarmActivities';
@@ -14,17 +15,19 @@ const SOFT = '#997455';
 export function breakfastPanel(c: FeaturePanelContext, go: (target: 'farm' | 'mill' | 'bakery' | 'honors') => void) {
   const { p, root, w, state: s, button, slot, act } = c;
   const step = s.journey.breakfast;
+  const locale = s.retention?.locale;
   p.label(root, '第一炉面包', w / 2, 24, 23, INK, w, 38);
   p.label(root, '跟着阿禾学做面包，把新鲜早餐送到小镇。', w / 2, 62, 14, SOFT, w, 32);
   BREAKFAST_STEPS.forEach((goal, i) => {
     const y = 117 + i * 55;
+    const line = breakfastLine(i, locale);
     slot(w / 2, y, w, 50);
     p.contain(root, goal.icon, 28, y, 34);
-    p.label(root, goal.title, w / 2 - 33, y, 15, INK, w - 188, 30, true, 'left');
+    p.label(root, line.title, w / 2 - 33, y, 15, INK, w - 188, 30, true, 'left');
     p.label(root, i < step ? '已完成' : i === step ? '当前目标' : '未开启', w - 60, y, 13, i === step ? '#42985c' : SOFT, 100, 30);
   });
   if (step < BREAKFAST_STEPS.length) {
-    p.label(root, BREAKFAST_STEPS[step].hint, w / 2, 408, 15, SOFT, w - 14, 58);
+    p.label(root, breakfastLine(step, locale).hint, w / 2, 408, 15, SOFT, w - 14, 58);
     const ready = breakfastReady(s);
     if (ready) {
       const label = step === 3 ? '把面包交给阿禾' : step === 4 ? '领取开垦补给' : '完成这一步';
@@ -85,11 +88,11 @@ export function areaStoryPanel(c: FeaturePanelContext, explore: () => void) {
     p.label(root, '打开旅行手册，到了目的地再找当地居民。', w / 2, 70, 16, INK, w - 15, 65);
     return;
   }
-  const story = AREA_STORIES[map.id], done = s.journey.stories.includes(map.id);
+  const story = AREA_STORIES[map.id], done = s.journey.stories.includes(map.id), copy = storyCopy(map.id, s.retention?.locale);
   p.contain(root, map.icon, w / 2, 62, 95, 95);
-  p.label(root, story.title, w / 2, 124, 23, INK, w, 39);
-  p.label(root, story.story, w / 2, 174, 15, SOFT, w - 24, 62);
-  p.label(root, `${NAMES[story.item]} ${Math.min(story.amount, s.inventory[story.item])}/${story.amount}`, w / 2, 228, 16, INK, w, 31);
+  p.label(root, copy.title, w / 2, 124, 23, INK, w, 39);
+  p.label(root, copy.body, w / 2, 174, 15, SOFT, w - 24, 62);
+  p.label(root, `${itemName(story.item, NAMES[story.item], s.retention?.locale)} ${Math.min(story.amount, s.inventory[story.item])}/${story.amount}`, w / 2, 228, 16, INK, w, 31);
   if (story.depth) {
     p.label(root, `已结算探索层数 ${Math.min(story.depth, s.advanced.explore.claimed[map.id] || 0)}/${story.depth}`, w / 2, 263, 14, SOFT, w, 31);
     if (!done) button('前往分层探索', w / 2, 355, w - 18, 39, explore, '#58bde4', '#3295bd', 14);
@@ -112,11 +115,11 @@ export function honorsPanel(c: FeaturePanelContext) {
   const { p, root, w, state: s, button, slot, act } = c;
   p.label(root, '晴野荣誉册', w / 2, 26, 23, INK, w, 38);
   HONORS.forEach((honor, i) => {
-    const y = 119 + 129 * i, claimed = s.journey.honors.includes(honor.level);
+    const y = 119 + 129 * i, claimed = s.journey.honors.includes(honor.level), line = honorLine(honor.level, s.retention?.locale);
     slot(w / 2, y, w, 111);
     p.contain(root, 'study_star', 38, y - 8, 51);
-    p.label(root, `${honor.level}级 · ${honor.name}`, w / 2 + 25, y - 34, 18, INK, w - 125, 32);
-    p.label(root, honor.hint, w / 2 + 25, y, 13, SOFT, w - 110, 32);
+    p.label(root, `${honor.level}级 · ${line.name}`, w / 2 + 25, y - 34, 18, INK, w - 125, 32);
+    p.label(root, line.hint, w / 2 + 25, y, 13, SOFT, w - 110, 32);
     p.label(root, `${honor.coins}金币 · ${honor.stars}星`, w * .33, y + 34, 12, SOFT, w / 2, 25);
     button(claimed ? '已获荣誉' : '领取荣誉', w * .79, y + 33, w * .35, 32, () => act(() => claimHonor(s, honor.level)),
       honorReady(s, honor.level) ? '#67ca70' : '#cfbfa1', '#829c66', 13);

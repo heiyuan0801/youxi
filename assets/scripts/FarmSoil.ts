@@ -1,5 +1,7 @@
 import type {FarmState, Result} from './FarmModel';
 import {t} from './SoilText';
+import {noteRedSoil} from './FarmRetention';
+import {t as retentionText} from './FarmI18n';
 
 export type SoilTier = 0 | 1 | 2;
 
@@ -70,7 +72,7 @@ export function soilCostLabel(tier: SoilTier, locale?: string): string {
 
 const fail = (message: string): Result => ({ok: false, message});
 
-export function upgradeSoil(s: FarmState, index: number): Result {
+export function upgradeSoil(s: FarmState, index: number, now = Date.now()): Result {
   const plot = Number.isInteger(index) ? s.plots[index] : undefined;
   const locale = s.locale;
   if (!plot?.unlocked) return fail(t('soil.locked', {}, locale));
@@ -85,5 +87,37 @@ export function upgradeSoil(s: FarmState, index: number): Result {
   s.coins -= cost.coins;
   if (cost.feed > 0) s.inventory.feed -= cost.feed;
   plot.soil = next;
+  if (next === 2) noteRedSoil(s, now);
   return {ok: true, message: t('soil.done', {name, growth: SOIL_GROWTH_LABEL[next], water: SOIL_WATER_LABEL[next]}, locale)};
+}
+
+export function upgradeSoilBatch(s: FarmState, now = Date.now()): Result {
+  const indexes = s.plots.map((_, index) => index).filter(index => {
+    const plot = s.plots[index];
+    return plot.unlocked && s.activities.stormPlot !== index && soilTier(plot) < 2;
+  });
+  if (!indexes.length) return fail(retentionText('soil.batchNone', {}, s.locale));
+  let coins = 0;
+  let feed = 0;
+  const plan: {index: number; next: SoilTier}[] = [];
+  for (const index of indexes) {
+    const next = (soilTier(s.plots[index]) + 1) as SoilTier;
+    const cost = SOIL_COST[next];
+    if (s.coins < coins + cost.coins || s.inventory.feed < feed + cost.feed) continue;
+    coins += cost.coins;
+    feed += cost.feed;
+    plan.push({index, next});
+  }
+  if (!plan.length) {
+    const next = (soilTier(s.plots[indexes[0]]) + 1) as SoilTier;
+    const cost = SOIL_COST[next], name = t(SOIL_NAME[next], {}, s.locale);
+    return s.coins < cost.coins
+      ? fail(t('soil.coins', {name, coins: cost.coins}, s.locale))
+      : fail(t('soil.feed', {name, feed: cost.feed}, s.locale));
+  }
+  s.coins -= coins;
+  s.inventory.feed -= feed;
+  for (const step of plan) s.plots[step.index].soil = step.next;
+  if (plan.some(step => step.next === 2)) noteRedSoil(s, now);
+  return {ok: true, message: retentionText('soil.batch', {n: plan.length}, s.locale)};
 }

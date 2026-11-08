@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs';
 import { levelFloor, newFarm, parseSave, serialize } from '../assets/scripts/FarmModel';
 import { collectCraft, enqueueCraft } from '../assets/scripts/FarmFeatures';
 import { startFurniture } from '../assets/scripts/FarmRoom';
-import { ART_HOOKS } from '../assets/scripts/ArtHooks';
+import { FARM_ART_HOOKS } from '../assets/scripts/ArtHooks';
 import { advanceTown, currentCommission, finishExploreQuest, nextExploreQuest, turnInCommission } from '../assets/scripts/FarmJourney';
 import { beginExplore, exploreLoot, levelTheme, lootName, nodeLoot, puzzleFor, resolveExploreEvent, routes, takeRoute } from '../assets/scripts/FarmExplore';
 import { dominance, inherit, transmitAllele } from '../assets/scripts/FarmGenetics';
@@ -260,11 +260,11 @@ test('gather icons follow the region loot instead of a wood graphic', () => {
 });
 
 test('art hooks name every drop-in file and do not collide', () => {
-  assert.equal(new Set(ART_HOOKS).size, ART_HOOKS.length);
-  assert.ok(ART_HOOKS.includes('fox'));
-  assert.ok(ART_HOOKS.includes('machineHarvester'));
-  assert.ok(ART_HOOKS.includes('forest-layer-01'));
-  assert.ok(ART_HOOKS.includes('coffeeBrew'));
+  assert.equal(new Set(FARM_ART_HOOKS).size, FARM_ART_HOOKS.length);
+  assert.ok(FARM_ART_HOOKS.includes('fox'));
+  assert.ok(FARM_ART_HOOKS.includes('machineHarvester'));
+  assert.ok(FARM_ART_HOOKS.includes('forest-layer-01'));
+  assert.ok(FARM_ART_HOOKS.includes('coffeeBrew'));
   for (const id of ['coffeeBrew', 'floralTea', 'sunTea', 'berryTea', 'estateBox', 'cabinet', 'teaTable', 'fox', 'machineHarvester', 'machineFeeder', 'forest-layer-01', 'forest-layer-02', 'forest-layer-12', 'mine-layer-12', 'beach-layer-12', 'snow-layer-12']) {
     assert.ok(existsSync(`assets/resources/hooks/${id}.png`), id);
     assert.ok(existsSync(`assets/resources/hooks/${id}.png.meta`), id);

@@ -1,6 +1,7 @@
 import type {FarmState,Result} from './FarmModel';
 import {FURNITURE,FurnitureId,furnitureGems,furnitureLevel} from './FarmCatalog';
 import {farmLevel} from './FarmFeatures';
+import {noteDecor} from './FarmRetention';
 export const WALLS=['#fff0db','#e5f1df','#e0edfa','#f8e1e8'];
 export const FLOORS=['#d7b28d','#b9cbad','#a8bfce','#dab8c6'];
 export function buyRoomFurniture(s:FarmState,type:FurnitureId):Result{
@@ -15,7 +16,7 @@ function putInFurnitureBox(s:FarmState,type:FurnitureId):Result{
  const room=s.advanced.room,f=FURNITURE.find(f=>f.id===type)!;
  room.items.push({id:++room.serial,type,x:null,y:null,rotation:0});
  if(!s.life.home.owned.includes(type))s.life.home.owned.push(type);
- return{ok:true,message:`${f.name}收入家具箱 · 选中后点地板摆放`};
+ noteDecor(s);return{ok:true,message:`${f.name}收入家具箱 · 选中后点地板摆放`};
 }
 export function startFurniture(s:FarmState,type:FurnitureId,now=Date.now()):Result{
  const f=FURNITURE.find(f=>f.id===type);
@@ -38,7 +39,7 @@ export function collectFurniture(s:FarmState,now=Date.now()):Result{
 export function moveFurniture(s:FarmState,id:number,x:number,y:number):Result{
  const r=s.advanced.room,f=r.items.find(f=>f.id===id);if(!f||!Number.isFinite(x+y)||x<.08||x>.92||y<.08||y>.92)return{ok:false,message:'请放在房间地板内'};
  if(f.type!=='rug'&&r.items.some(a=>a.id!==id&&a.type!=='rug'&&a.x!==null&&a.y!==null&&Math.hypot(a.x-x,a.y-y)<.85/r.size))return{ok:false,message:'这里已经摆了家具，换个位置吧'};
- f.x=Math.round(x*1000)/1000;f.y=Math.round(y*1000)/1000;return{ok:true,message:'家具位置已保存'};
+ f.x=Math.round(x*1000)/1000;f.y=Math.round(y*1000)/1000;noteDecor(s);return{ok:true,message:'家具位置已保存'};
 }
 export function rotateFurniture(s:FarmState,id:number):Result{const f=s.advanced.room.items.find(f=>f.id===id);if(!f)return{ok:false,message:'先选中一件家具'};f.rotation=(f.rotation+1)%4;return{ok:true,message:'家具旋转90°'};}
 export function storeFurniture(s:FarmState,id:number):Result{const f=s.advanced.room.items.find(f=>f.id===id);if(!f)return{ok:false,message:'先选中家具'};f.x=f.y=null;return{ok:true,message:'已收回家具箱'};}
