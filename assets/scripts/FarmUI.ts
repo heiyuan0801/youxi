@@ -1,3 +1,5 @@
+import {SOIL_GROWTH_LABEL,SOIL_NAME,SOIL_WATER_LABEL,soilCostLabel,soilTier,upgradeSoil} from './FarmSoil';
+import {t as soilText} from './SoilText';
 import {hudLayout,MIN_TOUCH} from './HudLayout';
 import {LOCALE_LABEL,LOCALES,setActiveLocale,t,tx,type LocaleId} from './Locale';
 import {nativeInsets} from './NativePlatform';
@@ -30,7 +32,7 @@ export class FarmUI {
   diaryTab:DiaryTab='成长';private liveUpdates:(()=>void)[]=[];
   private scrollId='';
   levelUp:number|null=null;private levelQueue:number[]=[];
-  landIndex:number|null=null;
+  landIndex:number|null=null;soilIndex:number|null=null;
   p!:Painter;private buttons:{label:string;n:Node}[]=[];private modalRoot!:Node;private toastRoot!:Node;
   private backdrop:SpriteFrame|null=null;private backdropTexture:Texture2D|null=null;private backdropCanvas:HTMLCanvasElement|null=null;
   constructor(public root:Node,private art:Map<string,SpriteFrame>,private state:()=>FarmState,private cb:UICallbacks){}
@@ -68,6 +70,7 @@ export class FarmUI {
       if(state.activities.stormCrop!==null)this.button(p,this.root,t('hud.stormCrop'),80,300,118,35,()=>this.cb.act(()=>repairStormCrop(state)),'#67ca70','#3fa84d',13);
       if(state.activities.stormDeco!==null)this.button(p,this.root,t('hud.stormDeco'),209,300,118,35,()=>this.cb.act(()=>repairStormDeco(state)),'#ffb150','#dc8a29',13);
       if(state.activities.scene){this.button(p,this.root,state.activities.scene.kind==='mouse'?t('hud.mouse'):t('hud.dog'),80,344,118,35,()=>this.cb.act(()=>resolveScene(state,true)),'#ab89d3','#8360ac',12);this.button(p,this.root,t('hud.ignore'),209,344,118,35,()=>this.cb.act(()=>resolveScene(state,false)),'#cfbfa1','#ad9875',13);}
+      this.button(p,this.root,soilText('soil.open',{},state.locale),348,256,136,35,()=>{this.shopTab='土地';this.open('shop');},'#8d6b4a','#6a4c32',13);
       if(seasonIndex(state)%4===3)this.button(p,this.root,t('hud.ice'),w-115,sys.isNative?310:298,178,33,()=>this.open('ice-fishing'),'#58bde4','#3295bd',13);
     }
     this.button(p,this.root,t('hud.auto'),w-115,sys.isNative?224:212,178,35,()=>this.open('automation'),'#ab89d3','#8360ac',13);
@@ -97,7 +100,7 @@ export class FarmUI {
   open(panel:Panel){this.panel=panel;this.seedOpen=false;this.render();}
   resetSelection(){
     this.levelUp=null;this.levelQueue=[];this.panel=null;this.seedOpen=false;this.selected=null;this.seedPage=0;
-    this.parents=[];this.companion=null;this.roomSelected=null;this.landIndex=null;this.restorePreview=null;this.scrollId='';
+    this.parents=[];this.companion=null;this.roomSelected=null;this.landIndex=null;this.soilIndex=null;this.restorePreview=null;this.scrollId='';
   }
   close(){if(this.levelUp!==null){this.levelUp=null;this.levelQueue=[];}else{this.panel=null;this.seedOpen=false;}this.render();}
   celebrate(from:number,to:number){const levels=Array.from({length:Math.max(0,to-from)},(_,i)=>from+i+1).filter(l=>!this.state().progression.claimedLevels.includes(l));this.levelQueue.push(...levels);if(this.levelUp===null)this.levelUp=this.levelQueue.shift()??null;this.seedOpen=false;this.render();}
@@ -106,7 +109,9 @@ export class FarmUI {
   tick(){for(const update of this.liveUpdates)update();}
   private renderSeeds(){
     const p=this.p,w=Math.min(760,p.w-16),height=238,x=p.w/2,y=p.h-height/2-10,root=p.node(this.root,'SeedPicker');const panel=p.rect(root,x,y+6,w,height,'#efd9b3',28);p.rect(root,x,y,w,height,PALE,28,'#ffffff',3);panel.addComponent(BlockInputEvents);
-    p.label(root,t('seed.title'),x-w/2+126,y-height/2+25,20,INK,215,30,true,'left');p.label(root,this.selected?t('seed.paint'):t('seed.hint'),x-w/2+169,y-height/2+49,12.5,SOFT,300,24,true,'left');this.closeButton(p,root,x+w/2-35,y-height/2+35,()=>{this.seedOpen=false;this.selected=null;this.render();});
+    const soilPlot=this.soilIndex!==null?this.state().plots[this.soilIndex]:undefined;
+    const soilName=soilPlot?.unlocked?` · ${soilText(SOIL_NAME[soilTier(soilPlot)],{},this.state().locale)}`:'';
+    p.label(root,t('seed.title'),x-w/2+126,y-height/2+25,20,INK,215,30,true,'left');p.label(root,(this.selected?t('seed.paint'):t('seed.hint'))+soilName,x-w/2+169,y-height/2+49,12.5,SOFT,340,24,true,'left');this.closeButton(p,root,x+w/2-35,y-height/2+35,()=>{this.seedOpen=false;this.selected=null;this.render();});
     this.button(p,root,'上一页',x+110,y-height/2+25,65,28,()=>{this.seedPage=(this.seedPage+Math.ceil(CROPS.length/6)-1)%Math.ceil(CROPS.length/6);this.render();},'#d6c4a4','#bba17b',11);p.label(root,`${this.seedPage+1}/${Math.ceil(CROPS.length/6)}`,x+166,y-height/2+25,12,SOFT,40,25);this.button(p,root,'下一页',x+222,y-height/2+25,65,28,()=>{this.seedPage=(this.seedPage+1)%Math.ceil(CROPS.length/6);this.render();},'#ffb150','#dc8a29',11);
     const cardW=Math.min(104,(w-34-50)/6),gap=10,start=x-w/2+16+cardW/2;
     CROPS.slice(this.seedPage*6,this.seedPage*6+6).forEach((c,i)=>{const xx=start+i*(cardW+gap),cy=y+29,locked=levelFor(this.state().xp)<c.level&&!this.state().cropUnlocks.includes(c.id),selected=this.selected===c.id;
@@ -193,11 +198,12 @@ export class FarmUI {
       });return;
     }
     if(panel==='shop'){
-      const contentH=this.shopTab==='装饰'?590:this.shopTab==='农场星'?1240:this.shopTab==='动物'?80+Math.ceil(ANIMALS.length/2)*325:390,m=this.modal('商店','market',600,contentH+70,contentH),{p,root,w}=m;
+      const contentH=this.shopTab==='装饰'?590:this.shopTab==='农场星'?1240:this.shopTab==='动物'?80+Math.ceil(ANIMALS.length/2)*325:640,m=this.modal('商店','market',600,contentH+70,contentH),{p,root,w}=m;
       p.rect(root,w/2,23,w,40,'#f5e6c8',20);['土地','动物','装饰','农场星'].forEach((tab,i)=>{const xx=w/8+i*w/4,n=p.rect(root,xx,23,w/4-4,34,this.shopTab===tab?'#ffffff':'#f5e6c8',18);p.label(root,tab,xx,23,14,this.shopTab===tab?INK:SOFT,w/4-8,28);p.hit(n,()=>{this.shopTab=tab;this.render();});this.buttons.push({label:'商店-'+tab,n});});
       if(this.shopTab==='土地'){
         const start=this.landIndex===null?0:this.landIndex<30?0:30+Math.floor((this.landIndex-30)/18)*18,end=this.landIndex===null?state.plots.length:start===0?30:start+18,target=state.plots.findIndex((plot,i)=>i>=start&&i<end&&!plot.unlocked),area=this.landIndex===null?'':start===0?'主农场':(['东侧草甸','甜蜜果林','阳光牧场'][Math.floor((start-30)/18)]||'');
         this.slot(p,root,w/2,225,w,323);const cx=w/2,cy=124;p.poly(root,[[cx,cy-30],[cx+82,cy+12],[cx,cy+54],[cx-82,cy+12]],'#7cd36a','#ffffff',3);p.poly(root,[[cx-82,cy+12],[cx,cy+54],[cx,cy+66],[cx-82,cy+24]],'#c98a52');p.poly(root,[[cx+82,cy+12],[cx,cy+54],[cx,cy+66],[cx+82,cy+24]],'#a86c3c');p.poly(root,[[cx,cy-16],[cx+56,cy+12],[cx,cy+40],[cx-56,cy+12]],'#a8714a');p.contain(root,'wheat',cx+74,cy-20,56);p.label(root,area?`开垦${area}`:'扩建田地',cx,219,20,INK,w-30,34);const n=state.plots.filter(p=>p.unlocked).length;p.label(root,`已有${n}/${state.plots.length}块地。地越多，收成越多！`,cx,251,13.5,SOFT,w-30,27);p.rect(root,cx,276,260,10,'#f1e2c8',5);p.rect(root,cx-130+260*n/state.plots.length/2,276,260*n/state.plots.length,10,'#a7744a',5);this.button(p,root,target<0?'这片田地已全部开垦':`购买田地 · ${expansionCost(state)}`,cx,324,210,48,()=>this.cb.act(()=>target<0?{ok:false,message:'这片田地已经全部开垦'}:expand(state,target)),'#67ca70','#3fa84d',17);p.label(root,'也可以直接点田里的价格牌',cx,368,12.5,SOFT,w-20,27);
+        this.renderSoilShop(p,root,w,state);
       }else if(this.shopTab==='动物'){
         ANIMALS.forEach((spec,i)=>{const id=spec.id,x=w/4+i%2*w/2,y=213+Math.floor(i/2)*325,locked=levelFor(state.xp)<spec.level&&!(spec.id==='whitePeacock'&&state.ecology.auroraAnimal);this.slot(p,root,x,y,w/2-8,309);p.pill(root,x-51,y-118,58,25,'#fff1d6');p.label(root,`${state.animals.filter(a=>a.type===id).length}/${animalCapacity(state,id)}`,x-51,y-118,13,INK,54,23);const img=p.contain(root,spec.sprite,x,y-41,116,120);if(locked){p.opacity(img,130);img.getComponent(Sprite)!.grayscale=true;p.pill(root,x,y-43,94,27,INK);p.label(root,`${spec.level}级解锁`,x,y-43,12,'#ffffff',91,25);}p.label(root,spec.name,x,y+46,20,INK,w/2-20,31);p.label(root,`${NAMES[spec.product]} · ${shortTime(spec.seconds)}`,x,y+77,13,SOFT,w/2-20,27);this.button(p,root,`购买 · ${spec.cost}`,x,y+120,w/2-30,44,()=>this.cb.act(()=>buyAnimal(state,id)),'#ff7aa2','#d64f7d',15.5);});
       }else if(this.shopTab==='装饰'){
@@ -240,6 +246,18 @@ export class FarmUI {
   }
   private renderLevelUp(){const level=this.levelUp!,p=this.p,root=p.node(this.root,'LevelUpOverlay');if(this.backdrop){const n=p.node(root,'BlurredFarm',p.w/2,p.h/2,p.w,p.h),s=n.addComponent(Sprite);s.sizeMode=Sprite.SizeMode.CUSTOM;s.spriteFrame=this.backdrop;n.getComponent(UITransform)!.setContentSize(p.w,p.h);}const shade=p.rect(root,p.w/2,p.h/2,p.w+4,p.h+4,'#423d31',0,undefined,2,105);shade.addComponent(BlockInputEvents);levelUpCard(p,root,this.state(),level,(label,x,y,w,h,run,color,dark,font)=>this.button(p,root,label,x,y,w,h,run,color,dark,font),()=>{this.levelUp=this.levelQueue.shift()??null;if(level>levelFor(this.state().xp)||this.state().progression.claimedLevels.includes(level))this.render();else this.cb.act(()=>claimLevelReward(this.state(),level));});}
   private featureContext(m:{p:Painter;root:Node;w:number;h:number}):FeaturePanelContext{return{...m,state:this.state(),act:this.cb.act,button:(label,x,y,w,h,run,color,dark,font)=>this.button(m.p,m.root,label,x,y,w,h,run,color,dark,font),slot:(x,y,w,h)=>this.slot(m.p,m.root,x,y,w,h),live:f=>this.liveUpdates.push(f)};}
+  private renderSoilShop(p:Painter,root:Node,w:number,state:FarmState){
+    const locale=state.locale,idx=this.soilIndex,plot=idx!==null?state.plots[idx]:undefined,tier=plot?.unlocked?soilTier(plot):null;
+    this.slot(p,root,w/2,520,w,210);
+    p.label(root,soilText('soil.open',{},locale),w/2,438,18,INK,w-20,30);
+    p.label(root,`${soilText(SOIL_NAME[0],{},locale)} ${SOIL_GROWTH_LABEL[0]} · ${SOIL_WATER_LABEL[0]}`,w/2,472,13,SOFT,w-28,26);
+    p.label(root,`${soilText(SOIL_NAME[1],{},locale)} ${SOIL_GROWTH_LABEL[1]} · ${SOIL_WATER_LABEL[1]}    ${soilText(SOIL_NAME[2],{},locale)} ${SOIL_GROWTH_LABEL[2]} · ${SOIL_WATER_LABEL[2]}`,w/2,498,13,SOFT,w-28,26);
+    if(tier===null||idx===null){p.label(root,soilText('soil.pick',{},locale),w/2,548,14,SOFT,w-24,40);return;}
+    p.label(root,soilText('soil.current',{index:idx+1,name:soilText(SOIL_NAME[tier],{},locale)},locale),w/2,540,15,INK,w-24,28);
+    if(tier>=2){this.button(p,root,soilText('soil.max',{},locale),w/2,586,w-40,42,()=>this.toast(soilText('soil.max',{},locale)),'#cbbd9e','#ac9978',14);return;}
+    const next=(tier+1) as 1|2,label=`${soilText('soil.upgrade',{name:soilText(SOIL_NAME[next],{},locale)},locale)} · ${soilCostLabel(next,locale)}`;
+    this.button(p,root,label,w/2,586,w-40,42,()=>this.cb.act(()=>upgradeSoil(state,idx)),'#67ca70','#3fa84d',14);
+  }
   toast(message:string){if(!this.toastRoot)return;empty(this.toastRoot);const p=this.p,w=Math.min(p.w-24,message.length*15+60),n=p.pill(this.toastRoot,p.w/2,135,w,42);p.label(this.toastRoot,message,p.w/2,135,14.5,INK,w-20,35);setTimeout(()=>{if(n.isValid&&this.toastRoot.isValid)empty(this.toastRoot);},2300);}
   private title(){const p=this.p,n=p.node(this.root,'Title');p.rect(n,p.w/2,p.h/2,p.w,p.h,'#bfe1d2',0).addComponent(BlockInputEvents);const f=this.art.get('cover')!,ratio=f.rect.width/f.rect.height,ww=Math.max(p.w,p.h*ratio);p.image(n,'cover',p.w/2,ww/ratio/2,ww,ww/ratio);this.button(p,n,t('title.start'),p.w/2,p.h*.87,Math.min(300,p.w*.45),p.h<500?44:57,()=>{this.started=true;this.cb.start();this.panel=this.state().advanced.auto.report?.unread?'offline':null;this.render();},'#67ca70','#3fa84d',p.h<500?20:25);p.label(n,t('title.tag'),p.w/2,p.h*.96,13,'#ffffff',300,25,true,'center','#5a3e2b');} 
 }

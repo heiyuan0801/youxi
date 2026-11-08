@@ -13,6 +13,8 @@ import {NODE_POSITIONS,isAdult,weatherAt,seasonIndex} from './FarmLife';
 import {worldWidth,hasRegion} from './FarmProgression';
 import {REGIONS,ORCHARD_TREES,BEEHIVES} from './WorldData';
 import {PATROL_SPOTS} from './FarmActivities';
+import {SOIL_CROP,SOIL_EDGE,SOIL_EMPTY,SOIL_FURROW,SOIL_FURROW_CROP,soilTier} from './FarmSoil';
+import {t} from './SoilText';
 import {animalClip,aquaticMotion} from './AnimalAnimation';
 import {drawAnimalAccent,drawPatrolCue,drawPatrolTrail} from './AnimalEffects';
 interface Hit {key?:string;x:number;y:number;w:number;h:number;depth:number;sprite?:Node;type:string;id:string|number;}
@@ -74,8 +76,9 @@ export class FarmScene {
     this.groundRect(g,8.92,5.92,6.16,5.16,'#93603d',6,.25);this.groundRect(g,8.92,5.92,6.16,5.16,'#b98058',0,.25);
     for(const r of REGIONS.slice(0,state.progression.regions.length)){this.groundRect(g,r.x+.92,5.92,6.16,3.16,'#93603d',6,.25);this.groundRect(g,r.x+.92,5.92,6.16,3.16,'#b98058',0,.25);}
     if(hasRegion(state,'pasture'))this.groundRect(g,39,10,5,8,'#bfe38f',0,.35);
-    PLOTS.forEach((b,i)=>{const plot=state.plots[i];if(!plot)return;if(!plot.unlocked){this.groundRect(g,b.x+.05,b.y+.05,.9,.9,'#a6d977',0,.12,'#d7e6b7',1.8);return;}this.groundRect(g,b.x+.07,b.y+.07,.86,.86,'#8e5a37',5,.14);this.groundRect(g,b.x+.07,b.y+.07,.86,.86,plot.crop?'#a8693f':'#cf9160',0,.14);
-      for(const offset of [.3,.5,.7])p.line(g,[project(b.x+.2,b.y+offset),project(b.x+.8,b.y+offset)],plot.crop?'#945d3d':'#b78055',2.3);
+    PLOTS.forEach((b,i)=>{const plot=state.plots[i];if(!plot)return;if(!plot.unlocked){this.groundRect(g,b.x+.05,b.y+.05,.9,.9,'#a6d977',0,.12,'#d7e6b7',1.8);return;}const tier=soilTier(plot);this.groundRect(g,b.x+.07,b.y+.07,.86,.86,SOIL_EDGE[tier],5,.14);this.groundRect(g,b.x+.07,b.y+.07,.86,.86,plot.crop?SOIL_CROP[tier]:SOIL_EMPTY[tier],0,.14);
+      for(const offset of [.3,.5,.7])p.line(g,[project(b.x+.2,b.y+offset),project(b.x+.8,b.y+offset)],plot.crop?SOIL_FURROW_CROP[tier]:SOIL_FURROW[tier],2.3);
+      if(tier>0){const [x,y]=project(b.x+.5,b.y+.18,-8),badge=p.node(this.root,'Soil-'+i);p.rect(badge,x,y,58*Z,22*Z,tier===2?'#c4513e':'#3c342c',11);p.label(badge,t(tier===2?'soil.badge.red':'soil.badge.black',{},state.locale),x,y,12*Z,'#fffaf1',52*Z,20*Z);this.depth.push({n:badge,depth:b.x+b.y+.35});}
       if(plot.crop){const [x,y]=project(b.x+.5,b.y+.5),ready=readyPlot(plot),size=((({wheat:92,carrot:96,tomato:88,strawberry:96,corn:92,pumpkin:104} as Record<string,number>)[plot.crop])||90)*Z;const progress=1-secondsLeft(plot)/growSeconds(plot);
         if(ready||progress>.55){const w=size*(ready?1:.5+(progress-.55)/.45*.28),n=this.object(plot.crop,x,y+16*Z,w,b.x+b.y+1);this.cropNodes.push({n,index:i,ready});this.addHit(plot.crop,x,y+16*Z,w,b.x+b.y+1,'plot',i);}
         else{const spr=p.g(this.root,'Sprouts-'+i);for(const [dx,dy]of[[.3,.35],[.68,.32],[.5,.62],[.3,.72],[.72,.68]]){const [u,v]=project(b.x+dx,b.y+dy),height=(4+progress/.55*9)*Z;p.line(spr,[[u,v],[u,v-height*.9]],'#3f8f37',1.3);p.ellipse(spr,u-height*.45,v-height*.9,height*.5,height*.26,'#6fd25a');p.ellipse(spr,u+height*.45,v-height*.95,height*.5,height*.26,'#6fd25a');}this.depth.push({n:spr.node,depth:b.x+b.y+1});}

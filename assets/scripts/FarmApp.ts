@@ -78,6 +78,7 @@ export class FarmApp extends Component {
     const hit=this.scene.hit(at);if(!hit)return;
     if(hit.type==='plot'){
       const i=Number(hit.id),plot=this.state.plots[i];
+      if(plot.unlocked)this.ui.soilIndex=i;
       if(this.state.activities.stormPlot===i){this.act(()=>repairStormPlot(this.state),at);return;}
       if(!plot.unlocked){const start=i<30?0:30+Math.floor((i-30)/18)*18,end=i<30?30:start+18,next=this.state.plots.findIndex((p,n)=>n>=start&&n<end&&!p.unlocked);if(i===next){this.ui.landIndex=i;this.ui.shopTab='土地';this.ui.open('shop');}else this.ui.toast('先开垦这片田里有价格牌的地块吧');return;}
       if(readyPlot(plot)){this.act(()=>harvest(this.state,i),at);return;}
