@@ -4,6 +4,7 @@ import {animalSpec,TRAVEL_MAPS} from './FarmCatalog';
 import {Trait} from './FarmAdvanced';
 import {genome,dominance,family,ancestry,TRAITS,TRAIT_NAMES,pairAnimals} from './FarmGenetics';
 import {routes,beginExplore,takeRoute,resolveExploreEvent,descendExplore,finishExplore,levelTheme,puzzleFor,eventCopy,layerStory} from './FarmExplore';
+import {t,tx} from './Locale';
 import {toggleOffline,toggleAutoOption,selectAutoSeed,toggleAutoRecipe,cycleAutomationReserve} from './FarmAutomation';
 import {toggleAutomation} from './FarmLife';
 import {RECIPES} from './FarmFeatures';
@@ -26,15 +27,15 @@ export function geneticsPanel(c:FeaturePanelContext,parents:number[],focus:Trait
  });
 }
 export function explorePanel(c:FeaturePanelContext,companion:number|null,selectPet:()=>void,home:()=>void){
- const {p,root,w,state:s,button,slot,act}=c,r=s.advanced.explore.run,pet=s.animals.find(a=>a.id===(r?r.companion:companion));p.label(root,r?`${TRAVEL_MAPS.find(m=>m.id===r.map)!.name} · 第${r.depth}/12层 · ${levelTheme(r.map,r.depth).title}`:'深入未知的农场世界',w/2,24,20,INK,w,36);
- if(!r){p.label(root,'先进入森林、矿山、海滩或雪原，每层有3处路线。\n沿途选择会改变收获；第3层有当地奇遇，第4层有地图谜题。',w/2,89,14,SOFT,w-30,70);p.contain(root,'forestCamp',w/2,198,140,140);button('同行：'+(pet?animalSpec(pet.type).name+' #'+pet.id:'独自出发'),w/2,304,w-20,42,selectPet,'#58bde4','#3295bd',14);p.label(root,'马／独角兽／骆驼节省体力，小狗增加采集产量',w/2,347,12,SOFT,w,30);button('开始探索 · 4农场体力',w/2,398,w-20,44,()=>act(()=>beginExplore(s,companion)),'#67ca70','#3fa84d',15);return;}
- p.label(root,`探索体力 ${r.stamina}/12 · 本层进度 ${r.step}/3 · ${pet?animalSpec(pet.type).name+'同行':'独自探索'}`,w/2,62,13,SOFT,w,26);p.label(root,layerStory(r.map,r.depth),w/2,88,12,'#6d7843',w-16,28);
- if(r.event==='puzzle'){const puzzle=puzzleFor(r);slot(w/2,230,w,280);p.label(root,puzzle.title,w/2,118,22,INK,w,34);p.label(root,puzzle.hint,w/2,156,13,SOFT,w-24,40);puzzle.choices.forEach((name,i)=>button(name,w/2,206+i*42,w-36,36,()=>act(()=>resolveExploreEvent(s,i)),'#67ca70','#3fa84d',14));button('绕开谜题',w/2,206+puzzle.choices.length*42,w-36,34,()=>act(()=>resolveExploreEvent(s,puzzle.choices.length)),'#58bde4','#3295bd',13);}
- else if(r.event){const copy=eventCopy(r.event,r.map,r.depth);slot(w/2,200,w,190);p.label(root,copy.title,w/2,132,22,INK,w,36);p.label(root,copy.detail,w/2,178,12,SOFT,w-20,52);button(copy.help,w*.25,246,w*.46,40,()=>act(()=>resolveExploreEvent(s,0)),'#67ca70','#3fa84d',13);button('绕路通过',w*.75,246,w*.46,40,()=>act(()=>resolveExploreEvent(s,1)),'#58bde4','#3295bd',13);}
+ const {p,root,w,state:s,button,slot,act}=c,r=s.advanced.explore.run,pet=s.animals.find(a=>a.id===(r?r.companion:companion));p.label(root,r?`${tx('map.'+r.map,TRAVEL_MAPS.find(m=>m.id===r.map)!.name)} · ${r.depth}/12 · ${levelTheme(r.map,r.depth).title}`:t('explore.title'),w/2,24,20,INK,w,36);
+ if(!r){p.label(root,'先进入森林、矿山、海滩或雪原，每层有3处路线。\n沿途选择会改变收获；第3层有当地奇遇，第4层有地图谜题。',w/2,89,14,SOFT,w-30,70);p.contain(root,'forestCamp',w/2,198,140,140);button((pet?animalSpec(pet.type).name+' #'+pet.id:t('explore.alone')),w/2,304,w-20,42,selectPet,'#58bde4','#3295bd',14);p.label(root,'马／独角兽／骆驼节省体力，小狗增加采集产量',w/2,347,12,SOFT,w,30);button(t('explore.start'),w/2,398,w-20,44,()=>act(()=>beginExplore(s,companion)),'#67ca70','#3fa84d',15);return;}
+ p.label(root,`${r.stamina}/12 · ${r.step}/3 · ${pet?animalSpec(pet.type).name:t('explore.solo')}`,w/2,62,13,SOFT,w,26);p.label(root,layerStory(r.map,r.depth),w/2,88,12,'#6d7843',w-16,28);
+ if(r.event==='puzzle'){const puzzle=puzzleFor(r);slot(w/2,230,w,280);p.label(root,puzzle.title,w/2,118,22,INK,w,34);p.label(root,puzzle.hint,w/2,156,13,SOFT,w-24,40);puzzle.choices.forEach((name,i)=>button(name,w/2,206+i*42,w-36,36,()=>act(()=>resolveExploreEvent(s,i)),'#67ca70','#3fa84d',14));button(t('explore.skip'),w/2,206+puzzle.choices.length*42,w-36,34,()=>act(()=>resolveExploreEvent(s,puzzle.choices.length)),'#58bde4','#3295bd',13);}
+ else if(r.event){const copy=eventCopy(r.event,r.map,r.depth);slot(w/2,200,w,190);p.label(root,copy.title,w/2,132,22,INK,w,36);p.label(root,copy.detail,w/2,178,12,SOFT,w-20,52);button(copy.help,w*.25,246,w*.46,40,()=>act(()=>resolveExploreEvent(s,0)),'#67ca70','#3fa84d',13);button(t('explore.around'),w*.75,246,w*.46,40,()=>act(()=>resolveExploreEvent(s,1)),'#58bde4','#3295bd',13);}
  else if(r.step<3)routes(s).forEach((route,i)=>{const y=137+i*81;slot(w/2,y,w,70);p.contain(root,route.icon,40,y,52);p.label(root,route.kind==='rest'?'消耗1饲料，恢复5探索体力':`消耗最多${route.cost}探索体力`,w/2-25,y+13,12,SOFT,w-200,27);button(route.name,w-104,y,185,40,()=>act(()=>takeRoute(s,i)),'#58bde4','#3295bd',14);});
- else{p.contain(root,levelTheme(r.map,r.depth).icon,w/2,172,90);p.label(root,'本层探索完成！',w/2,247,21,INK,w,36);button('进入下一层',w/2,305,w-20,43,()=>act(()=>descendExplore(s)),'#67ca70','#3fa84d',15);}
- slot(w/2,520,w,150);p.label(root,'探索背包 · 返程后入库',w/2,468,19,INK,w,33);p.label(root,Object.entries(r.bag).map(([id,n])=>`${NAMES[id as keyof typeof NAMES]} ×${n}`).join('  ·  ')||'还没有收获，选择路线继续前进',w/2,512,13,SOFT,w-24,60);p.label(root,'每层首次完成另奖励80金币＋2星，重复探索不重复发奖',w/2,562,12,SOFT,w-20,28);
- button('安全返程 · 物资入库',w/2,640,w-20,45,()=>{act(()=>finishExplore(s));home();},'#ffb150','#dc8a29',15);
+ else{p.contain(root,levelTheme(r.map,r.depth).icon,w/2,172,90);p.label(root,t('explore.done'),w/2,247,21,INK,w,36);button(t('explore.next'),w/2,305,w-20,43,()=>act(()=>descendExplore(s)),'#67ca70','#3fa84d',15);}
+ slot(w/2,520,w,150);p.label(root,t('explore.bag'),w/2,468,19,INK,w,33);p.label(root,Object.entries(r.bag).map(([id,n])=>`${tx('crop.'+id,NAMES[id as keyof typeof NAMES]||id)} ×${n}`).join('  ·  ')||t('explore.empty'),w/2,512,13,SOFT,w-24,60);p.label(root,'每层首次完成另奖励80金币＋2星，重复探索不重复发奖',w/2,562,12,SOFT,w-20,28);
+ button(t('explore.home'),w/2,640,w-20,45,()=>{act(()=>finishExplore(s));home();},'#ffb150','#dc8a29',15);
 }
 export function automationPanel(c:FeaturePanelContext){
  const {p,root,w,state:s,button,slot,act}=c,a=s.advanced.auto;p.label(root,'自动农场 · 在线与离线持续生产',w/2,24,22,INK,w,36);p.label(root,'最多结算8小时 · 缺钱或缺材料时暂停相应任务 · 产物直接入库',w/2,63,12,SOFT,w,32);

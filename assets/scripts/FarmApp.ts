@@ -1,4 +1,5 @@
 import {nativeHaptic,exportNativeSave,beginNativeSaveImport,takeNativeSaveImport} from './NativePlatform';
+import {detectLocale,isLocale,setActiveLocale,type LocaleId} from './Locale';
 import {compostPumpkin,damageStorm,recordStorm,repairStormPlot,resolveScene,rollScene,searchPatrol,PATROL_SPOTS} from './FarmActivities';
 import {settleAutomation} from './FarmAutomation';
 import {takeRoute} from './FarmExplore';
@@ -35,7 +36,7 @@ export class FarmApp extends Component {
   onLoad(){
     view.setDesignResolutionSize(WIDTH,HEIGHT,ResolutionPolicy.SHOW_ALL);if(sys.isBrowser)view.resizeWithBrowserSize(true);profiler.hideStats();
     let raw:string|null=null;try{raw=sys.localStorage.getItem(SAVE_KEY);}catch{}
-    const loaded=parseSave(raw,Date.now(),false);this.state=loaded||newFarm();settleAutomation(this.state);refreshFeatures(this.state);refreshLife(this.state);
+    const loaded=parseSave(raw,Date.now(),false);this.state=loaded||newFarm();if(!loaded)this.state.locale=detectLocale(typeof sys.languageCode==='string'&&sys.languageCode?sys.languageCode:undefined);else if(!isLocale(this.state.locale))this.state.locale='zh-CN';setActiveLocale(this.state.locale);settleAutomation(this.state);refreshFeatures(this.state);refreshLife(this.state);
     if(raw){try{const old=JSON.parse(raw);if(!loaded)sys.localStorage.setItem(SAVE_KEY+'-unreadable-backup',raw);else{if(!old.features)sys.localStorage.setItem(SAVE_KEY+'-before-v03',raw);if(!old.progression)sys.localStorage.setItem(SAVE_KEY+'-before-v04',raw);if(!old.life)sys.localStorage.setItem(SAVE_KEY+'-before-v05',raw);if(!old.ecology)sys.localStorage.setItem(SAVE_KEY+'-before-v06',raw);if(!old.advanced)sys.localStorage.setItem(SAVE_KEY+'-before-v07',raw);if(!old.journey)sys.localStorage.setItem(SAVE_KEY+'-before-v08',raw);}if(old.layoutVersion!==2)sys.localStorage.setItem(SAVE_KEY+'-before-v02',raw);}catch{try{sys.localStorage.setItem(SAVE_KEY+'-unreadable-backup',raw);}catch{}}}
     const p=new Painter(WIDTH,HEIGHT,this.art),loading=p.label(this.node,'晴野物语 · 正在准备农场…',800,450,24,'#5a3e2b',600,80);
     const adopt=(key:string,texture:Texture2D)=>{texture.setFilters(Texture2D.Filter.LINEAR,Texture2D.Filter.LINEAR);const frame=new SpriteFrame();frame.texture=texture;this.art.set(key,frame);};
@@ -51,7 +52,7 @@ export class FarmApp extends Component {
   private initialize(p:Painter){
     for(const [alias,source] of Object.entries(ART_PLACEHOLDERS)){const frame=this.art.get(source);if(frame&&!this.art.has(alias))this.art.set(alias,frame);}
     this.world=p.node(this.node,'FarmWorld',800,450,9000,7000);const hud=p.node(this.node,'ReferenceUI');this.scene=new FarmScene(this.world,this.art,()=>this.state);this.sfx=new FarmAudio(this.node,this.soundClips,this.nativeClips);this.sfx.setEnabled(this.state.sound);
-    this.ui=new FarmUI(hud,this.art,()=>this.state,{act:f=>this.act(f),pick:id=>this.pick(id),place:id=>{this.placing=id;this.ui.toast('点一块空草地，放下新的装饰');},zoom:f=>this.zoom(f),focus:id=>this.focus(id),travel:id=>this.travelTo(id),settings:key=>{this.state[key]=!this.state[key];if(key==='sound')this.sfx.setEnabled(this.state.sound);if(key==='music')this.sfx.setMusic(this.state.music&&this.audioStarted);this.save();this.ui.render();},exportSave:()=>this.exportSave(),chooseSave:()=>this.chooseSave(),restoreBackup:()=>this.restoreBackup(),confirmSave:()=>this.confirmSave(),reset:()=>this.reset(),start:()=>this.startAudio()});
+    this.ui=new FarmUI(hud,this.art,()=>this.state,{act:f=>this.act(f),pick:id=>this.pick(id),place:id=>{this.placing=id;this.ui.toast('点一块空草地，放下新的装饰');},zoom:f=>this.zoom(f),focus:id=>this.focus(id),travel:id=>this.travelTo(id),settings:key=>{this.state[key]=!this.state[key];if(key==='sound')this.sfx.setEnabled(this.state.sound);if(key==='music')this.sfx.setMusic(this.state.music&&this.audioStarted);this.save();this.ui.render();},setLocale:(id:LocaleId)=>{this.state.locale=id;setActiveLocale(id);this.save();this.ui.render();},exportSave:()=>this.exportSave(),chooseSave:()=>this.chooseSave(),restoreBackup:()=>this.restoreBackup(),confirmSave:()=>this.confirmSave(),reset:()=>this.reset(),start:()=>this.startAudio()});
     this.ui.started=!!rawSession();
     this.world.on(Node.EventType.TOUCH_START,this.touchStart,this);this.world.on(Node.EventType.TOUCH_MOVE,this.touchMove,this);this.world.on(Node.EventType.TOUCH_END,this.touchEnd,this);this.world.on(Node.EventType.TOUCH_CANCEL,()=>{this.pointer=null;this.pinch=0;this.flush();});
     this.world.on(Node.EventType.MOUSE_WHEEL,(e:EventMouse)=>this.zoom(e.getScrollY()>0?1.08:1/1.08,e.getUILocation()));
